@@ -61,6 +61,8 @@
     "format:check": "prettier --check .",
     "build:validators": "node scripts/build-validators.ts",
     "demo": "vite demo --port 5190 --strictPort",
+    "docs": "pnpm --filter paintcanvas-docs start",
+    "docs:build": "pnpm --filter paintcanvas-docs build",
     "prepack": "pnpm build"
   },
   "packageManager": "pnpm@12.10.1",

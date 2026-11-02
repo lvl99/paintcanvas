@@ -12,6 +12,10 @@ export default tseslint.config(
       "**/coverage/**",
       "**/node_modules/**",
       "**/*.generated.js",
+      // Documentation site build output, cache and generated API pages
+      "docs/build/**",
+      "docs/.docusaurus/**",
+      "docs/docs/api/**",
     ],
   },
   eslint.configs.recommended,
@@ -22,7 +26,7 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ["*.config.{js,ts}", "scripts/**/*.ts"],
+    files: ["*.config.{js,ts}", "scripts/**/*.ts", "docs/*.ts"],
     languageOptions: { globals: globals.node },
   },
   {

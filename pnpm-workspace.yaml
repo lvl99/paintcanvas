@@ -1,0 +1,3 @@
+# The library is the root package; the documentation site is its own package
+packages:
+  - docs

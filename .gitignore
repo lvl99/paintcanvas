@@ -14,3 +14,8 @@ collaboration
 # Screenshots Vitest saves when a browser test fails
 .vitest-attachments/
 .claude/
+
+# Documentation site: build output, cache and the API pages TypeDoc generates
+docs/build
+docs/.docusaurus
+docs/docs/api

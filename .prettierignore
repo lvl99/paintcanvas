@@ -2,3 +2,6 @@ dist
 coverage
 pnpm-lock.yaml
 *.generated.js
+docs/build
+docs/.docusaurus
+docs/docs/api
