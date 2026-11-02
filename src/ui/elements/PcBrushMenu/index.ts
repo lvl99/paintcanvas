@@ -95,7 +95,7 @@ export const previewSizes = (
 
 /**
  * Brush or eraser menu: current size, a drag control to change size, a scrollable grid of presets grouped by author
- * ("My presets", "LiveCanvas", then other authors), and "New preset", "Import" and "Export" buttons. Each preset is a
+ * ("My presets", "PaintCanvas", then other authors), and "New preset", "Import" and "Export" buttons. Each preset is a
  * tile showing its shape at its size relative to the rest of its family, five to a row. Picking a preset closes the
  * menu; holding Alt/Option shows an "X" over custom presets, and clicking one asks before deleting it.
  *
@@ -246,7 +246,7 @@ export class PcBrushMenu extends PcElement {
   }
 
   /**
-   * Export the custom presets (not LiveCanvas's) as a brush preset file.
+   * Export the custom presets (not the built-in ones) as a brush preset file.
    */
   async exportFile(): Promise<void> {
     const app = this.app;

@@ -75,11 +75,11 @@ describe("paint-canvas", () => {
     expect(queryAll(layout, "pc-toolbar")).toHaveLength(0);
     expect(queryAll(layout, "pc-canvas")).toHaveLength(0);
     const other = await setup();
-    other.layout.menuText = "LC";
+    other.layout.menuText = "App";
     other.layout.menuLabel = "App menu";
     await other.layout.updateComplete;
     expect(query<PcToolbar>(other.layout, "pc-toolbar")).toMatchObject({
-      menuText: "LC",
+      menuText: "App",
       menuLabel: "App menu",
     });
   });

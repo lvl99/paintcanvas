@@ -48,11 +48,11 @@ describe("pc-toolbar", () => {
     expect([menu.textContent?.trim(), menu.getAttribute("aria-label")]).toEqual(
       ["☰", "Menu"],
     );
-    element.menuText = "LC";
-    element.menuLabel = "LiveCanvas menu";
+    element.menuText = "App";
+    element.menuLabel = "My app menu";
     await element.updateComplete;
     expect([menu.textContent?.trim(), menu.getAttribute("aria-label")]).toEqual(
-      ["LC", "LiveCanvas menu"],
+      ["App", "My app menu"],
     );
     query(element, `[data-panel="${Panel.Layers}"]`).click();
     expect(app.panel).toBe(Panel.Layers);

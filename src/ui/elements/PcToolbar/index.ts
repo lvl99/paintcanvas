@@ -64,7 +64,7 @@ export const TOOLBAR_TOOLS: readonly {
  * `menuLabel` for screen readers.
  *
  * @example
- * html`<pc-toolbar .app=${app} menuText="LC" menuLabel="My app menu"></pc-toolbar>`
+ * html`<pc-toolbar .app=${app} menuText="App" menuLabel="App menu"></pc-toolbar>`
  */
 export class PcToolbar extends PcElement {
   static override properties = {

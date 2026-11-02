@@ -13,5 +13,4 @@ collaboration
 # Local tooling
 # Screenshots Vitest saves when a browser test fails
 .vitest-attachments/
-.firebase/
 .claude/
