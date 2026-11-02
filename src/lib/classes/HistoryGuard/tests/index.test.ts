@@ -112,6 +112,24 @@ describe("HistoryGuard", () => {
     expect(listeners.size).toBe(0);
   });
 
+  it("should keep the guard's address when asked to guard from another entry", () => {
+    const { target, go, current } = createWindow();
+    const onBack = vi.fn();
+    const guard = new HistoryGuard(onBack);
+    guard.attach(target);
+    guard.guard();
+    // The page adds its own entry after the guard's
+    target.history.pushState(null, "", "https://example.com/elsewhere");
+    guard.guard();
+    go(-1);
+    go(-1);
+    expect(onBack).toHaveBeenCalledOnce();
+    expect(current()).toEqual({
+      state: GUARD_STATE,
+      url: "https://example.com/app/",
+    });
+  });
+
   it("should guard again once back on the page's own entry, when asked to while releasing", () => {
     const { target, go, current } = createWindow();
     const onBack = vi.fn();
