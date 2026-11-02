@@ -1,22 +1,41 @@
 {
-  "extends": "../../tsconfig.base.json",
+  // Type checks everything: source, tests, scripts, demo and configs. See tsconfig.build.json for the published types.
+  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    "composite": true,
-    "noEmit": false,
-    "emitDeclarationOnly": true,
-    "outDir": "./dist/types",
+    // Environment Settings
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["vite/client", "node"],
+    "resolveJsonModule": true,
     // Lets scripts run directly with Node.js type stripping, which needs explicit .ts extensions
     "allowImportingTsExtensions": true,
     "allowJs": true,
-    "lib": ["es2022", "dom", "dom.iterable"],
-    "types": ["vite/client", "node"]
+
+    // Stricter Typechecking Options
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Recommended Options
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "noEmit": true
   },
   "include": [
     "src",
     "src/**/*.json",
     "scripts",
+    "demo",
     "locales/*.json",
-    "package.json"
+    "package.json",
+    "*.config.ts"
   ],
   // Generated validators are typed by their `.d.ts`
   "exclude": ["src/**/*.generated.js"]
