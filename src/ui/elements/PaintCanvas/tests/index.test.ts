@@ -1,0 +1,371 @@
+import { afterEach, describe, it, expect, vi } from "vitest";
+import "..";
+import type { PaintCanvasElement } from "..";
+import PaintCanvas, { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
+import { SHORTCUT_EVENT } from "../../../../lib/classes/KeyboardShortcuts";
+import { STATE_EVENT, type LayoutState } from "../../../layout";
+import type { PcPanel } from "../../PcPanel";
+import type { PcToolbar } from "../../PcToolbar";
+import { createApp } from "../../../../testing/app";
+import { createRecordingCanvasFactory } from "../../../../testing/recordingCanvas";
+import {
+  events,
+  pointerEvent,
+  query,
+  queryAll,
+} from "../../../../testing/elements";
+
+afterEach(() => {
+  document.body.replaceChildren();
+  vi.unstubAllGlobals();
+});
+
+/** Mount a layout with some content, at a width */
+const setup = async (content = "", width = 1000, app = createApp()) => {
+  const layout = document.createElement("paint-canvas") as PaintCanvasElement;
+  layout.app = app;
+  layout.innerHTML = content;
+  document.body.append(layout);
+  layout.width = width;
+  await layout.updateComplete;
+  // Slot changes render once more
+  await layout.updateComplete;
+  return { layout, app };
+};
+
+/** A panel for a side */
+const panelHtml = (side: string, label: string, extra = "") =>
+  `<pc-panel slot="${side}" icon="layers" label="${label}" ${extra}><button>Inside ${label}</button></pc-panel>`;
+
+describe("paint-canvas", () => {
+  it("should make its own canvas when given none", async () => {
+    // jsdom has no OffscreenCanvas
+    const { factory } = createRecordingCanvasFactory();
+    vi.stubGlobal("OffscreenCanvas", function (width: number, height: number) {
+      return factory(width, height);
+    });
+    const layout = document.createElement("paint-canvas") as PaintCanvasElement;
+    document.body.append(layout);
+    await layout.updateComplete;
+    expect(layout.app).toBeInstanceOf(PaintCanvas);
+  });
+
+  it("should show the toolbar, tool settings, canvas and canvas map by default, in labelled regions", async () => {
+    const { layout, app } = await setup();
+    expect(query<PcToolbar>(layout, ".side.left pc-toolbar").app).toBe(app);
+    expect(queryAll(layout, ".top pc-tool-settings")).toHaveLength(1);
+    expect(queryAll(layout, ".center pc-canvas")).toHaveLength(1);
+    expect(queryAll(layout, ".overlay pc-canvas-map")).toHaveLength(1);
+    expect(
+      queryAll(layout, "[role=region]").map((r) =>
+        r.getAttribute("aria-label"),
+      ),
+    ).toEqual(["Tools", "Tool settings", "Canvas", "Status", "Panels"]);
+    // The app menu button shows only with a menu
+    expect(query<PcToolbar>(layout, "pc-toolbar").menu).toBe(false);
+    app.selectTool(Tool.Pan);
+    await layout.updateComplete;
+    expect(queryAll(layout, ".top pc-tool-settings")).toHaveLength(0);
+  });
+
+  it("should replace defaults with given content, and pass its menu text to the toolbar", async () => {
+    const { layout } = await setup(
+      '<div slot="left"></div><p slot="center">Mine</p>',
+    );
+    expect(queryAll(layout, "pc-toolbar")).toHaveLength(0);
+    expect(queryAll(layout, "pc-canvas")).toHaveLength(0);
+    const other = await setup();
+    other.layout.menuText = "LC";
+    other.layout.menuLabel = "App menu";
+    await other.layout.updateComplete;
+    expect(query<PcToolbar>(other.layout, "pc-toolbar")).toMatchObject({
+      menuText: "LC",
+      menuLabel: "App menu",
+    });
+  });
+
+  it("should show the app menu while it's open, and the toolbar's other menus over the canvas", async () => {
+    const { layout, app } = await setup('<nav slot="menu">Menu</nav>');
+    expect(query<PcToolbar>(layout, "pc-toolbar").menu).toBe(true);
+    const menu = query(layout, ".menu-panel");
+    expect(menu.hasAttribute("open")).toBe(false);
+    app.togglePanel(Panel.Menu);
+    await layout.updateComplete;
+    expect(menu.hasAttribute("open")).toBe(true);
+    for (const [panel, tag] of [
+      [Panel.Brush, "pc-brush-menu"],
+      [Panel.Eraser, "pc-brush-menu"],
+      [Panel.Layers, "pc-layers-menu"],
+    ] as const) {
+      app.togglePanel(panel);
+      await layout.updateComplete;
+      expect(queryAll(layout, `.center ${tag}`)).toHaveLength(1);
+    }
+    app.toggleInterface();
+    await layout.updateComplete;
+    expect(layout.hasAttribute("ui-hidden")).toBe(true);
+    expect(queryAll(layout, ".center pc-layers-menu")).toHaveLength(0);
+  });
+
+  it("should report its state as attributes and events", async () => {
+    const { layout } = await setup("", 1000);
+    const states = events<LayoutState>(layout, STATE_EVENT);
+    expect([
+      layout.hasAttribute("narrow"),
+      layout.getAttribute("left-mode"),
+      layout.getAttribute("right-mode"),
+    ]).toEqual([false, "docked", "docked"]);
+    layout.width = 500;
+    await layout.updateComplete;
+    expect(layout.hasAttribute("narrow")).toBe(true);
+    expect(layout.getAttribute("right-mode")).toBe("rail");
+    layout.dispatchEvent(pointerEvent("pointerdown", 0, 0));
+    expect(layout.input).toBe("mouse");
+    layout.dispatchEvent(
+      Object.assign(pointerEvent("pointerdown", 0, 0), { pointerType: "pen" }),
+    );
+    await layout.updateComplete;
+    expect(layout.getAttribute("input")).toBe("pen");
+    layout.dispatchEvent(
+      Object.assign(pointerEvent("pointerdown", 0, 0), {
+        pointerType: "touch",
+      }),
+    );
+    expect(layout.input).toBe("touch");
+    await layout.updateComplete;
+    expect(states.map((s) => [s.narrow, s.rightMode, s.input])).toEqual([
+      [true, "rail", "mouse"],
+      [true, "rail", "pen"],
+      [true, "rail", "touch"],
+    ]);
+    layout.requestUpdate();
+    await layout.updateComplete;
+    expect(states).toHaveLength(3);
+  });
+
+  it("should follow its width with a ResizeObserver when there is one", async () => {
+    let callback: ResizeObserverCallback | undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: ResizeObserverCallback) {
+          callback = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const layout = document.createElement("paint-canvas") as PaintCanvasElement;
+    layout.app = createApp();
+    document.body.append(layout);
+    callback!(
+      [{ contentRect: { width: 321.4 } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    expect(layout.width).toBe(321);
+    callback!([], {} as ResizeObserver);
+    expect(layout.width).toBe(0);
+  });
+
+  it("should open a rail's panels over the canvas, one at a time, and close them on Escape or a press outside", async () => {
+    const { layout } = await setup(
+      panelHtml("right", "Layers") + panelHtml("right", "Chat", "badge"),
+      500,
+    );
+    const [layers, chat] = [
+      ...layout.querySelectorAll<PcPanel>("pc-panel"),
+    ] as [PcPanel, PcPanel];
+    const buttons = queryAll<HTMLButtonElement>(
+      layout,
+      ".side.right .rail button",
+    );
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Layers",
+      "Chat (new)",
+    ]);
+    expect(queryAll(layout, ".rail .badge")).toHaveLength(1);
+    buttons[0]!.click();
+    await layout.updateComplete;
+    expect(layers.hasAttribute("data-pc-open")).toBe(true);
+    expect(document.activeElement?.textContent).toBe("Inside Layers");
+    expect(buttons[0]!.getAttribute("aria-expanded")).toBe("true");
+    buttons[1]!.click();
+    expect([
+      layers.hasAttribute("data-pc-open"),
+      chat.hasAttribute("data-pc-open"),
+    ]).toEqual([false, true]);
+    // Pressing inside the panel or its button keeps it open
+    chat.dispatchEvent(
+      new Event("pointerdown", { bubbles: true, composed: true }),
+    );
+    expect(layout.openPanel).toBe(chat);
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(layout.openPanel).toBeUndefined();
+    buttons[1]!.click();
+    chat.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "a", bubbles: true, composed: true }),
+    );
+    expect(layout.openPanel).toBe(chat);
+    chat.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    expect(layout.openPanel).toBeUndefined();
+    expect(layout.shadowRoot!.activeElement).toBe(buttons[1]);
+    // The button closes it too
+    buttons[1]!.click();
+    buttons[1]!.click();
+    expect(layout.openPanel).toBeUndefined();
+    layout.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  });
+
+  it("should focus a panel without anything focusable, update rail buttons as panels change, and close panels when the rail goes", async () => {
+    const { layout } = await setup(
+      '<pc-panel slot="left" icon="layers" label="Notes"><p>Text</p></pc-panel>',
+      500,
+    );
+    const panel = layout.querySelector("pc-panel") as PcPanel;
+    const button = query<HTMLButtonElement>(layout, ".side.left .rail button");
+    button.click();
+    expect(document.activeElement).toBe(panel);
+    panel.label = "Ideas";
+    await new Promise((resolve) => setTimeout(resolve));
+    await layout.updateComplete;
+    expect(button.getAttribute("aria-label")).toBe("Ideas");
+    layout.width = 1000;
+    await layout.updateComplete;
+    expect(layout.openPanel).toBeUndefined();
+    expect(panel.hasAttribute("data-pc-open")).toBe(false);
+  });
+
+  it("should float a side over the canvas, collapsed to a button until opened", async () => {
+    const { layout } = await setup(panelHtml("right", "Layers"));
+    layout.rightModes = "floating";
+    await layout.updateComplete;
+    const toggle = query<HTMLButtonElement>(layout, ".side.right .collapse");
+    expect([
+      toggle.getAttribute("aria-expanded"),
+      toggle.getAttribute("aria-label"),
+    ]).toEqual(["false", "Show Panels"]);
+    expect(query(layout, ".side.right .content").hidden).toBe(true);
+    toggle.click();
+    await layout.updateComplete;
+    expect(toggle.getAttribute("aria-label")).toBe("Hide Panels");
+    expect(query(layout, ".side.right .content").hidden).toBe(false);
+    layout.leftModes = "floating";
+    await layout.updateComplete;
+    expect(query(layout, ".side.left .collapse").textContent?.trim()).toBe("»");
+  });
+
+  it("should keep the canvas clear of open floating sides", async () => {
+    const { layout } = await setup(panelHtml("right", "Layers"));
+    layout.rightModes = "floating";
+    layout.collapsed = { left: true, right: false };
+    await layout.updateComplete;
+    const float = query(layout, ".side.right .float");
+    vi.spyOn(float, "getBoundingClientRect").mockReturnValue({
+      width: 240,
+    } as DOMRect);
+    layout.requestUpdate();
+    await layout.updateComplete;
+    await layout.updateComplete;
+    expect(
+      query<HTMLElement & { insets: unknown }>(layout, "pc-canvas").insets,
+    ).toEqual({ top: 0, right: 240, bottom: 0, left: 0 });
+  });
+
+  it("should handle keyboard shortcuts unless asked not to, saving a screenshot on Cmd/Ctrl + S", async () => {
+    const { layout, app } = await setup();
+    const saveFile = vi.fn(async () => "download" as const);
+    layout.saveFile = saveFile;
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "e" }));
+    expect(app.tool).toBe(Tool.Eraser);
+    vi.stubGlobal("OffscreenCanvas", class {});
+    const screenshot = vi
+      .spyOn(layout, "saveScreenshot")
+      .mockResolvedValue("download");
+    window.dispatchEvent(
+      new CustomEvent(SHORTCUT_EVENT, { detail: { type: "undo" } }),
+    );
+    window.dispatchEvent(
+      new CustomEvent(SHORTCUT_EVENT, { detail: { type: "save" } }),
+    );
+    expect(screenshot).toHaveBeenCalledOnce();
+    layout.shortcuts = false;
+    await layout.updateComplete;
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "b" }));
+    expect(app.tool).toBe(Tool.Eraser);
+    layout.remove();
+  });
+
+  it("should open the brush configuration for the current or a new preset, and apply or close it", async () => {
+    const { layout, app } = await setup();
+    layout.configure("brush");
+    await layout.updateComplete;
+    const config = () =>
+      layout.shadowRoot!.querySelector("pc-brush-config") as
+        (HTMLElement & { config: { name?: string } }) | null;
+    expect(config()?.getAttribute("kind")).toBe("brush");
+    config()!.dispatchEvent(
+      new CustomEvent("pc-save", {
+        detail: { ...app.brush.preset, alpha: 0.5 },
+      }),
+    );
+    await layout.updateComplete;
+    expect(app.brush.preset.alpha).toBe(0.5);
+    expect(config()).toBeNull();
+    // The user's own preset can be deleted from the window
+    const own = app.newPreset(app.eraser.preset, "Mine");
+    await app.customPresets.save(own);
+    app.eraser.select(own.id);
+    layout.configure("eraser");
+    await layout.updateComplete;
+    expect(config()?.getAttribute("editingid")).toBe(own.id);
+    config()!.dispatchEvent(new CustomEvent("pc-close"));
+    app.togglePanel(Panel.Brush);
+    layout.newPreset("brush");
+    await layout.updateComplete;
+    expect(config()!.config.name).toBe("New brush");
+    expect(app.panel).toBeNull();
+  });
+
+  it("should open the brush configuration from the tool settings and the presets menu", async () => {
+    const { layout, app } = await setup();
+    query(layout, "pc-tool-settings").dispatchEvent(
+      new CustomEvent("pc-configure-brush", { detail: "brush" }),
+    );
+    await layout.updateComplete;
+    expect(queryAll(layout, "pc-brush-config")).toHaveLength(1);
+    layout.configuring = undefined;
+    app.togglePanel(Panel.Eraser);
+    await layout.updateComplete;
+    query(layout, "pc-brush-menu").dispatchEvent(
+      new CustomEvent("pc-new-preset"),
+    );
+    await layout.updateComplete;
+    expect(query(layout, "pc-brush-config").getAttribute("kind")).toBe(
+      "eraser",
+    );
+  });
+
+  it("should start with touch input on touch devices, and open panels from code", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    const { layout } = await setup(
+      '<pc-panel slot="right" icon="layers" label="Layers"></pc-panel>',
+      500,
+    );
+    expect(layout.input).toBe("touch");
+    layout.closePanel(true);
+    const panel = layout.querySelector("pc-panel") as PcPanel;
+    layout.togglePanel(panel);
+    expect(layout.openPanel).toBe(panel);
+    layout.closePanel(true);
+    expect(layout.openPanel).toBeUndefined();
+    const text = await setup('<span slot="top"></span>');
+    expect(queryAll(text.layout, "pc-tool-settings")).toHaveLength(0);
+  });
+});

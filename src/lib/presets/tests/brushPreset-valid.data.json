@@ -1,0 +1,30 @@
+{
+  "id": "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
+  "name": "My brush",
+  "version": "1.0.0",
+  "author": { "name": "Ada", "handle": "ada.example" },
+  "image": "data:image/png;base64,iVBORw0KGgo=",
+  "colourMode": 0,
+  "alpha": 0.8,
+  "alphaConfig": { "usePressure": true, "minPressure": 0.2, "maxPressure": 1 },
+  "width": 20,
+  "height": 20,
+  "widthConfig": {
+    "useRandomise": true,
+    "minRandomise": 0.5,
+    "maxRandomise": 1
+  },
+  "constrainProportions": true,
+  "rotation": 45,
+  "rotationConfig": { "useTilt": true, "minTilt": 0, "maxTilt": 1 },
+  "offsetX": 0,
+  "offsetXConfig": {
+    "useRandomise": true,
+    "minRandomise": 0,
+    "maxRandomise": 0.5
+  },
+  "sampleRate": 5,
+  "smoothingType": 3,
+  "spacing": 2,
+  "snapToPixelGrid": true
+}

@@ -1,0 +1,17 @@
+!.gitignore
+.DS_Store
+Thumbs.db
+tmp
+logs
+*.log
+.env*
+node_modules
+dist
+coverage
+collaboration
+
+# Local tooling
+# Screenshots Vitest saves when a browser test fails
+.vitest-attachments/
+.firebase/
+.claude/

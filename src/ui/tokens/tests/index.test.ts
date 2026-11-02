@@ -1,0 +1,53 @@
+import { afterEach, describe, it, expect } from "vitest";
+import {
+  DARK_TOKENS,
+  LIGHT_TOKENS,
+  PAGE_TOKENS_CSS,
+  TOKENS_CSS,
+  TOKENS_STYLE_ID,
+  installTokens,
+  tokens,
+} from "..";
+
+afterEach(() => document.getElementById(TOKENS_STYLE_ID)?.remove());
+
+describe("design tokens", () => {
+  it("should set light tokens on the page, and dark ones for dark and automatic themes", () => {
+    expect(PAGE_TOKENS_CSS).toContain(
+      ':root, [data-pc-theme="light"] { --pc-blue: #2c6bff;',
+    );
+    expect(PAGE_TOKENS_CSS).toContain(
+      `[data-pc-theme="dark"] { --pc-surface: ${DARK_TOKENS.surface};`,
+    );
+    expect(PAGE_TOKENS_CSS).toContain(
+      '@media (prefers-color-scheme: dark) { [data-pc-theme="auto"]',
+    );
+    expect(TOKENS_CSS).toBe(PAGE_TOKENS_CSS);
+  });
+
+  it("should only override light tokens in the dark theme", () => {
+    for (const name of Object.keys(DARK_TOKENS))
+      expect(LIGHT_TOKENS).toHaveProperty(name);
+  });
+
+  it("should let one element choose its theme", () => {
+    expect(tokens.cssText).toContain(':host([theme="dark"]) {');
+    expect(tokens.cssText).toContain(':host([theme="auto"])');
+    expect(tokens.cssText).toContain(".pc-visually-hidden");
+    expect(tokens.cssText).toContain(
+      ":host { color: var(--pc-text); color-scheme: var(--pc-color-scheme); }",
+    );
+  });
+
+  it("should add the page stylesheet once, before the page's own styles", () => {
+    const own = document.createElement("style");
+    document.head.append(own);
+    installTokens();
+    installTokens();
+    const added = document.querySelectorAll(`#${TOKENS_STYLE_ID}`);
+    expect(added).toHaveLength(1);
+    expect(document.head.firstElementChild).toBe(added[0]);
+    expect(added[0]!.textContent).toBe(PAGE_TOKENS_CSS);
+    own.remove();
+  });
+});

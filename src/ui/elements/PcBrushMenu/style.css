@@ -1,0 +1,120 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 240px;
+  max-height: 100%;
+  padding: 8px;
+  /* Light grey, like the bars */
+  background: var(--pc-bar);
+  box-shadow: var(--pc-shadow);
+}
+/* The current preset on one row: its shape, name and size */
+.current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--pc-border);
+  background: var(--pc-surface);
+}
+.current-shape {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--pc-text);
+}
+.current-shape.image {
+  border-radius: 0;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+}
+.name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.size {
+  flex: none;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 0 0 8px;
+  border-left: 1px solid var(--pc-border);
+  cursor: ew-resize;
+  touch-action: none;
+}
+/* The presets scroll, at most 400px tall, or less so the whole menu fits under the settings bar in a shorter window */
+.presets {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(400px, calc(100vh - 180px));
+  overflow-y: auto;
+}
+h3 {
+  margin: 4px 0;
+  font-size: 14px;
+}
+ul {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-content: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--pc-border);
+  background: var(--pc-bar);
+}
+:host([deleting]) li button.custom {
+  cursor: var(--delete-cursor);
+}
+/* Create, Import and Export side by side */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.actions button.pill {
+  padding: 4px 8px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+li button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-right: 1px solid var(--pc-border);
+  border-bottom: 1px solid var(--pc-border);
+  background: var(--pc-bar);
+  cursor: pointer;
+}
+li button:hover {
+  background: var(--pc-surface-hover);
+}
+li button[aria-pressed="true"] {
+  background: var(--pc-surface-active);
+}
+.shape {
+  background: var(--pc-text);
+  border-radius: 50%;
+}
+.shape.image {
+  border-radius: 0;
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+}

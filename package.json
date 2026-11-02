@@ -1,0 +1,37 @@
+{
+  "name": "paintcanvas",
+  "version": "0.1.0",
+  "description": "Open-source painting engine and renderer for the browser, with optional UI.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./ui": "./src/ui/index.ts",
+    "./ui/*": "./src/ui/*/index.ts",
+    "./lib/*": "./src/lib/*/index.ts",
+    "./testing/*": "./src/testing/*.ts",
+    "./locales/*": "./locales/*"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p . && vite build",
+    "typecheck": "tsc -p .",
+    "build:validators": "node scripts/build-validators.ts",
+    "demo": "vite demo --port 5190 --strictPort"
+  },
+  "peerDependencies": {
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "jsdom": "^30.1.3",
+    "lit": "^3.3.3",
+    "fake-indexeddb": "^6.2.6"
+  },
+  "files": [
+    "dist",
+    "locales",
+    "README.md",
+    "LICENSE"
+  ]
+}

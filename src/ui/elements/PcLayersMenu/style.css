@@ -1,0 +1,42 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 290px;
+  padding: 8px;
+  /* Light grey, like the bars */
+  background: var(--pc-bar);
+  box-shadow: var(--pc-shadow);
+}
+/* "New Layer": a full-width purple pill */
+button.new {
+  width: 100%;
+  min-height: 40px;
+}
+/* Where a dragged layer would land: a full-width block with its name, as tall as the row (set by the menu) */
+.ghost {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 2px dashed;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Dropping a dragged layer here duplicates it (highlighted for touch, where there is no "+" cursor) */
+button.new.drop-target {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+  outline-offset: 2px;
+}
+/* For screen readers only */
+.announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

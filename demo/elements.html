@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PaintCanvas elements</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+      }
+      body.dark {
+        background: #111111;
+        color: #f2f2f2;
+      }
+      section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      pc-slider {
+        width: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PaintCanvas elements</h1>
+    <section>
+      <label
+        >Language
+        <select id="language"></select
+      ></label>
+      <label><input id="dark" type="checkbox" /> Dark theme</label>
+    </section>
+    <section>
+      <pc-button id="dialog-button">Open dialog</pc-button>
+      <pc-button variant="cancel">Cancel</pc-button>
+      <pc-button variant="dismiss">Dismiss</pc-button>
+      <pc-button variant="pill">Pill</pc-button>
+      <pc-button variant="icon" icon="undo" label="Undo"></pc-button>
+      <pc-button disabled>Disabled</pc-button>
+    </section>
+    <section>
+      <pc-button-group label="Tools">
+        <pc-icon-toggle
+          icon="pressure"
+          label="Pressure"
+          checked
+        ></pc-icon-toggle>
+        <pc-icon-toggle icon="tilt" label="Tilt"></pc-icon-toggle>
+        <pc-icon-toggle icon="focusPen" label="Focus pen mode"></pc-icon-toggle>
+      </pc-button-group>
+      <pc-toggle-checkbox checked>Pinch to zoom</pc-toggle-checkbox>
+      <pc-slider label="Opacity" value="50" unit="%"></pc-slider>
+      <pc-info-tip
+        >Focus pen mode stops fingers and palms from drawing.</pc-info-tip
+      >
+      <pc-button id="menu-button" variant="pill">Context menu</pc-button>
+    </section>
+    <pc-toast message="Preset saved" duration="0"></pc-toast>
+    <pc-context-menu id="menu" label="Layer actions"></pc-context-menu>
+    <script type="module" src="./elements.ts"></script>
+  </body>
+</html>

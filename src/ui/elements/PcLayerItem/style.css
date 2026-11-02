@@ -1,0 +1,119 @@
+/* A white row with space around its parts */
+:host {
+  display: grid;
+  grid-template-columns: 30px 1fr 30px 30px;
+  align-items: center;
+  column-gap: 6px;
+  position: relative;
+  padding: 6px;
+  border: 1px solid var(--pc-surface-active);
+  background: var(--pc-surface);
+}
+.name.active {
+  font-weight: bold;
+}
+.thumbnail {
+  width: 30px;
+  height: 30px;
+}
+/* Thumbnail on the left and name on the right; under them, opacity on the left and blend mode on the right */
+.details {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 6px;
+}
+.details .name {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+.details input[type="range"] {
+  grid-column: 1 / 3;
+  min-width: 0;
+  margin: 0;
+}
+/* Like the chat's ⋮ menu: white and rounded, with plain items highlighted on hover. It floats beside the handle (placed
+   by `placeMenu`), so the layers panel's edges don't cut it off */
+menu {
+  position: fixed;
+  z-index: 20;
+  min-width: 160px;
+  margin: 0;
+  padding: 4px 0;
+  border-radius: 12px;
+  list-style: none;
+  background: var(--pc-surface);
+  color: var(--pc-text);
+  box-shadow: var(--pc-shadow);
+}
+menu button {
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 16px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+menu button:hover,
+menu button:focus-visible {
+  background: var(--pc-bar);
+}
+/* The reorder handle drags with mouse, pen or touch (touch drags it rather than scrolling the panel) */
+.handle {
+  /* As tall as the row */
+  align-self: stretch;
+  cursor: grab;
+  touch-action: none;
+}
+/* While dragged: the row floats with the pointer, out of the list (the layers menu places it), and the cursor shows
+   what dropping would do ("+" duplicates on "New Layer") */
+:host([dragging]) {
+  position: fixed;
+  z-index: 10;
+  opacity: 0.9;
+  background: Canvas;
+  box-shadow: var(--pc-shadow);
+}
+:host([dragging]) .handle {
+  cursor: grabbing;
+}
+:host([drop-action="duplicate"]) .handle {
+  cursor: copy;
+}
+:host([drop-action="none"]) .handle {
+  cursor: no-drop;
+}
+/* Alpha lock and visibility: boxed icon toggles like the settings bar's, darker while on */
+.alpha-lock,
+.visibility {
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--pc-border);
+  border-radius: 4px;
+  background: var(--pc-surface);
+  cursor: pointer;
+}
+.alpha-lock:hover,
+.visibility:hover {
+  background: var(--pc-surface-hover);
+}
+.alpha-lock[aria-pressed="true"],
+.visibility[aria-pressed="true"] {
+  background: var(--pc-surface-active);
+}
+.alpha-lock:focus-visible,
+.visibility:focus-visible {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+}
+.alpha-lock img,
+.visibility img {
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: auto;
+}

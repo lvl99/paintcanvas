@@ -1,0 +1,595 @@
+import { html, nothing, unsafeCSS } from "lit";
+import styles from "./style.css?inline";
+import { WINDOWS_CSS as theme } from "../../styles";
+import { PILLS_CSS as pill } from "../../styles";
+import { ICON_CONTROLS_CSS as iconToggle } from "../../styles";
+import { iconLabel } from "../../icons";
+import { styleMap } from "lit/directives/style-map.js";
+import { PcElement, defineElement } from "../../base";
+import "../PcBrushTest";
+import type PaintCanvas from "../../../lib/classes/PaintCanvas";
+import { SmoothingType, type BrushConfig } from "../../../lib/brushes/types";
+import {
+  PARAM_LIMITS,
+  VARIATION_SOURCES,
+  readRange,
+  toggleSource,
+  writeRange,
+  type VariationSource,
+  type VaryingParam,
+} from "../../../lib/brushes/configRanges";
+import {
+  readClipboardShape,
+  readShapeImage,
+  SHAPE_ERRORS,
+  ShapeImageError,
+  type ShapeImage,
+} from "../../../lib/brushes/shapeImage";
+import {
+  MAX_SAMPLE_RATE,
+  MIN_SAMPLE_RATE,
+} from "../../../lib/brushes/StrokeSampler";
+
+/** Asks the user to confirm; replaceable for tests */
+export type ConfirmFn = (message: string) => boolean;
+
+/** Asks the user for text; replaceable for tests */
+export type PromptFn = (message: string, value: string) => string | null;
+
+/** The smoothing choices, in the order shown: value, translation key of the name, and icon name */
+export const SMOOTHING_CHOICES = [
+  {
+    value: SmoothingType.Linear,
+    label: "brushConfig.smoothingLinear",
+    icon: "smoothingLinear",
+  },
+  {
+    value: SmoothingType.BezierQuad,
+    label: "brushConfig.smoothingQuadratic",
+    icon: "smoothingBezierQuad",
+  },
+  {
+    value: SmoothingType.BezierCubic,
+    label: "brushConfig.smoothingCubic",
+    icon: "smoothingBezierCubic",
+  },
+] as const;
+
+/** Icon names of the variation sources */
+const SOURCE_ICONS: Record<VariationSource, string> = {
+  pressure: "pressure",
+  tilt: "tilt",
+  randomise: "randomise",
+};
+
+/** Translation keys of the variation sources' names */
+const SOURCE_LABELS: Record<VariationSource, string> = {
+  pressure: "toolSettings.pressure",
+  tilt: "toolSettings.tilt",
+  randomise: "brushConfig.randomise",
+};
+
+/** Translation keys of the brush shape error messages */
+const SHAPE_ERROR_KEYS: Record<string, string> = {
+  [SHAPE_ERRORS.type]: "shape.notPng",
+  [SHAPE_ERRORS.size]: "shape.tooLarge",
+  [SHAPE_ERRORS.decode]: "shape.readFailed",
+  [SHAPE_ERRORS.noImage]: "shape.noPngToPaste",
+};
+
+/** Largest stamp spacing in pixels */
+const MAX_SPACING = 200;
+
+/** Read a number input, or undefined if it isn't a number */
+const numberValue = (event: Event): number | undefined => {
+  const value = (event.target as HTMLInputElement).valueAsNumber;
+  return Number.isFinite(value) ? value : undefined;
+};
+
+/**
+ * The brush (or eraser) configuration window: a testing area, the shape (upload or paste), smoothing, width, height,
+ * opacity, rotation, offsets, sample rate, spacing and snapping to the pixel grid. Width, height, opacity, rotation and the offsets can vary with
+ * pressure, tilt and randomness; when any is on, the setting has a min and max.
+ *
+ * Changes stay in the window until "Save" (fires `pc-save` with the settings, to apply to the current tool) or "Add to
+ * presets" (saves them as one of the user's presets, asking before replacing one with the same name, and selects it).
+ * "Delete preset…" shows when editing one of the user's presets. Fires `pc-close` when closed, and `pc-toast` with a
+ * message after adding or deleting a preset, or when a shape can't be used. Styling is structural only.
+ *
+ * @example
+ * html`<pc-brush-config .app=${app} kind="brush" .config=${app.brush.preset} @pc-save=${apply}></pc-brush-config>`
+ */
+export class PcBrushConfig extends PcElement {
+  static override properties = {
+    ...PcElement.properties,
+    app: { attribute: false },
+    kind: { type: String },
+    config: { attribute: false },
+    editingId: { type: String },
+    draft: { state: true },
+    busy: { state: true },
+  };
+
+  static override styles = [
+    PcElement.styles,
+
+    unsafeCSS(styles),
+    unsafeCSS(theme),
+    unsafeCSS(iconToggle),
+    unsafeCSS(pill),
+  ];
+
+  declare app?: PaintCanvas;
+
+  /** Which tool's settings are configured */
+  declare kind: "brush" | "eraser";
+
+  /** The settings to start from */
+  declare config?: BrushConfig;
+
+  /** The ID of the user's own preset being edited, if any (shows "Delete preset…") */
+  declare editingId?: string;
+
+  /** The settings as changed in the window */
+  declare draft?: BrushConfig;
+
+  /** Whether a preset is being saved or deleted */
+  declare busy: boolean;
+
+  confirm: ConfirmFn = (message) => window.confirm(message);
+
+  prompt: PromptFn = (message, value) => window.prompt(message, value);
+
+  /** Turns files into brush shapes (replaceable for tests) */
+  readShape: (file: File) => Promise<ShapeImage> = readShapeImage;
+
+  /** Reads a brush shape from the clipboard (replaceable for tests) */
+  readClipboard: () => Promise<ShapeImage> = () => readClipboardShape();
+
+  private readonly onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") this.close();
+  };
+
+  constructor() {
+    super();
+    this.kind = "brush";
+    this.busy = false;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.onKeyDown);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.removeEventListener("keydown", this.onKeyDown);
+  }
+
+  protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
+    super.willUpdate(changed);
+    if (changed.has("config") && this.config)
+      this.draft = structuredClone(this.config);
+  }
+
+  /** Fire an event that crosses shadow DOM boundaries */
+  private emit(type: string, detail?: unknown): void {
+    this.dispatchEvent(
+      new CustomEvent(type, { detail, bubbles: true, composed: true }),
+    );
+  }
+
+  /** Change the draft settings (only shown, and so only changed, once there is a draft) */
+  private change(changes: Partial<BrushConfig>): void {
+    this.draft = { ...(this.draft as BrushConfig), ...changes };
+  }
+
+  /**
+   * Change the width; with constrained proportions, the height and its variation follow.
+   */
+  private changeWidth(changes: Partial<BrushConfig>): void {
+    const draft = this.draft as BrushConfig;
+    if (!draft.constrainProportions) {
+      this.change(changes);
+      return;
+    }
+    const ratio = (draft.height ?? draft.width ?? 1) / (draft.width ?? 1);
+    const width = changes.width ?? draft.width ?? 1;
+    this.change({
+      ...changes,
+      height: Math.max(1, Math.round(width * ratio)),
+      heightConfig: changes.widthConfig ?? draft.widthConfig,
+    });
+  }
+
+  /** Apply changes to a setting */
+  private changeParam(param: VaryingParam, changes: Partial<BrushConfig>) {
+    if (param === "width") this.changeWidth(changes);
+    else this.change(changes);
+  }
+
+  /**
+   * Close the window without applying anything.
+   */
+  close(): void {
+    this.emit("pc-close");
+  }
+
+  /**
+   * Apply the settings to the current tool.
+   */
+  save(): void {
+    if (this.draft) this.emit("pc-save", this.draft);
+  }
+
+  /** Use a shape, showing why if it can't be used */
+  private async useShape(read: () => Promise<ShapeImage>): Promise<void> {
+    try {
+      const shape = await read();
+      const width = this.draft?.width ?? shape.width;
+      this.change({
+        image: shape.image,
+        height: Math.max(1, Math.round((width * shape.height) / shape.width)),
+      });
+    } catch (error) {
+      this.emit("pc-toast", {
+        message: this.t(
+          (error instanceof ShapeImageError &&
+            SHAPE_ERROR_KEYS[error.message]) ||
+            "brushConfig.shapeFailed",
+        ),
+        kind: "error",
+      });
+    }
+  }
+
+  /**
+   * Save the settings as one of the user's presets, asking for its name, and before replacing one of theirs with the
+   * same name. The new preset is selected.
+   */
+  async addToPresets(): Promise<void> {
+    const app = this.app;
+    const draft = this.draft;
+    if (!app || !draft) return;
+    const name = this.prompt(
+      this.t("brushConfig.presetName"),
+      draft.name ?? "",
+    )?.trim();
+    if (!name) return;
+    const existing = app.customPresets.findOwn(
+      name,
+      app.authorHandle,
+      app.names.unknownAuthor,
+    );
+    if (existing && !this.confirm(this.t("presets.replaceConfirm", { name })))
+      return;
+    const preset = {
+      ...app.newPreset(draft, name),
+      ...(existing ? { id: existing.id } : {}),
+    };
+    this.busy = true;
+    try {
+      await app.customPresets.save(preset);
+      (this.kind === "eraser" ? app.eraser : app.brush).select(preset.id);
+      this.emit("pc-toast", {
+        message: this.t("presets.saved", { name }),
+        kind: "success",
+      });
+      this.close();
+    } catch {
+      this.emit("pc-toast", {
+        message: this.t("presets.saveFailed", { name }),
+        kind: "error",
+      });
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /**
+   * Delete the preset being edited, after confirming.
+   */
+  async deletePreset(): Promise<void> {
+    const app = this.app;
+    const id = this.editingId;
+    if (!app || !id) return;
+    const name = app.customPresets.get(id)?.name ?? "this preset";
+    if (!this.confirm(this.t("presets.deleteConfirm", { name }))) return;
+    this.busy = true;
+    try {
+      await app.customPresets.remove(id);
+      this.emit("pc-toast", {
+        message: this.t("presets.deleted", { name }),
+        kind: "success",
+      });
+      this.close();
+    } catch {
+      this.emit("pc-toast", {
+        message: this.t("presets.deleteFailed", { name }),
+        kind: "error",
+      });
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Render a number input */
+  private number(
+    className: string,
+    value: number,
+    limits: { min: number; max: number },
+    onChange: (value: number) => void,
+    disabled = false,
+  ) {
+    return html`<input
+      type="number"
+      class=${className}
+      min=${limits.min}
+      max=${limits.max}
+      ?disabled=${disabled || this.busy}
+      .value=${String(Math.round(value))}
+      @change=${(e: Event) => {
+        const next = numberValue(e);
+        if (next !== undefined) onChange(next);
+      }}
+    />`;
+  }
+
+  /** Render a range slider */
+  private slider(
+    className: string,
+    value: number,
+    limits: { min: number; max: number },
+    onChange: (value: number) => void,
+    disabled = false,
+  ) {
+    return html`<input
+      type="range"
+      class=${className}
+      min=${limits.min}
+      max=${limits.max}
+      ?disabled=${disabled || this.busy}
+      .value=${String(value)}
+      @input=${(e: Event) => onChange((e.target as HTMLInputElement).valueAsNumber)}
+    />`;
+  }
+
+  /** Render a setting that can vary: its value (or min and max), and its pressure, tilt and randomise icon toggles */
+  private renderParam(
+    draft: BrushConfig,
+    param: VaryingParam,
+    label: string,
+    disabled = false,
+  ) {
+    const range = readRange(draft, param);
+    const limits = PARAM_LIMITS[param];
+    const isOffset = param === "offsetX" || param === "offsetY";
+    const write = (values: { value?: number; min?: number; max?: number }) =>
+      this.changeParam(param, writeRange(draft, param, values));
+    const values = range.varies
+      ? html`${this.number(`${param} min`, range.min, limits, (min) => write({ min }), disabled)}
+        ${this.slider(`${param} min`, range.min, limits, (min) => write({ min }), disabled)}
+        ${this.slider(`${param} max`, range.max, limits, (max) => write({ max }), disabled)}
+        ${this.number(`${param} max`, range.max, limits, (max) => write({ max }), disabled)}`
+      : html`${this.number(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}
+        ${this.slider(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}`;
+    return html`<div class="row" data-param=${param}>
+      <span class="label">${label}</span>
+      ${values}
+      ${VARIATION_SOURCES.map(
+        (source) =>
+          html`<label
+            class="icon-toggle"
+            title=${this.t(SOURCE_LABELS[source])}
+          >
+            <input
+              type="checkbox"
+              class=${`${param} ${source}`}
+              aria-label=${this.t("brushConfig.variation", { param: label, source: this.t(SOURCE_LABELS[source]) })}
+              .checked=${range.sources[source]}
+              ?disabled=${disabled || this.busy}
+              @change=${(e: Event) =>
+                this.changeParam(
+                  param,
+                  toggleSource(
+                    draft,
+                    param,
+                    source,
+                    (e.target as HTMLInputElement).checked,
+                  ),
+                )}
+            />
+            ${iconLabel(this.iconUrl(SOURCE_ICONS[source]), this.t(SOURCE_LABELS[source]))}
+          </label>`,
+      )}
+    </div>`;
+  }
+
+  /** Render the shape and smoothing row */
+  private renderShape(draft: BrushConfig) {
+    const smoothing =
+      draft.smoothingType === SmoothingType.None ||
+      draft.smoothingType === undefined
+        ? SmoothingType.Linear
+        : draft.smoothingType;
+    return html`<div class="row shape-row">
+      <span class="label">${this.t("brushConfig.shape")}</span>
+      <span
+        class=${draft.image ? "shape-preview image" : "shape-preview"}
+        style=${styleMap({
+          maskImage:
+            typeof draft.image === "string"
+              ? `url("${draft.image}")`
+              : undefined,
+        })}
+      ></span>
+      <button
+        type="button"
+        class="pill upload"
+        ?disabled=${this.busy}
+        @click=${() =>
+          this.renderRoot
+            .querySelector<HTMLInputElement>("input.shape")
+            ?.click()}
+      >
+        ${this.t("brushConfig.upload")}
+      </button>
+      <!-- Chosen through "Upload" -->
+      <label class="visually-hidden">
+        Upload a shape (PNG)
+        <input
+          type="file"
+          class="shape"
+          tabindex="-1"
+          accept="image/png"
+          ?disabled=${this.busy}
+          @change=${(e: Event) => {
+            const input = e.target as HTMLInputElement;
+            const file = input.files?.[0];
+            input.value = "";
+            if (file) void this.useShape(() => this.readShape(file));
+          }}
+        />
+      </label>
+      <button
+        type="button"
+        class="icon-button paste"
+        title=${this.t("brushConfig.paste")}
+        ?disabled=${this.busy}
+        @click=${() => void this.useShape(this.readClipboard)}
+      >
+        ${iconLabel(this.iconUrl("clipboard"), this.t("brushConfig.paste"))}
+      </button>
+      <fieldset class="smoothing">
+        <legend>${this.t("brushConfig.smoothing")}</legend>
+        ${SMOOTHING_CHOICES.map(
+          (choice) =>
+            html`<label class="icon-toggle" title=${this.t(choice.label)}>
+              <input
+                type="radio"
+                name="smoothing"
+                .value=${String(choice.value)}
+                .checked=${smoothing === choice.value}
+                ?disabled=${this.busy}
+                @change=${() => this.change({ smoothingType: choice.value })}
+              />
+              ${iconLabel(this.iconUrl(choice.icon), this.t(choice.label))}
+            </label>`,
+        )}
+      </fieldset>
+    </div>`;
+  }
+
+  override render() {
+    const draft = this.draft;
+    if (!draft) return nothing;
+    const constrained = draft.constrainProportions ?? false;
+    const sampleLimits = { min: MIN_SAMPLE_RATE, max: MAX_SAMPLE_RATE };
+    const spacingLimits = { min: 0, max: MAX_SPACING };
+    return html`<div
+      role="dialog"
+      aria-modal="true"
+      aria-label=${this.t(this.kind === "eraser" ? "brushConfig.eraserTitle" : "brushConfig.brushTitle")}
+    >
+      <div class="row header">
+        <label>
+          ${this.t("brushConfig.name")}
+          <input
+            class="name"
+            .value=${draft.name ?? ""}
+            ?disabled=${this.busy}
+            @input=${(e: Event) =>
+              this.change({ name: (e.target as HTMLInputElement).value })}
+          />
+        </label>
+        <button
+          type="button"
+          class="close dismiss"
+          @click=${() => this.close()}
+        >
+          ${this.t("common.dismiss")}
+        </button>
+      </div>
+      <pc-brush-test .config=${draft} .tips=${this.app?.tips}></pc-brush-test>
+      ${this.renderShape(draft)}
+      ${this.renderParam(draft, "width", this.t("common.width"))}
+      <div class="row">
+        <span class="label"></span>
+        <label
+          class="icon-toggle"
+          title=${this.t("toolSettings.constrainProportions")}
+        >
+          <input
+            type="checkbox"
+            class="constrain"
+            .checked=${constrained}
+            ?disabled=${this.busy}
+            @change=${(e: Event) =>
+              this.change({
+                constrainProportions: (e.target as HTMLInputElement).checked,
+              })}
+          />
+          ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("toolSettings.constrainProportions"))}
+        </label>
+      </div>
+      ${this.renderParam(draft, "height", this.t("common.height"), constrained)}
+      ${this.renderParam(draft, "alpha", this.t("common.opacity"))}
+      ${this.renderParam(draft, "rotation", this.t("brushConfig.rotation"))}
+      ${this.renderParam(draft, "offsetX", this.t("brushConfig.offsetX"))}
+      ${this.renderParam(draft, "offsetY", this.t("brushConfig.offsetY"))}
+      <div class="row">
+        <span class="label">${this.t("brushConfig.sampleRate")}</span>
+        ${this.number("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
+        ${this.slider("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
+        <span class="label">${this.t("brushConfig.spacing")}</span>
+        ${this.number("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
+        ${this.slider("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
+      </div>
+      <label>
+        <input
+          type="checkbox"
+          class="snap"
+          .checked=${draft.snapToPixelGrid ?? false}
+          ?disabled=${this.busy}
+          @change=${(e: Event) =>
+            this.change({
+              snapToPixelGrid: (e.target as HTMLInputElement).checked,
+            })}
+        />
+        ${this.t("brushConfig.snapToPixelGrid")}
+      </label>
+      <div class="row">
+        ${
+          this.editingId
+            ? html`<button
+                type="button"
+                class="delete"
+                ?disabled=${this.busy}
+                @click=${() => void this.deletePreset()}
+              >
+                ${this.t("brushConfig.deletePreset")}
+              </button>`
+            : nothing
+        }
+        <button
+          type="button"
+          class="add affirmative"
+          ?disabled=${this.busy}
+          @click=${() => void this.addToPresets()}
+        >
+          ${this.t("brushConfig.addToPresets")}
+        </button>
+        <button
+          type="button"
+          class="save affirmative"
+          ?disabled=${this.busy}
+          @click=${() => this.save()}
+        >
+          ${this.t("common.save")}
+        </button>
+      </div>
+    </div>`;
+  }
+}
+
+defineElement("pc-brush-config", PcBrushConfig);

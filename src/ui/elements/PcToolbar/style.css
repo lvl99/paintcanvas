@@ -1,0 +1,46 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 50px;
+  height: 100%;
+  background: var(--pc-bar);
+  border-right: 1px solid var(--pc-border);
+}
+button,
+input {
+  width: 50px;
+  height: 50px;
+}
+/* Buttons separated by thin lines, as designed */
+button {
+  border: 0;
+  border-bottom: 1px solid var(--pc-border);
+  background: transparent;
+  font-size: 20px;
+}
+button:hover {
+  background: var(--pc-surface-hover);
+}
+/* The selected tool, or the open panel */
+button[aria-pressed="true"],
+button[aria-expanded="true"] {
+  background: var(--pc-surface-active);
+}
+button:disabled {
+  opacity: 0.4;
+  background: transparent;
+}
+button:focus-visible {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+  outline-offset: -3px;
+}
+img {
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: auto;
+}
+.spacer {
+  flex: 1;
+  border-bottom: 1px solid var(--pc-border);
+}

@@ -1,0 +1,71 @@
+:host {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pc-backdrop);
+}
+[role="dialog"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(560px, 95vw);
+  max-height: 95vh;
+  overflow: auto;
+  padding: 8px;
+  background: var(--pc-surface);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.row > .label {
+  width: 6em;
+}
+input[type="number"] {
+  width: 4.5em;
+}
+input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+}
+.shape-preview {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background: var(--pc-text);
+  border-radius: 50%;
+}
+.shape-preview.image {
+  border-radius: 0;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+}
+/* The name, with "Close" on the right */
+.header .close {
+  margin-left: auto;
+}
+/* The shape (preview, Upload and Paste) and the smoothing icons on one row */
+.shape-row {
+  flex-wrap: nowrap;
+}
+.shape-row .shape-preview {
+  flex: none;
+}
+fieldset.smoothing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+}
+fieldset.smoothing legend {
+  float: left;
+  margin-right: 4px;
+  padding: 0;
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PaintCanvas</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      paint-canvas {
+        height: 100%;
+      }
+      .menu {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 220px;
+        padding: 12px;
+        background: var(--pc-surface-raised);
+        color: var(--pc-text);
+        box-shadow: var(--pc-shadow);
+      }
+      #map {
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+      }
+      .narrow-note {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: var(--pc-accent);
+        color: white;
+        font:
+          12px Arial,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <paint-canvas right-modes="docked, rail@800, floating@400">
+      <pc-panel slot="right" icon="layers" label="Layers">
+        <pc-layers-menu id="layers"></pc-layers-menu>
+      </pc-panel>
+      <div slot="menu" class="menu">
+        <pc-input-settings id="settings"></pc-input-settings>
+        <label><input id="dark" type="checkbox" /> Dark theme</label>
+      </div>
+      <div slot="overlay">
+        <pc-canvas-map id="map"></pc-canvas-map>
+        <pc-match when="narrow">
+          <template><span class="narrow-note">Narrow layout</span></template>
+        </pc-match>
+      </div>
+    </paint-canvas>
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>

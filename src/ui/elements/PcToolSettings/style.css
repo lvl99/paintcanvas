@@ -1,0 +1,77 @@
+:host {
+  display: block;
+  background: var(--pc-bar);
+  border-bottom: 1px solid var(--pc-surface-active);
+}
+/* An open menu's button */
+button[aria-expanded="true"] {
+  background: var(--pc-surface-active);
+}
+/* Toggles that are on, and the selected option: purple, so it's obvious (the icon stays the same) */
+button[aria-pressed="true"],
+.icon-toggle:has(input:checked),
+.icon-toggle:has(input:checked):hover {
+  border-color: var(--pc-accent);
+  background: var(--pc-accent);
+  color: var(--pc-accent-text);
+}
+[role="toolbar"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 4px 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+input[type="number"] {
+  width: 4.5em;
+}
+.preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.shape-preview {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: var(--pc-text);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.shape-preview.image {
+  border-radius: 0;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+}
+/* Icon buttons (zoom in and out) */
+button img {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+/* Fields' names small and in capitals above them, as designed */
+[role="toolbar"] > label:not(.icon-toggle) {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+/* A unit after its field ("%", "°"), beside it rather than under it */
+[role="toolbar"] > label:has(.unit) {
+  position: relative;
+  margin-right: 14px;
+}
+.unit {
+  position: absolute;
+  right: -14px;
+  bottom: 3px;
+  font-size: 13px;
+}
+/* Focus pen mode sits on the right of every tool's settings */
+.focus-pen {
+  margin-left: auto;
+}
