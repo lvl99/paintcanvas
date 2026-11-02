@@ -12,13 +12,7 @@ Licensed under the [Apache License 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBU
 
 - [Installation](#installation)
 - [Quick start](#quick-start)
-- [The layout and its slots](#the-layout-and-its-slots)
-- [Building your own UI on the engine](#building-your-own-ui-on-the-engine)
-- [Messages and events](#messages-and-events)
-- [Saving and opening drawings](#saving-and-opening-drawings)
-- [Translations](#translations)
-- [Icons](#icons)
-- [Theming](#theming)
+- [Documentation](#documentation)
 - [Demo](#demo)
 - [Development](#development)
 
@@ -71,185 +65,17 @@ layout.app = new PaintCanvas({ width: 1200, height: 800, maxLayers: 10 });
 
 Importing `paintcanvas/ui` registers every element. To load less, import single elements, e.g. `paintcanvas/ui/elements/PaintCanvas`.
 
-## The layout and its slots
+## Documentation
 
-```
-┌──────────────────── header ────────────────────┐
-│      │           top (tool settings)   │       │
-│ left │                                 │ right │
-│(tool-│      center (canvas)            │       │
-│ bar) │      + overlay                  │       │
-│      │           bottom                │       │
-└──────────────────── footer ────────────────────┘
-```
+Guides and API pages are in [docs/](docs/), a [Docusaurus](https://docusaurus.io) site (`pnpm docs`). The guides:
 
-| Slot      | Default content                     |
-| --------- | ----------------------------------- |
-| `header`  | Nothing                             |
-| `left`    | `<pc-toolbar>`                      |
-| `top`     | `<pc-tool-settings>` for the tool   |
-| `center`  | `<pc-canvas>`                       |
-| `overlay` | `<pc-canvas-map>`, over the canvas  |
-| `bottom`  | Nothing                             |
-| `right`   | Nothing                             |
-| `footer`  | Nothing                             |
-| `menu`    | Opened by the toolbar's menu button |
-
-Put your own element in a slot to replace its default. Empty areas take no space.
-
-```html
-<paint-canvas menu-text="App" menu-label="App menu">
-  <pc-panel slot="right" icon="layers" label="Layers">
-    <pc-layers-menu></pc-layers-menu>
-  </pc-panel>
-  <nav slot="menu">…</nav>
-</paint-canvas>
-```
-
-### Side modes
-
-Each side (`left` and `right`) is shown in one of three modes, chosen by the layout's width:
-
-- `docked`: beside the canvas.
-- `rail`: a column of buttons, one per `<pc-panel>` in the side. Each button opens its panel over the canvas; Escape or a press outside closes it.
-- `floating`: over the canvas as a palette that starts collapsed to a button.
-
-Set the rules with `left-modes` and `right-modes`: a mode, then `mode@width` for layouts narrower than that width. The default is `"docked, rail@600"`.
-
-```html
-<paint-canvas right-modes="docked, rail@800, floating@400"></paint-canvas>
-```
-
-### Layout state
-
-The layout reflects its state as attributes, so you can style for it:
-
-| Attribute                   | Meaning                                                    |
-| --------------------------- | ---------------------------------------------------------- |
-| `narrow`                    | Narrower than `narrow-width` (default 600px)               |
-| `input="pen\|touch\|mouse"` | The latest kind of press                                   |
-| `ui-hidden`                 | The interface is hidden (Tab key), leaving only the canvas |
-| `left-mode`, `right-mode`   | Each side's current mode                                   |
-
-It also dispatches `pc-state-change` when the state changes. `<pc-match>` shows its template's contents only while a condition holds; conditions are `narrow`, `ui-hidden`, `input:<kind>`, `left:<mode>` and `right:<mode>`, each negatable with `!`:
-
-```html
-<pc-match when="input:touch">
-  <template><p>Pinch to zoom.</p></template>
-</pc-match>
-```
-
-In your own Lit elements, `LayoutStateController` gives the same state.
-
-### Keyboard shortcuts
-
-The layout handles keyboard shortcuts (tools, brush size, undo and redo, selection, clipboard, Tab to hide the interface, Cmd/Ctrl + S to save a PNG). Set `.shortcuts=${false}` to handle them yourself with `KeyboardShortcuts` (`paintcanvas/lib/classes/KeyboardShortcuts`), which dispatches `pc-shortcut` for actions it leaves to you.
-
-## Building your own UI on the engine
-
-Use the engine on its own and the drawing elements with it, or none of the UI at all:
-
-```ts
-import PaintCanvas from "paintcanvas/lib/classes/PaintCanvas";
-import { Tool } from "paintcanvas/lib/classes/PaintCanvas";
-import "paintcanvas/ui/elements/PcCanvas";
-
-const canvas = new PaintCanvas({ width: 1000, height: 800 });
-document.querySelector("pc-canvas").app = canvas;
-
-canvas.selectTool(Tool.Brush, { fromToolbar: true });
-canvas.setColour("#ff0000");
-canvas.addEventListener("change", () => render(canvas));
-document.querySelector("#undo").addEventListener("click", () => canvas.undo());
-```
-
-The engine dispatches `change` when its own state changes (tool, colour, panels). Its parts dispatch their own `change`: `canvas.layers`, `canvas.brush`, `canvas.selection`, `canvas.history` and `canvas.viewport`.
-
-Useful building blocks:
-
-- Drawing elements: `<pc-canvas>`, `<pc-canvas-map>`, `<pc-toolbar>`, `<pc-tool-settings>`, `<pc-brush-menu>`, `<pc-brush-config>`, `<pc-layers-menu>`, `<pc-layer-item>`, `<pc-input-settings>`.
-- Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>`, `<pc-slider>`, `<pc-context-menu>`, `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>`, `<pc-panel>`.
-- `PcElement`, the base class for your own elements: gives them `t()` for translated text, `iconUrl()` and the design tokens.
-
-Custom brush presets are kept in memory unless you pass a `presetStore` (e.g. backed by IndexedDB) in the options.
-
-## Messages and events
-
-PaintCanvas doesn't decide where drawings go. It sends messages; you carry them.
-
-```ts
-// Send: patches of the user's drawing shortly after it changes, plus each stroke if asked
-const stop = canvas.onMessage((message) => transport.send(message));
-canvas.startSending({ patches: true, strokes: false, delayMs: 200 });
-
-// Receive: draw another source's messages onto their own sheet, under or over the user's layers
-transport.onMessage((from, message) => canvas.receive(from, message));
-```
-
-| Message  | Holds                                                    |
-| -------- | -------------------------------------------------------- |
-| `patch`  | A changed area of pixels (PNG or RGBA, deflated, base64) |
-| `stroke` | A finished brush or eraser stroke: its points and brush  |
-| `undo`   | A step undone                                            |
-| `redo`   | A step redone                                            |
-
-Every message has a `protocol` version and a `type`. `receive` checks messages first and ignores invalid ones; `validateCanvasMessage` (`paintcanvas/lib/messages`) checks them yourself.
-
-Other useful methods:
-
-- `canvas.snapshot()`: a patch of the user's whole drawing, e.g. for someone who joins late.
-- `canvas.sendNow()`: send what changed straight away.
-- `canvas.external`: the sheets drawn from other sources; `clear()` removes them.
-- The `history` event: an undo or redo message was received.
-
-## Saving and opening drawings
-
-```ts
-const json = JSON.stringify(await canvas.exportDocument());
-await canvas.importDocument(JSON.parse(json)); // false if the document isn't valid
-```
-
-A document holds the canvas size, the user's layers and drawings from other sources, with PNG images.
-
-## Translations
-
-The UI's text comes from `translations` (`paintcanvas/lib/i18n`). Built-in locales: `en-US` (fallback), `en-GB`, `ja`, `ko`, `zh-Hans` and `zh-Hant`. Locale files load when first used, and the UI switches language without reloading.
-
-```ts
-import { translations } from "paintcanvas/lib/i18n";
-
-await translations.useDeviceLocale(); // the best match for the device's languages
-await translations.setLocale("ja");
-translations.addStrings("en-US", { "layout.tools": "Tools" }); // change or add text
-translations.t("presets.deleted", { name: "Sketch" }); // 'Deleted "Sketch"'
-```
-
-Strings missing from a locale come from `en-US`. The locale files are in `locales/` (exported as `paintcanvas/locales/*`).
-
-## Icons
-
-Replace any icon, or add your own, with an image URL (e.g. an SVG data URL):
-
-```ts
-import { icons } from "paintcanvas/ui";
-
-icons.register({ brush: "/my-icons/brush.svg", chat: "/my-icons/chat.svg" });
-```
-
-Elements update when icons change. `DEFAULT_ICONS` lists the names.
-
-## Theming
-
-The look comes from CSS custom properties named `--pc-*` (colours, spacing, fonts, shadows). Override any on `:root` or on an ancestor:
-
-```css
-:root {
-  --pc-accent: #0a7d55;
-  --pc-font: "Inter", sans-serif;
-}
-```
-
-For the dark theme, set `data-pc-theme="dark"` on an ancestor (or `"auto"` to follow the device), or `theme="dark"` on a single element. `LIGHT_TOKENS` and `DARK_TOKENS` list every token.
+- [The layout and its slots](docs/docs/layout.md)
+- [Building your own UI on the engine](docs/docs/engine.md)
+- [Messages and events](docs/docs/messages.md)
+- [Saving and opening drawings](docs/docs/documents.md)
+- [Translations](docs/docs/translations.md)
+- [Icons](docs/docs/icons.md)
+- [Theming](docs/docs/theming.md)
 
 ## Demo
 
@@ -277,6 +103,7 @@ Source layout:
 - `locales/`: UI text per locale.
 - `scripts/`: build scripts, e.g. the validator generator.
 - `demo/`: the demo pages.
+- `docs/`: the documentation site (its own pnpm package): guides in `docs/docs/`, and API pages TypeDoc generates from the source's comments.
 
 Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in jsdom; pixel tests (`*.browser.test.ts`) run in headless Chromium.
 
@@ -292,5 +119,6 @@ Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in j
 | `pnpm build`            | Builds the package into `dist/`: ES modules matching `src/`, with types           |
 | `pnpm build:validators` | Regenerates the validators after changing the preset, message or document schemas |
 | `pnpm demo`             | Starts the demo                                                                   |
+| `pnpm docs`             | Starts the documentation site (`pnpm docs:build` builds it into `docs/build/`)    |
 
 Each folder in `src/lib` and `src/ui` is published as its own import path (e.g. `src/lib/classes/PaintCanvas` as `paintcanvas/lib/classes/PaintCanvas`). `sideEffects` in `package.json` lists the UI modules that register elements when loaded (`src/ui/index.ts` and each `src/ui/elements/*/index.ts`), so bundlers keep them; add any other module that registers elements there.
