@@ -17,12 +17,28 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./ui": "./src/ui/index.ts",
-    "./ui/*": "./src/ui/*/index.ts",
-    "./lib/*": "./src/lib/*/index.ts",
-    "./testing/*": "./src/testing/*.ts",
-    "./locales/*": "./locales/*"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "default": "./dist/ui/index.js"
+    },
+    "./ui/*": {
+      "types": "./dist/ui/*/index.d.ts",
+      "default": "./dist/ui/*/index.js"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*/index.d.ts",
+      "default": "./dist/lib/*/index.js"
+    },
+    "./testing/*": {
+      "types": "./dist/testing/*.d.ts",
+      "default": "./dist/testing/*.js"
+    },
+    "./locales/*": "./locales/*",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -31,7 +47,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc -p . && vite build",
+    "build": "vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p .",
     "test": "vitest --run --project paintcanvas",
     "test:browser": "vitest --run --project paintcanvas-browser",
@@ -41,11 +57,18 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build:validators": "node scripts/build-validators.ts",
-    "demo": "vite demo --port 5190 --strictPort"
+    "demo": "vite demo --port 5190 --strictPort",
+    "prepack": "pnpm build"
   },
   "packageManager": "pnpm@12.10.1",
   "peerDependencies": {
-    "lit": "^3.3.3"
+    "lit": "^3.3.3",
+    "vitest": "^4.1.12"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
