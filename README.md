@@ -254,7 +254,7 @@ For the dark theme, set `data-pc-theme="dark"` on an ancestor (or `"auto"` to fo
 ## Demo
 
 ```sh
-pnpm --filter paintcanvas demo
+pnpm demo
 ```
 
 - http://localhost:5190/: a full-page PaintCanvas with a layers panel, a menu with input settings and a dark theme switch.
@@ -262,17 +262,35 @@ pnpm --filter paintcanvas demo
 
 ## Development
 
-Source layout:
-
-- `src/lib/`: engine code (brushes, rendering, selection, transform, classes, messages, document, i18n, image, presets, validation, utils). Uses relative imports only, so it works for npm consumers.
-- `src/ui/`: tokens, icons, base elements, drawing elements and the layout.
-- `src/testing/`: test helpers (fake and recording canvases).
-- `locales/`: UI text per locale.
-- `scripts/`: build scripts, e.g. the validator generator.
+You need [Node.js](https://nodejs.org) 22.18 or later (scripts run TypeScript directly) and [pnpm](https://pnpm.io) (`corepack enable` installs the version in `package.json`).
 
 ```sh
-pnpm --filter paintcanvas typecheck
-pnpm --filter paintcanvas build
-pnpm vitest --project paintcanvas --project paintcanvas-browser
-pnpm --filter paintcanvas build:validators   # after changing the brush preset or message schemas
+pnpm install
+pnpm exec playwright install chromium   # once, for the browser tests
 ```
+
+Source layout:
+
+- `src/lib/`: engine code (brushes, rendering, selection, transform, classes, messages, document, i18n, image, presets, validation, utils). No UI.
+- `src/ui/`: tokens, icons, base elements, drawing elements and the layout.
+- `src/testing/`: test helpers (fake and recording canvases), published as `paintcanvas/testing/*`. Some use Vitest.
+- `locales/`: UI text per locale.
+- `scripts/`: build scripts, e.g. the validator generator.
+- `demo/`: the demo pages.
+
+Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in jsdom; pixel tests (`*.browser.test.ts`) run in headless Chromium.
+
+| Command                 | Does                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| `pnpm typecheck`        | Checks types in the source, tests, scripts and demo                               |
+| `pnpm lint`             | Checks the code with ESLint                                                       |
+| `pnpm format`           | Formats files with Prettier (`pnpm format:check` only checks)                     |
+| `pnpm test`             | Runs the unit tests                                                               |
+| `pnpm test:browser`     | Runs the pixel tests in a real browser                                            |
+| `pnpm test:all`         | Runs both                                                                         |
+| `pnpm coverage`         | Runs both, with a coverage report in `coverage/`                                  |
+| `pnpm build`            | Builds the package into `dist/`: ES modules matching `src/`, with types           |
+| `pnpm build:validators` | Regenerates the validators after changing the preset, message or document schemas |
+| `pnpm demo`             | Starts the demo                                                                   |
+
+Each folder in `src/lib` and `src/ui` is published as its own import path (e.g. `src/lib/classes/PaintCanvas` as `paintcanvas/lib/classes/PaintCanvas`). `sideEffects` in `package.json` lists the UI modules that register elements when loaded (`src/ui/index.ts` and each `src/ui/elements/*/index.ts`), so bundlers keep them; add any other module that registers elements there.

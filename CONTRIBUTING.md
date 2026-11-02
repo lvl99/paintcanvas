@@ -28,16 +28,18 @@ Pull requests with commits that aren't signed off can't be merged. There is no C
 
 ## Making changes
 
+See [Development](README.md#development) in the README to set up the project.
+
 1. Open an issue first for large changes, so the approach can be agreed before you start.
 2. Keep pull requests small and focused on one change.
-3. Add or update unit tests for every change; tests sit in a `tests` folder beside the code, named `*.test.ts`.
+3. Add or update unit tests for every change; tests sit in a `tests` folder beside the code, named `*.test.ts` (or `*.browser.test.ts` for tests that draw pixels in a real browser).
 4. Run the checks before opening a pull request:
 
    ```sh
-   pnpm --filter paintcanvas typecheck
-   pnpm vitest --run --project paintcanvas --project paintcanvas-browser
+   pnpm typecheck
+   pnpm test:all
    pnpm lint
-   pnpm prettier --check .
+   pnpm format:check
    ```
 
 5. Add new UI text to every file in `locales/`. Mark machine-made translations in the pull request so a native speaker can review them.
