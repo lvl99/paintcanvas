@@ -15,7 +15,10 @@
   "author": "Matt Scheurich <matt@lvl99.com>",
   "license": "Apache-2.0",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/ui/index.js",
+    "./dist/ui/elements/*/index.js"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
