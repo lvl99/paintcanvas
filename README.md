@@ -80,11 +80,17 @@ Guides and API pages are in [docs/](docs/), a [Docusaurus](https://docusaurus.io
 ## Demo
 
 ```sh
-pnpm demo
+pnpm dev
 ```
+
+Starts a development server and opens the demo in your browser. It uses the source directly, so saving a change to `src/`, `demo/` or `locales/` reloads the page with the change straight away. (The whole page reloads because custom elements can't be redefined in a running page, so the drawing starts again.)
 
 - http://localhost:5190/: a full-page PaintCanvas with a layers panel, a menu with input settings and a dark theme switch.
 - http://localhost:5190/elements.html: the base elements.
+
+To try it with a pen or touch on another device (e.g. a tablet) on the same network, run `pnpm dev --host` and open the network address it prints. This makes the server reachable by anyone on that network.
+
+The UI text follows your device's languages: on an English (UK) device, edit `locales/en-GB.json` to see text changes.
 
 ## Development
 
@@ -118,7 +124,7 @@ Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in j
 | `pnpm coverage`         | Runs both, with a coverage report in `coverage/`                                  |
 | `pnpm build`            | Builds the package into `dist/`: ES modules matching `src/`, with types           |
 | `pnpm build:validators` | Regenerates the validators after changing the preset, message or document schemas |
-| `pnpm demo`             | Starts the demo                                                                   |
+| `pnpm dev`              | Starts the demo, reloading it when files change (`pnpm demo` does the same)       |
 | `pnpm docs`             | Starts the documentation site (`pnpm docs:build` builds it into `docs/build/`)    |
 
 Each folder in `src/lib` and `src/ui` is published as its own import path (e.g. `src/lib/classes/PaintCanvas` as `paintcanvas/lib/classes/PaintCanvas`). `sideEffects` in `package.json` lists the UI modules that register elements when loaded (`src/ui/index.ts` and each `src/ui/elements/*/index.ts`), so bundlers keep them; add any other module that registers elements there.
