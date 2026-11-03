@@ -6,8 +6,11 @@ import Translations, {
   languageName,
   matchLocale,
   translations,
+  type LocaleLoader,
 } from "..";
 import enUS from "../../../../locales/en-US.json";
+import fr from "../../../../locales/fr.json";
+import ja from "../../../../locales/ja.json";
 
 const LOCALE_FILES = ["en-GB", "fr", "ja", "ko", "zh-Hans", "zh-Hant"];
 
@@ -146,12 +149,23 @@ describe("Translations", () => {
     expect(t.locale).toBe("fast");
   });
 
-  it("should keep the current locale when one can't be loaded", async () => {
-    const t = new Translations({
-      locales: { broken: () => Promise.reject(new Error("Offline")) },
-    });
-    await expect(t.setLocale("broken")).rejects.toThrow("Offline");
+  it("should keep the current locale when one can't be loaded, and try again next time", async () => {
+    const loader = vi
+      .fn<LocaleLoader>()
+      .mockRejectedValueOnce(new Error("Offline"))
+      .mockResolvedValueOnce({ "paintCanvas.tool.brush": "Pinsel" });
+    const t = new Translations({ locales: { de: loader } });
+    await expect(t.setLocale("de")).rejects.toThrow("Offline");
     expect(t.locale).toBe("en-US");
+    await t.setLocale("de");
+    expect([t.locale, t.t("paintCanvas.tool.brush")]).toEqual(["de", "Pinsel"]);
+  });
+
+  it("should load a locale once when it's asked for again while loading", async () => {
+    const loader = vi.fn(async () => ({ "paintCanvas.tool.brush": "Pinsel" }));
+    const t = new Translations({ locales: { de: loader } });
+    await Promise.all([t.setLocale("de"), t.setLocale("de")]);
+    expect(loader).toHaveBeenCalledOnce();
   });
 
   it("should use the device's languages", async () => {
@@ -181,6 +195,76 @@ describe("Translations", () => {
     expect(listener).toHaveBeenCalledOnce();
     await t.setLocale("ja");
     expect(t.t("paintCanvas.tool.brush")).toBe("筆");
+    // PaintCanvas's own Japanese still loads
+    expect(t.t("paintCanvas.tool.eraser")).toBe(ja["paintCanvas.tool.eraser"]);
+  });
+
+  it("should add locales from another project, merged after PaintCanvas's so they can replace its text", async () => {
+    const t = new Translations();
+    const listener = vi.fn();
+    t.addEventListener("change", listener);
+    const appFrench = vi.fn(async () => ({
+      default: {
+        "liveCanvas.share": "Partager",
+        "paintCanvas.tool.brush": "Pinceau magique",
+      },
+    }));
+    await t.addLocales({
+      "en-US": async () => ({ "liveCanvas.share": "Share" }),
+      fr: appFrench,
+    });
+    expect([t.t("liveCanvas.share"), listener.mock.calls.length]).toEqual([
+      "Share",
+      1,
+    ]);
+    expect(appFrench).not.toHaveBeenCalled();
+    await t.setLocale("fr");
+    expect(t.t("liveCanvas.share")).toBe("Partager");
+    expect(t.t("paintCanvas.tool.brush")).toBe("Pinceau magique");
+    expect(t.t("paintCanvas.tool.eraser")).toBe(fr["paintCanvas.tool.eraser"]);
+    expect(t.locales).toEqual(Object.keys(BUILT_IN_LOCALES));
+  });
+
+  it("should let later sets of strings replace earlier ones, in the order they were added", async () => {
+    const t = new Translations();
+    t.addStrings("en-US", { "paintCanvas.tool.brush": "Strings" });
+    await t.addLocales({
+      "en-US": async () => ({ "paintCanvas.tool.brush": "Locales" }),
+    });
+    expect(t.t("paintCanvas.tool.brush")).toBe("Locales");
+    t.addStrings("en-US", { "paintCanvas.tool.brush": "Strings again" });
+    expect(t.t("paintCanvas.tool.brush")).toBe("Strings again");
+  });
+
+  it("should make an added project's own locales available, falling back for PaintCanvas's text", async () => {
+    const t = new Translations();
+    const listener = vi.fn();
+    t.addEventListener("change", listener);
+    await t.addLocales({ de: async () => ({ "liveCanvas.share": "Teilen" }) });
+    expect(listener).not.toHaveBeenCalled();
+    expect(t.locales).toContain("de");
+    await t.setLocale("de-AT");
+    expect([t.locale, t.t("liveCanvas.share")]).toEqual(["de", "Teilen"]);
+    expect(t.t("paintCanvas.tool.brush")).toBe("Brush");
+  });
+
+  it("should load locales added while switching before using the new locale", async () => {
+    const t = new Translations();
+    const switching = t.setLocale("fr");
+    const adding = t.addLocales({
+      fr: async () => ({ "liveCanvas.share": "Partager" }),
+    });
+    await switching;
+    expect([t.locale, t.t("liveCanvas.share")]).toEqual(["fr", "Partager"]);
+    await adding;
+  });
+
+  it("should reject adding locales when the locale in use can't be loaded", async () => {
+    const t = new Translations();
+    await expect(
+      t.addLocales({ "en-US": () => Promise.reject(new Error("Offline")) }),
+    ).rejects.toThrow("Offline");
+    expect(t.t("paintCanvas.tool.brush")).toBe("Brush");
   });
 
   it("should use the given fallback locale and strings", () => {
