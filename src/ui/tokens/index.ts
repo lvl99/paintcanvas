@@ -64,8 +64,8 @@ export const DARK_TOKENS: TokenValues = {
   accent: "#a463f0",
   "dismiss-text": "#ff5cb8",
   disabled: "#6b6b6b",
-  // The icons are black: show them white
-  "icon-filter": "invert(1)",
+  // Icons show as drawn (black lines, white fills), as in the light theme
+  "icon-filter": "none",
   focus: "#ffffff",
   "color-scheme": "dark",
 };
