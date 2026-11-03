@@ -150,6 +150,10 @@ pc-canvas-map {
   background: var(--pc-surface-raised);
   box-shadow: var(--pc-shadow);
 }
+/* When narrow, a layers menu fills the panel opened from the rail (a floating side sizes itself to its content) */
+:host([narrow]) .side[data-mode="rail"] ::slotted(pc-panel) {
+  --pc-layers-menu-width: 100%;
+}
 .side.left[data-mode="rail"] ::slotted(pc-panel[data-pc-open]) {
   left: 100%;
 }
