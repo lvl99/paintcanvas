@@ -42,6 +42,23 @@ export const rgbaByteLength = (coords: BoundingBox): number => {
 };
 
 /**
+ * A quick fingerprint of RGBA pixels (FNV-1a over each pixel), to tell whether they changed without keeping a copy of
+ * them. Different pixels give the same fingerprint only very rarely (about 1 in 4 billion).
+ *
+ * @example
+ * const print = pixelFingerprint(layer.context.getImageData(0, 0, layer.width, layer.height).data);
+ * if (print !== savedPrint) save(layer);
+ */
+export const pixelFingerprint = (rgba: Uint8ClampedArray): number => {
+  // Read 4 bytes (one pixel) at a time
+  const pixels = new Uint32Array(rgba.buffer, rgba.byteOffset, rgba.length / 4);
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < pixels.length; i++)
+    hash = Math.imul(hash ^ (pixels[i] as number), 0x01000193);
+  return hash >>> 0;
+};
+
+/**
  * Encode bytes as a base64 string.
  *
  * @example
