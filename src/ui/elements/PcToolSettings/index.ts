@@ -131,7 +131,7 @@ const numberValue = (event: Event): number | undefined => {
  *
  * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), width, height, constrain proportions, pressure, tilt, opacity and "Configure" (fires
  *   `pc-configure-brush` with the tool, "brush" or "eraser").
- * - Lassos: select all, invert selection, deselect.
+ * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
  *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform).
  * - Colour sample: point sample (the pixel under the pointer) or area sample (the average of a dragged rectangle).
@@ -379,6 +379,7 @@ export class PcToolSettings extends PcElement {
       <button
         type="button"
         class="pill invert"
+        ?disabled=${!app.selection.active}
         @click=${() => app.selection.invert()}
       >
         ${this.t("toolSettings.invertSelection")}
@@ -386,6 +387,7 @@ export class PcToolSettings extends PcElement {
       <button
         type="button"
         class="pill deselect"
+        ?disabled=${!app.selection.active}
         @click=${() => app.selection.clear()}
       >
         ${this.t("toolSettings.deselect")}

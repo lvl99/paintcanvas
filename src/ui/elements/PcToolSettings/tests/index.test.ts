@@ -220,18 +220,35 @@ describe("pc-tool-settings", () => {
     expect(app.panel).toBe(Panel.Eraser);
   });
 
-  it("should select all, invert and deselect for every lasso", async () => {
+  it("should select all for every lasso, and invert and deselect while there is a mask", async () => {
     const { app, element } = await setup(Tool.RectangleLasso);
     const selectAll = vi.spyOn(app.selection, "selectAll");
     const invert = vi.spyOn(app.selection, "invert");
     const clear = vi.spyOn(app.selection, "clear");
+    const button = (name: string) =>
+      query<HTMLButtonElement>(element, `button.${name}`);
+    const disabled = () =>
+      ["select-all", "invert", "deselect"].map((name) => button(name).disabled);
     query(element, "button.select-all").click();
-    query(element, "button.invert").click();
-    query(element, "button.deselect").click();
-    // Inverting without a mask (these canvases never have one) selects everything too
+    // Without a mask (these canvases never have one), there's nothing to invert or deselect
+    await element.updateComplete;
+    expect(disabled()).toEqual([false, true, true]);
+    button("invert").click();
+    button("deselect").click();
     expect(
       [selectAll, invert, clear].map((spy) => spy.mock.calls.length),
-    ).toEqual([2, 1, 1]);
+    ).toEqual([1, 0, 0]);
+    // With a mask
+    app.selection.active = true;
+    app.selection.dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    expect(disabled()).toEqual([false, false, false]);
+    button("invert").click();
+    expect(invert).toHaveBeenCalledOnce();
+    button("deselect").click();
+    expect(clear).toHaveBeenCalledOnce();
+    await element.updateComplete;
+    expect(disabled()).toEqual([false, true, true]);
     app.selectTool(Tool.FreeformLasso);
     await element.updateComplete;
     expect(query(element, "[role=toolbar]").getAttribute("aria-label")).toBe(
