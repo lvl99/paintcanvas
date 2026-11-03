@@ -1,7 +1,7 @@
 import { afterEach, describe, it, expect } from "vitest";
 import "..";
 import { CANCEL_CHOICE, type PcDialog } from "..";
-import { events, mount, shadow } from "../../../../testing/elements";
+import { events, mount, queryAll, shadow } from "../../../../testing/elements";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -44,6 +44,21 @@ describe("pc-dialog", () => {
     dialog.remove();
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(chosen).toHaveLength(2);
+  });
+
+  it("should style a choice as it asks", async () => {
+    const dialog = await mount<PcDialog>("pc-dialog", {
+      heading: "Clear layer",
+      choices: [
+        { value: "clear", label: "Clear" },
+        { value: "cancel", label: "Dismiss", variant: "dismiss" },
+      ],
+    });
+    expect(
+      queryAll(dialog, "pc-button").map((button) =>
+        button.getAttribute("variant"),
+      ),
+    ).toEqual(["accent", "dismiss"]);
   });
 
   it("should leave out an empty message", async () => {

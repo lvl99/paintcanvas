@@ -1,7 +1,7 @@
 import { css, html, nothing, type PropertyValues } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
 import "../PcButton";
-import type { PcButton } from "../PcButton";
+import type { ButtonVariant, PcButton } from "../PcButton";
 
 /** A button in a dialog */
 export interface DialogChoice {
@@ -10,6 +10,8 @@ export interface DialogChoice {
   label: string;
   /** Shown as cancelling (pink), e.g. for a choice that removes something */
   cancelling?: boolean;
+  /** The button's style instead (e.g. `dismiss`: pink text without a background) */
+  variant?: ButtonVariant;
 }
 
 /** What `pc-choose` gives when the dialog is dismissed with Escape */
@@ -17,7 +19,8 @@ export const CANCEL_CHOICE = "cancel";
 
 /**
  * A modal window asking the user to choose, over a dimmed backdrop, with a heading, a message, any content of its own,
- * and its choices, each on its own row (the cancel choice and those marked `cancelling` in pink, the others purple).
+ * and its choices, each on its own row (the cancel choice and those marked `cancelling` in pink, the others purple,
+ * unless a choice gives its own `variant`).
  * Focus moves to the first choice when it opens. Fires `pc-choose` with the chosen value (`cancel` for Escape, pressed
  * anywhere while it's open).
  *
@@ -133,7 +136,7 @@ export class PcDialog extends PcElement {
         ${this.choices.map(
           (choice) =>
             html`<pc-button
-              variant=${choice.value === CANCEL_CHOICE || choice.cancelling ? "cancel" : "accent"}
+              variant=${choice.variant ?? (choice.value === CANCEL_CHOICE || choice.cancelling ? "cancel" : "accent")}
               data-value=${choice.value}
               @click=${() => this.choose(choice.value)}
               >${choice.label}</pc-button
