@@ -13,6 +13,7 @@ import {
 } from "..";
 import { CHECKER_DARK } from "../../../../lib/rendering/checkerboard";
 import { createRecordingContext } from "../../../../testing/recordingContext";
+import type Layer from "../../../../lib/classes/Layer";
 import { BlendMode } from "../../../../lib/classes/Layer";
 import {
   mount,
@@ -179,7 +180,7 @@ describe("pc-layer-item", () => {
         ]),
       ).toEqual([
         [button, "accent"],
-        ["Dismiss", "cancel"],
+        ["Dismiss", "dismiss"],
       ]);
       // Dismissing (or Escape) changes nothing
       query(dialog()!, `pc-button[data-value="cancel"]`).click();
@@ -244,6 +245,47 @@ describe("pc-layer-item", () => {
     expect(merge).toHaveBeenCalledWith(layer.id);
     expect(stack.layers).toHaveLength(1);
     expect(dialog()).toBeUndefined();
+  });
+
+  it("should only offer moves the layer can make: not up from the top, nor down or merging from the bottom", async () => {
+    const app = createApp();
+    const stack = app.layers;
+    stack.create();
+    stack.create();
+    const disabled = async (layer: (typeof stack.layers)[number]) => {
+      const element = await mount<PcLayerItem>("pc-layer-item", {
+        stack,
+        layer,
+      });
+      query(element, ".handle").dispatchEvent(
+        new MouseEvent("contextmenu", { cancelable: true }),
+      );
+      await element.updateComplete;
+      const actions = queryAll<HTMLButtonElement>(element, "menu [data-action]")
+        .filter((button) => button.disabled)
+        .map((button) => button.dataset.action);
+      element.remove();
+      return actions;
+    };
+    const [top, middle, bottom] = stack.layers as [Layer, Layer, Layer];
+    expect(await disabled(top)).toEqual(["up", "top"]);
+    expect(await disabled(middle)).toEqual([]);
+    expect(await disabled(bottom)).toEqual(["merge", "down", "bottom"]);
+    // Asked from code anyway: nothing happens
+    const element = await mount<PcLayerItem>("pc-layer-item", {
+      stack,
+      layer: top,
+    });
+    const order = stack.layers.map((layer) => layer.id);
+    element.runAction("up");
+    element.runAction("top");
+    element.layer = bottom;
+    element.runAction("down");
+    element.runAction("bottom");
+    expect(stack.layers.map((layer) => layer.id)).toEqual(order);
+    expect(element.canRun("duplicate")).toBe(true);
+    element.stack = undefined;
+    expect(element.canRun("duplicate")).toBe(false);
   });
 
   it("should not offer to merge down the bottom layer", async () => {

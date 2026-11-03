@@ -68,7 +68,7 @@ export const CONFIRMATIONS: Readonly<
     message: "layers.mergeDownConfirm",
     choices: [
       { value: "merge", label: "layers.mergeLayer" },
-      { value: CANCEL_CHOICE, label: "common.dismiss" },
+      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
     ],
   },
   clear: {
@@ -76,7 +76,7 @@ export const CONFIRMATIONS: Readonly<
     message: "layers.clearConfirm",
     choices: [
       { value: "clear", label: "common.clear" },
-      { value: CANCEL_CHOICE, label: "common.dismiss" },
+      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
     ],
   },
   delete: {
@@ -84,7 +84,7 @@ export const CONFIRMATIONS: Readonly<
     message: "layers.deleteConfirm",
     choices: [
       { value: "delete", label: "common.delete" },
-      { value: CANCEL_CHOICE, label: "common.dismiss" },
+      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
     ],
   },
 };
@@ -224,7 +224,7 @@ export class PcLayerItem extends PcElement {
   runAction(action: LayerAction): void {
     const { stack, layer } = this;
     this.menuOpen = false;
-    if (!stack || !layer) return;
+    if (!stack || !layer || !this.canRun(action)) return;
     switch (action) {
       case "mask":
         this.requestMask(layer, { shiftKey: false, altKey: false });
@@ -233,13 +233,9 @@ export class PcLayerItem extends PcElement {
         stack.duplicate(layer.id);
         break;
       case "merge":
-        if (stack.canMergeDown(layer.id)) this.confirming = action;
-        break;
       case "clear":
-        this.confirming = action;
-        break;
       case "delete":
-        if (stack.layers.length > 1) this.confirming = action;
+        this.confirming = action;
         break;
       case "up":
         stack.moveUp(layer.id);
@@ -253,6 +249,31 @@ export class PcLayerItem extends PcElement {
       case "bottom":
         stack.moveToBottom(layer.id);
         break;
+    }
+  }
+
+  /**
+   * Whether a context menu action can be done to the layer now: not merging down the bottom layer (or with a hidden
+   * layer), deleting the only layer, or moving a layer further up or down than it can go.
+   */
+  canRun(action: LayerAction): boolean {
+    const { stack, layer } = this;
+    if (!stack || !layer) return false;
+    const index = stack.indexOf(layer.id);
+    const last = stack.layers.length - 1;
+    switch (action) {
+      case "merge":
+        return stack.canMergeDown(layer.id);
+      case "delete":
+        return last > 0;
+      case "up":
+      case "top":
+        return index > 0;
+      case "down":
+      case "bottom":
+        return index < last;
+      default:
+        return true;
     }
   }
 
@@ -621,10 +642,7 @@ export class PcLayerItem extends PcElement {
                     <button
                       type="button"
                       data-action=${action}
-                      ?disabled=${
-                        (action === "merge" && !stack.canMergeDown(layer.id)) ||
-                        (action === "delete" && stack.layers.length === 1)
-                      }
+                      ?disabled=${!this.canRun(action)}
                       @click=${() => this.runAction(action)}
                     >
                       ${this.t(label)}
