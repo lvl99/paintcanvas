@@ -2,6 +2,12 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.3.1 (2026-11-03)
+
+### Fixed
+
+- Elements register the elements they use again: the build removed imports kept only to register them (e.g. `pc-dialog` didn't register `pc-button`), and `@lvl99dotcom/paintcanvas/ui` didn't register the drawing elements, so `<paint-canvas>` on its own didn't work.
+
 ## 0.3.0 (2026-11-03)
 
 Other projects can now use PaintCanvas's translations for their own text.
