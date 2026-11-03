@@ -76,3 +76,11 @@ In your own Lit elements, `LayoutStateController` gives the same state.
 ## Keyboard shortcuts
 
 The layout handles keyboard shortcuts (tools, brush size, undo and redo, selection, clipboard, Tab to hide the interface, Cmd/Ctrl + S to save a PNG). Set `.shortcuts=${false}` to handle them yourself with `KeyboardShortcuts` (`paintcanvas/lib/classes/KeyboardShortcuts`), which dispatches `pc-shortcut` for actions it leaves to you.
+
+## Keeping the drawing
+
+With a `store` name, the layout keeps the user's layers in the browser, so the drawing survives reloading the page. While another window is drawing on the same name, the layout is blocked by a message offering to draw here instead. See [Saving and opening drawings](documents.md#keeping-the-drawing-in-the-browser).
+
+```html
+<paint-canvas store="my-drawing"></paint-canvas>
+```

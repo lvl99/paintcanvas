@@ -2,7 +2,7 @@
 
 Open-source painting engine and renderer for the browser, with optional UI.
 
-- **Engine** (`paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI and no storage.
+- **Engine** (`paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI, and nothing is stored unless you ask (e.g. keeping the drawing in the browser).
 - **Messages**: the engine sends and receives small drawing messages (patches of pixels, strokes, undo and redo), so you can share a drawing over any transport you choose.
 - **UI** (`paintcanvas/ui`), optional: Lit web components, from buttons and sliders up to a full `<paint-canvas>` layout with slots for your own parts.
 
@@ -54,6 +54,8 @@ A full-page drawing app:
 </html>
 ```
 
+To keep the drawing through page reloads, give it a name to store it under in the browser: `<paint-canvas store="my-drawing">`.
+
 `<paint-canvas>` creates its own engine (a 2000 × 2000 pixel canvas). To choose the size or other options, give it one:
 
 ```ts
@@ -85,7 +87,7 @@ pnpm dev
 
 Starts a development server and opens the demo in your browser. It uses the source directly, so saving a change to `src/`, `demo/` or `locales/` reloads the page with the change straight away. (The whole page reloads because custom elements can't be redefined in a running page, so the drawing starts again.)
 
-- http://localhost:5190/: a full-page PaintCanvas with a layers panel, a menu with input settings and a dark theme switch.
+- http://localhost:5190/: a full-page PaintCanvas with a layers panel, a menu with input settings, a dark theme switch and a "New drawing" button. The drawing is kept in the browser, so it survives reloads.
 - http://localhost:5190/elements.html: the base elements.
 
 To try it with a pen or touch on another device (e.g. a tablet) on the same network, run `pnpm dev --host` and open the network address it prints. This makes the server reachable by anyone on that network.

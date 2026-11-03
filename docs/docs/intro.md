@@ -8,7 +8,7 @@ slug: /
 
 Open-source painting engine and renderer for the browser, with optional UI. Draw with a mouse, touch, or a pen or stylus with pressure and tilt.
 
-- **Engine** (`paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI and no storage.
+- **Engine** (`paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI, and nothing is stored unless you ask (e.g. keeping the drawing in the browser).
 - **Messages**: the engine sends and receives small drawing messages (patches of pixels, strokes, undo and redo), so you can share a drawing over any transport you choose.
 - **UI** (`paintcanvas/ui`), optional: Lit web components, from buttons and sliders up to a full `<paint-canvas>` layout with slots for your own parts.
 
@@ -69,7 +69,7 @@ Each folder of the engine and UI has its own import path, matching the [API](/ap
 - [Layout and slots](layout.md): the `<paint-canvas>` layout, its slots, side modes, state and keyboard shortcuts.
 - [Using the engine](engine.md): build your own UI on the engine.
 - [Messages and events](messages.md): share a drawing over your own transport.
-- [Saving and opening drawings](documents.md)
+- [Saving and opening drawings](documents.md): as files, and kept in the browser.
 - [Translations](translations.md)
 - [Icons](icons.md)
 - [Theming](theming.md)
