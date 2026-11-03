@@ -2,6 +2,26 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.3.0 (2026-11-03)
+
+Other projects can now use PaintCanvas's translations for their own text.
+
+### Fixed
+
+- `translations.addStrings` for a locale that hadn't loaded yet no longer stops PaintCanvas's own strings for that locale from loading.
+
+### Added
+
+- `translations.addLocales(loaders)` adds an app's own locales. A locale's strings from every set load together when it's chosen and are merged in the order they were added, PaintCanvas's first, so an app can add its own text and replace PaintCanvas's. Locales only the app has become available too.
+- `languageName(locale)` (`@lvl99dotcom/paintcanvas/lib/i18n`) names a locale in its own language, using `Intl.DisplayNames`.
+- The demo translates its own text with `addLocales` (`demo/locales/`).
+
+### Changed
+
+- **Breaking:** every PaintCanvas translation key starts with `paintCanvas.` (e.g. `paintCanvas.tool.brush`). Add the prefix to keys passed to `addStrings` or `t()`. Apps should prefix their own keys too (e.g. `liveCanvas.`).
+- `addStrings` adds its strings after any added before, in the same order as `addLocales`.
+- Language pickers name languages with `languageName` instead of `language.*` keys, which are removed, and mark each option with its `lang`. The Chinese names are now "中文（简体）" and "中文（繁體）".
+
 ## 0.2.0 (2026-11-03)
 
 The first release of PaintCanvas as its own package, `@lvl99dotcom/paintcanvas`, separate from LiveCanvas.
