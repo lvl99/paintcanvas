@@ -179,6 +179,27 @@ describe("LayerAutosave", () => {
     expect(encode).toHaveBeenCalledTimes(3);
   });
 
+  it("should know how much its layer images take in the store, telling listeners when it changes", async () => {
+    const { store } = savedStore();
+    const { canvas, autosave } = setup(store);
+    const changes = events(autosave, "change");
+    expect(autosave.storedBytes).toBe(0);
+    await settle();
+    // Restored: "ink" and "sketch"
+    expect(autosave.storedBytes).toBe(9);
+    const before = changes.length;
+    paint(canvas.layers.get("top"), 123);
+    canvas.layers.markChanged("top");
+    await settle();
+    // "123" and "sketch"
+    expect(autosave.storedBytes).toBe(9);
+    expect(changes).toHaveLength(before);
+    canvas.layers.remove("bottom");
+    await settle();
+    expect(autosave.storedBytes).toBe(3);
+    expect(changes).toHaveLength(before + 1);
+  });
+
   it("should wait for the layers to stop changing and for drawing to pause before saving", async () => {
     const { canvas, store } = setup(undefined, { delayMs: SAVE_DELAY_MS });
     await settle();

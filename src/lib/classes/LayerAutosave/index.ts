@@ -97,8 +97,8 @@ const isComplete = (
  * the other window, which then waits instead. Without Web Locks, every window draws.
  *
  * If the saved drawing can't be loaded or restored, autosaving stops (`stopped`) so the drawing isn't saved over; clear
- * the store to start again. Dispatches `change` when its state changes, and `error` (detail: the error) when loading or
- * saving fails. Undo history isn't saved.
+ * the store to start again. Dispatches `change` when its state or `storedBytes` changes, and `error` (detail: the
+ * error) when loading or saving fails. Undo history isn't saved.
  *
  * @example
  * const autosave = new LayerAutosave(canvas, new IndexedDbLayerStore("my-drawing"));
@@ -131,6 +131,9 @@ export default class LayerAutosave extends EventTarget {
 
   /** Fingerprints of each layer's pixels as last saved, by layer ID */
   private prints = new Map<string, number>();
+
+  /** Size in bytes of each layer's image as last saved or restored, by layer ID */
+  private sizes = new Map<string, number>();
 
   /** Layers whose pixels changed since the last save */
   private changed = new Set<string>();
@@ -195,6 +198,13 @@ export default class LayerAutosave extends EventTarget {
   /** Where autosaving is up to (see `AutosaveState`) */
   get state(): AutosaveState {
     return this.currentState;
+  }
+
+  /** Total size in bytes of the layer images kept in the store (as last saved or restored) */
+  get storedBytes(): number {
+    let total = 0;
+    for (const size of this.sizes.values()) total += size;
+    return total;
   }
 
   /** Name of the Web Lock that only one window holds per drawing */
@@ -341,6 +351,12 @@ export default class LayerAutosave extends EventTarget {
       decoded,
       drawing.activeLayer,
     );
+    this.sizes = new Map(
+      drawing.layers.map((layer) => [
+        layer.id,
+        (images.get(layer.id) as Blob).size,
+      ]),
+    );
     return true;
   }
 
@@ -392,12 +408,28 @@ export default class LayerAutosave extends EventTarget {
         if (!kept.has(id)) this.prints.delete(id);
       for (const [id, print] of prints) this.prints.set(id, print);
       this.error = undefined;
+      this.rememberSizes(kept, images);
     } catch (error) {
       // Check the same layers again with the next save
       for (const id of [...changed, ...prints.keys()]) this.changed.add(id);
       this.checkAll ||= checkAll;
       this.fail(error);
     }
+  }
+
+  /**
+   * Remember the sizes of the layer images just saved, forgetting layers that are gone, and tell listeners if the total
+   * changed.
+   */
+  private rememberSizes(
+    kept: ReadonlySet<string>,
+    images: ReadonlyMap<string, Blob>,
+  ): void {
+    const before = this.storedBytes;
+    for (const id of this.sizes.keys())
+      if (!kept.has(id)) this.sizes.delete(id);
+    for (const [id, image] of images) this.sizes.set(id, image.size);
+    if (this.storedBytes !== before) this.dispatchEvent(new Event("change"));
   }
 
   /**

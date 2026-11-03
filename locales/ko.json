@@ -172,5 +172,10 @@
   "autosave.elsewhere": "이미 다른 창에서 그리고 있습니다",
   "autosave.elsewhereMessage": "이 그림은 다른 창이나 탭에서 열려 있으며, 한 번에 한 곳에서만 그릴 수 있습니다. ‘여기서 그리기’를 선택하면 이 창에서 계속 그립니다(다른 창은 멈춥니다).",
   "autosave.takeOver": "여기서 그리기",
-  "autosave.failed": "이 브라우저에 그림을 저장하지 못했습니다"
+  "autosave.failed": "이 브라우저에 그림을 저장하지 못했습니다",
+  "stats.label": "캔버스 정보",
+  "stats.size": "캔버스: {width} × {height} px",
+  "stats.zoom": "확대/축소: {zoom}",
+  "stats.colour": "색상: {colour}",
+  "stats.stored": "저장됨: {size}"
 }

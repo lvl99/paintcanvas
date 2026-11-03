@@ -42,6 +42,7 @@ import "../PcCanvasMap";
 import "../PcBrushMenu";
 import "../PcLayersMenu";
 import "../PcBrushConfig";
+import "../PcStats";
 import "../PcDialog";
 import type { DialogChoice } from "../PcDialog";
 
@@ -62,13 +63,14 @@ const FOCUSABLE =
  * A ready-made painting app: the drawing elements arranged around the canvas, sized to its container (not the
  * window), with slots to add or replace content:
  *
- * - `header` and `footer`: across the top and bottom (empty by default)
+ * - `header`: across the top (empty by default)
  * - `left`: `<pc-toolbar>` by default
  * - `top`: `<pc-tool-settings>` (for tools that have settings) by default
  * - `right`: empty by default (e.g. a `<pc-panel>` with a layers menu or chat)
  * - `center`: `<pc-canvas>` by default
  * - `overlay`: drawn over the canvas; `<pc-canvas-map>` by default
  * - `bottom`: under the canvas (empty by default)
+ * - `footer`: across the bottom; `<pc-stats>` by default
  * - `menu`: the app menu the toolbar's menu button opens (the button shows only with a menu)
  *
  * Content given for a slot replaces its default; an empty element clears it. Empty slots take no space. Hiding the
@@ -762,7 +764,7 @@ export class PaintCanvasElement extends PcElement {
       </div>
       ${this.renderSide("right", app, blocked)}
       <footer part="footer" ?inert=${blocked}>
-        <slot name="footer"></slot>
+        ${this.slotWithDefault("footer", html`<pc-stats .app=${app}></pc-stats>`)}
       </footer>
       ${this.renderConfig(app)} ${blocked ? this.renderBlocked(app) : nothing}`;
   }

@@ -172,5 +172,10 @@
   "autosave.elsewhere": "すでに別のウィンドウで描画しています",
   "autosave.elsewhereMessage": "この絵は別のウィンドウまたはタブで開かれていて、一度に描画できるのは1つだけです。「ここで描画する」を選ぶと、このウィンドウで続けられます（もう一方は停止します）。",
   "autosave.takeOver": "ここで描画する",
-  "autosave.failed": "このブラウザに絵を保存できませんでした"
+  "autosave.failed": "このブラウザに絵を保存できませんでした",
+  "stats.label": "キャンバスの詳細",
+  "stats.size": "キャンバス: {width} × {height} px",
+  "stats.zoom": "ズーム: {zoom}",
+  "stats.colour": "色: {colour}",
+  "stats.stored": "保存済み: {size}"
 }

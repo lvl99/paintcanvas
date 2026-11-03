@@ -30,6 +30,7 @@ export {
   type InputSettingsLike,
 } from "./elements/PcInputSettings";
 export { PcMatch } from "./elements/PcMatch";
+export { PcStats, formatBytes } from "./elements/PcStats";
 export { PaintCanvasElement } from "./elements/PaintCanvas";
 export {
   DEFAULT_NARROW_WIDTH,

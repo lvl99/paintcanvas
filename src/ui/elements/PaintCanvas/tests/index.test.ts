@@ -16,6 +16,7 @@ import {
   AutosaveState,
 } from "../../../../lib/classes/LayerAutosave";
 import type { PcDialog } from "../../PcDialog";
+import type { PcStats } from "../../PcStats";
 import { createRecordingCanvasFactory } from "../../../../testing/recordingCanvas";
 import {
   events,
@@ -75,6 +76,14 @@ describe("paint-canvas", () => {
     app.selectTool(Tool.Pan);
     await layout.updateComplete;
     expect(queryAll(layout, ".top pc-tool-settings")).toHaveLength(0);
+  });
+
+  it("should describe the canvas in the footer unless given other content", async () => {
+    const { layout, app } = await setup();
+    expect(query<PcStats>(layout, "footer pc-stats").app).toBe(app);
+    layout.remove();
+    const given = await setup('<p slot="footer">Mine</p>');
+    expect(queryAll(given.layout, "pc-stats")).toHaveLength(0);
   });
 
   it("should replace defaults with given content, and pass its menu text to the toolbar", async () => {

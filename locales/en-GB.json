@@ -172,5 +172,10 @@
   "autosave.elsewhere": "You are already drawing in another window",
   "autosave.elsewhereMessage": "This drawing is open in another window or tab, and only one can draw on it at a time. Choose \"Draw here instead\" to continue in this window; the other one stops.",
   "autosave.takeOver": "Draw here instead",
-  "autosave.failed": "Couldn't keep the drawing in this browser"
+  "autosave.failed": "Couldn't keep the drawing in this browser",
+  "stats.label": "Canvas details",
+  "stats.size": "Canvas: {width} × {height} px",
+  "stats.zoom": "Zoom: {zoom}",
+  "stats.colour": "Colour: {colour}",
+  "stats.stored": "Stored: {size}"
 }
