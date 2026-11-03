@@ -21,10 +21,14 @@ button {
 button:hover {
   background: var(--pc-surface-hover);
 }
-/* The selected tool, or the open panel */
-button[aria-pressed="true"],
+/* The open panel */
 button[aria-expanded="true"] {
   background: var(--pc-surface-active);
+}
+/* The selected tool, like other pressed icon buttons */
+button[aria-pressed="true"],
+button[aria-pressed="true"]:hover {
+  background: var(--pc-accent);
 }
 button:disabled {
   opacity: 0.4;
