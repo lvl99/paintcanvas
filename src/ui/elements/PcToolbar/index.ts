@@ -59,9 +59,9 @@ export const TOOLBAR_TOOLS: readonly {
 
 /**
  * Vertical toolbar: current colour, tools, undo and redo (disabled when there is nothing to undo or redo), layers menu
- * toggle and app menu toggle. Tools, undo, redo and the layers toggle show their icons; undo and redo have their
- * shortcuts (⌘ on Apple devices, ^ elsewhere) in their tooltips. The app menu button shows `menuText` and is named
- * `menuLabel` for screen readers.
+ * toggle (unless `layers` is false) and app menu toggle. Tools, undo, redo and the layers toggle show their icons; undo
+ * and redo have their shortcuts (⌘ on Apple devices, ^ elsewhere) in their tooltips. The app menu button shows
+ * `menuText` and is named `menuLabel` for screen readers.
  *
  * @example
  * html`<pc-toolbar .app=${app} menuText="App" menuLabel="App menu"></pc-toolbar>`
@@ -73,6 +73,7 @@ export class PcToolbar extends PcElement {
     menuText: { type: String },
     menuLabel: { type: String },
     menu: { type: Boolean },
+    layers: { type: Boolean },
   };
 
   static override styles = [
@@ -86,6 +87,9 @@ export class PcToolbar extends PcElement {
   /** Whether to show the app menu button (default true) */
   declare menu: boolean;
 
+  /** Whether to show the layers menu button (default true; e.g. false when the layers are shown elsewhere) */
+  declare layers: boolean;
+
   /** What the app menu button shows (default ☰) */
   declare menuText: string;
 
@@ -96,6 +100,7 @@ export class PcToolbar extends PcElement {
     super();
     this.menuText = "☰";
     this.menu = true;
+    this.layers = true;
   }
 
   private changes = new ChangeController(this, () => [
@@ -171,16 +176,20 @@ export class PcToolbar extends PcElement {
       >
         <img src=${this.iconUrl("redo")} alt="" />
       </button>
-      <button
-        type="button"
-        data-panel=${Panel.Layers}
-        title=${this.t("toolbar.layers")}
-        aria-label=${this.t("toolbar.layers")}
-        aria-expanded=${app.panel === Panel.Layers}
-        @click=${() => app.togglePanel(Panel.Layers)}
-      >
-        <img src=${this.iconUrl("layers")} alt="" />
-      </button>
+      ${
+        this.layers
+          ? html`<button
+              type="button"
+              data-panel=${Panel.Layers}
+              title=${this.t("toolbar.layers")}
+              aria-label=${this.t("toolbar.layers")}
+              aria-expanded=${app.panel === Panel.Layers}
+              @click=${() => app.togglePanel(Panel.Layers)}
+            >
+              <img src=${this.iconUrl("layers")} alt="" />
+            </button>`
+          : nothing
+      }
       ${
         this.menu
           ? html`<button

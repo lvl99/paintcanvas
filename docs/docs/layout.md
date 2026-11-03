@@ -27,7 +27,7 @@ sidebar_label: Layout and slots
 | `footer`  | Nothing                             |
 | `menu`    | Opened by the toolbar's menu button |
 
-Put your own element in a slot to replace its default. Empty areas take no space.
+Put your own element in a slot to replace its default. Empty areas take no space. A `<pc-layers-menu>` in the `left` or `right` slot (e.g. in a `<pc-panel>`, as below) replaces the toolbar's layers button. On its own, `<pc-toolbar>` leaves the button out with `.layers=${false}`.
 
 ```html
 <paint-canvas menu-text="App" menu-label="App menu">

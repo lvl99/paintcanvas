@@ -93,6 +93,31 @@ describe("paint-canvas", () => {
     });
   });
 
+  it("should leave out the toolbar's layers menu when a side has a layers menu", async () => {
+    const layersPanel = (side: string) =>
+      `<pc-panel slot="${side}" icon="layers" label="Layers"><pc-layers-menu></pc-layers-menu></pc-panel>`;
+    const { layout, app } = await setup(layersPanel("right"));
+    expect(query<PcToolbar>(layout, "pc-toolbar").layers).toBe(false);
+    app.togglePanel(Panel.Layers);
+    await layout.updateComplete;
+    expect(queryAll(layout, ".center pc-layers-menu")).toHaveLength(0);
+    layout.remove();
+    // In the left side too (which then has no toolbar), or given straight in a side
+    const left = await setup(layersPanel("left"));
+    left.app.togglePanel(Panel.Layers);
+    await left.layout.updateComplete;
+    expect(queryAll(left.layout, ".center pc-layers-menu")).toHaveLength(0);
+    left.layout.remove();
+    const direct = await setup(
+      '<pc-layers-menu slot="right"></pc-layers-menu>',
+    );
+    expect(query<PcToolbar>(direct.layout, "pc-toolbar").layers).toBe(false);
+    direct.layout.remove();
+    // Without one, the toolbar has its own
+    const plain = await setup(panelHtml("right", "Chat"));
+    expect(query<PcToolbar>(plain.layout, "pc-toolbar").layers).toBe(true);
+  });
+
   it("should show the app menu while it's open, and the toolbar's other menus over the canvas", async () => {
     const { layout, app } = await setup('<nav slot="menu">Menu</nav>');
     expect(query<PcToolbar>(layout, "pc-toolbar").menu).toBe(true);

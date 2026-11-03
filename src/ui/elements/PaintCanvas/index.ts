@@ -72,7 +72,8 @@ const FOCUSABLE =
  * - `menu`: the app menu the toolbar's menu button opens (the button shows only with a menu)
  *
  * Content given for a slot replaces its default; an empty element clears it. Empty slots take no space. Hiding the
- * interface (Tab key) leaves only the canvas and overlay.
+ * interface (Tab key) leaves only the canvas and overlay. A `<pc-layers-menu>` given in a side (e.g. in a `<pc-panel>`)
+ * replaces the toolbar's layers menu button.
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
  * rail@600"`): `docked` beside the canvas; `rail`, a column of buttons (one per `<pc-panel>`) that open each panel over
@@ -175,6 +176,9 @@ export class PaintCanvasElement extends PcElement {
 
   /** The panels in each side's slot */
   private panels: Record<Side, PcPanel[]> = { left: [], right: [] };
+
+  /** Whether each side's slot has a layers menu (the toolbar's isn't needed then) */
+  private sideLayers: Record<Side, boolean> = { left: false, right: false };
 
   /** Whether the implementer gave a menu */
   private hasMenu = false;
@@ -520,15 +524,20 @@ export class PaintCanvasElement extends PcElement {
     >`;
   }
 
-  /** Follow the panels given for a side */
+  /** Follow the panels given for a side, and whether it has a layers menu */
   private onSideSlotChange(side: Side, event: Event): void {
+    const assigned = (event.target as HTMLSlotElement).assignedElements();
     this.panels = {
       ...this.panels,
-      [side]: (event.target as HTMLSlotElement)
-        .assignedElements()
-        .filter(
-          (element): element is PcPanel => element.localName === "pc-panel",
-        ),
+      [side]: assigned.filter(
+        (element): element is PcPanel => element.localName === "pc-panel",
+      ),
+    };
+    this.sideLayers = {
+      ...this.sideLayers,
+      [side]: assigned.some((element) =>
+        element.matches("pc-layers-menu, :has(pc-layers-menu)"),
+      ),
     };
     this.onSlotChange(event);
   }
@@ -540,11 +549,17 @@ export class PaintCanvasElement extends PcElement {
     this.requestUpdate();
   }
 
+  /** Whether a side has a layers menu, replacing the toolbar's */
+  private get layersInSide(): boolean {
+    return this.sideLayers.left || this.sideLayers.right;
+  }
+
   /** The toolbar shown on the left unless the implementer gives other content */
   private renderToolbar(app: PaintCanvas) {
     return html`<pc-toolbar
       .app=${app}
       .menu=${this.hasMenu}
+      .layers=${!this.layersInSide}
       .menuText=${this.menuText}
       .menuLabel=${this.menuLabel}
     ></pc-toolbar>`;
@@ -641,7 +656,7 @@ export class PaintCanvasElement extends PcElement {
     return html`${app.panel === Panel.Brush ? brushMenu("brush") : nothing}
       ${app.panel === Panel.Eraser ? brushMenu("eraser") : nothing}
       ${
-        app.panel === Panel.Layers
+        app.panel === Panel.Layers && !this.layersInSide
           ? html`<pc-layers-menu class="panel" .app=${app}></pc-layers-menu>`
           : nothing
       }
