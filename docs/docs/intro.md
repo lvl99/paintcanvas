@@ -8,9 +8,9 @@ slug: /
 
 Open-source painting engine and renderer for the browser, with optional UI. Draw with a mouse, touch, or a pen or stylus with pressure and tilt.
 
-- **Engine** (`paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI, and nothing is stored unless you ask (e.g. keeping the drawing in the browser).
+- **Engine** (`@lvl99dotcom/paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI, and nothing is stored unless you ask (e.g. keeping the drawing in the browser).
 - **Messages**: the engine sends and receives small drawing messages (patches of pixels, strokes, undo and redo), so you can share a drawing over any transport you choose.
-- **UI** (`paintcanvas/ui`), optional: Lit web components, from buttons and sliders up to a full `<paint-canvas>` layout with slots for your own parts.
+- **UI** (`@lvl99dotcom/paintcanvas/ui`), optional: Lit web components, from buttons and sliders up to a full `<paint-canvas>` layout with slots for your own parts.
 
 ## Tools
 
@@ -27,7 +27,7 @@ Open-source painting engine and renderer for the browser, with optional UI. Draw
 ## Installation
 
 ```sh
-npm install paintcanvas lit
+npm install @lvl99dotcom/paintcanvas lit
 ```
 
 [Lit](https://lit.dev) is a peer dependency, used by the UI only. The package is ES modules with TypeScript types.
@@ -53,8 +53,8 @@ A full-page drawing app:
   <body>
     <paint-canvas></paint-canvas>
     <script type="module">
-      import "paintcanvas/ui";
-      import { translations } from "paintcanvas/lib/i18n";
+      import "@lvl99dotcom/paintcanvas/ui";
+      import { translations } from "@lvl99dotcom/paintcanvas/lib/i18n";
 
       await translations.useDeviceLocale();
     </script>
@@ -62,7 +62,7 @@ A full-page drawing app:
 </html>
 ```
 
-Each folder of the engine and UI has its own import path, matching the [API](/api) pages: e.g. `paintcanvas/lib/classes/PaintCanvas` or `paintcanvas/ui/elements/PcButton`.
+Each folder of the engine and UI has its own import path, matching the [API](/api) pages: e.g. `@lvl99dotcom/paintcanvas/lib/classes/PaintCanvas` or `@lvl99dotcom/paintcanvas/ui/elements/PcButton`.
 
 ## Guides
 

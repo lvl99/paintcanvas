@@ -8,9 +8,9 @@ sidebar_label: Using the engine
 Use the engine on its own and the drawing elements with it, or none of the UI at all:
 
 ```ts
-import PaintCanvas from "paintcanvas/lib/classes/PaintCanvas";
-import { Tool } from "paintcanvas/lib/classes/PaintCanvas";
-import "paintcanvas/ui/elements/PcCanvas";
+import PaintCanvas from "@lvl99dotcom/paintcanvas/lib/classes/PaintCanvas";
+import { Tool } from "@lvl99dotcom/paintcanvas/lib/classes/PaintCanvas";
+import "@lvl99dotcom/paintcanvas/ui/elements/PcCanvas";
 
 const canvas = new PaintCanvas({ width: 1000, height: 800 });
 document.querySelector("pc-canvas").app = canvas;

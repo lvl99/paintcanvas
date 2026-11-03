@@ -2,9 +2,9 @@
 
 Open-source painting engine and renderer for the browser, with optional UI.
 
-- **Engine** (`paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI, and nothing is stored unless you ask (e.g. keeping the drawing in the browser).
+- **Engine** (`@lvl99dotcom/paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI, and nothing is stored unless you ask (e.g. keeping the drawing in the browser).
 - **Messages**: the engine sends and receives small drawing messages (patches of pixels, strokes, undo and redo), so you can share a drawing over any transport you choose.
-- **UI** (`paintcanvas/ui`), optional: Lit web components, from buttons and sliders up to a full `<paint-canvas>` layout with slots for your own parts.
+- **UI** (`@lvl99dotcom/paintcanvas/ui`), optional: Lit web components, from buttons and sliders up to a full `<paint-canvas>` layout with slots for your own parts.
 
 Licensed under the [Apache License 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) to help.
 
@@ -19,7 +19,7 @@ Licensed under the [Apache License 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBU
 ## Installation
 
 ```sh
-npm install paintcanvas lit
+npm install @lvl99dotcom/paintcanvas lit
 ```
 
 [Lit](https://lit.dev) is a peer dependency, used by the UI only.
@@ -45,8 +45,8 @@ A full-page drawing app:
   <body>
     <paint-canvas></paint-canvas>
     <script type="module">
-      import "paintcanvas/ui";
-      import { translations } from "paintcanvas/lib/i18n";
+      import "@lvl99dotcom/paintcanvas/ui";
+      import { translations } from "@lvl99dotcom/paintcanvas/lib/i18n";
 
       await translations.useDeviceLocale();
     </script>
@@ -59,13 +59,13 @@ To keep the drawing through page reloads, give it a name to store it under in th
 `<paint-canvas>` creates its own engine (a 2000 × 2000 pixel canvas). To choose the size or other options, give it one:
 
 ```ts
-import PaintCanvas from "paintcanvas/lib/classes/PaintCanvas";
+import PaintCanvas from "@lvl99dotcom/paintcanvas/lib/classes/PaintCanvas";
 
 const layout = document.querySelector("paint-canvas");
 layout.app = new PaintCanvas({ width: 1200, height: 800, maxLayers: 10 });
 ```
 
-Importing `paintcanvas/ui` registers every element. To load less, import single elements, e.g. `paintcanvas/ui/elements/PaintCanvas`.
+Importing `@lvl99dotcom/paintcanvas/ui` registers every element. To load less, import single elements, e.g. `@lvl99dotcom/paintcanvas/ui/elements/PaintCanvas`.
 
 ## Documentation
 
@@ -107,7 +107,7 @@ Source layout:
 
 - `src/lib/`: engine code (brushes, rendering, selection, transform, classes, messages, document, i18n, image, presets, validation, utils). No UI.
 - `src/ui/`: tokens, icons, base elements, drawing elements and the layout.
-- `src/testing/`: test helpers (fake and recording canvases), published as `paintcanvas/testing/*`. Some use Vitest.
+- `src/testing/`: test helpers (fake and recording canvases), published as `@lvl99dotcom/paintcanvas/testing/*`. Some use Vitest.
 - `locales/`: UI text per locale.
 - `scripts/`: build scripts, e.g. the validator generator.
 - `demo/`: the demo pages.
@@ -129,4 +129,4 @@ Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in j
 | `pnpm dev`              | Starts the demo, reloading it when files change (`pnpm demo` does the same)       |
 | `pnpm docs`             | Starts the documentation site (`pnpm docs:build` builds it into `docs/build/`)    |
 
-Each folder in `src/lib` and `src/ui` is published as its own import path (e.g. `src/lib/classes/PaintCanvas` as `paintcanvas/lib/classes/PaintCanvas`). `sideEffects` in `package.json` lists the UI modules that register elements when loaded (`src/ui/index.ts` and each `src/ui/elements/*/index.ts`), so bundlers keep them; add any other module that registers elements there.
+Each folder in `src/lib` and `src/ui` is published as its own import path (e.g. `src/lib/classes/PaintCanvas` as `@lvl99dotcom/paintcanvas/lib/classes/PaintCanvas`). `sideEffects` in `package.json` lists the UI modules that register elements when loaded (`src/ui/index.ts` and each `src/ui/elements/*/index.ts`), so bundlers keep them; add any other module that registers elements there.

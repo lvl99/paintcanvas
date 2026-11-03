@@ -1,5 +1,5 @@
 // PaintCanvas optional UI: design tokens, icons, base elements, drawing elements and the `<paint-canvas>` layout.
-// Importing this registers every element; import single elements (e.g. `paintcanvas/ui/elements/PcButton`) to load less.
+// Importing this registers every element; import single elements (e.g. `@lvl99dotcom/paintcanvas/ui/elements/PcButton`) to load less.
 export {
   tokens,
   installTokens,
