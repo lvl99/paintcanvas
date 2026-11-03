@@ -164,5 +164,9 @@
   "language.ja": "日本語",
   "language.ko": "한국어",
   "language.zh-Hans": "简体中文",
-  "language.zh-Hant": "繁體中文"
+  "language.zh-Hant": "繁體中文",
+  "autosave.elsewhere": "すでに別のウィンドウで描画しています",
+  "autosave.elsewhereMessage": "この絵は別のウィンドウまたはタブで開かれていて、一度に描画できるのは1つだけです。「ここで描画する」を選ぶと、このウィンドウで続けられます（もう一方は停止します）。",
+  "autosave.takeOver": "ここで描画する",
+  "autosave.failed": "このブラウザに絵を保存できませんでした"
 }

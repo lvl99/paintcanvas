@@ -1,4 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
+import "fake-indexeddb/auto";
 import "..";
 import type { PaintCanvasElement } from "..";
 import PaintCanvas, { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
@@ -7,6 +8,14 @@ import { STATE_EVENT, type LayoutState } from "../../../layout";
 import type { PcPanel } from "../../PcPanel";
 import type { PcToolbar } from "../../PcToolbar";
 import { createApp } from "../../../../testing/app";
+import { MemoryLayerStore } from "../../../../testing/layerStore";
+import { createFakeLocks } from "../../../../testing/locks";
+import IndexedDbLayerStore from "../../../../lib/storage";
+import {
+  AUTOSAVE_ERROR_EVENT,
+  AutosaveState,
+} from "../../../../lib/classes/LayerAutosave";
+import type { PcDialog } from "../../PcDialog";
 import { createRecordingCanvasFactory } from "../../../../testing/recordingCanvas";
 import {
   events,
@@ -367,5 +376,125 @@ describe("paint-canvas", () => {
     expect(layout.openPanel).toBeUndefined();
     const text = await setup('<span slot="top"></span>');
     expect(queryAll(text.layout, "pc-tool-settings")).toHaveLength(0);
+  });
+
+  it("should keep the drawing in the browser under its store name, changing or stopping with the attribute", async () => {
+    const { layout, app } = await setup();
+    expect(app.autosave).toBeUndefined();
+    layout.store = "sketchbook";
+    await layout.updateComplete;
+    const first = app.autosave;
+    expect(first?.store).toBeInstanceOf(IndexedDbLayerStore);
+    expect(first?.store.name).toBe("sketchbook");
+    layout.store = "other";
+    await layout.updateComplete;
+    expect(app.autosave?.store.name).toBe("other");
+    expect(first?.state).not.toBe(AutosaveState.Ready);
+    // The same name again keeps the autosave
+    const second = app.autosave;
+    layout.requestUpdate("store");
+    await layout.updateComplete;
+    expect(app.autosave).toBe(second);
+    layout.store = undefined;
+    await layout.updateComplete;
+    expect(app.autosave).toBeUndefined();
+  });
+
+  it("should leave the canvas's own autosave alone, and stop its own when given another canvas", async () => {
+    const { layout, app } = await setup();
+    const own = app.useLayerStore(new MemoryLayerStore(), {
+      locks: null,
+      document: null,
+    });
+    layout.requestUpdate("store");
+    await layout.updateComplete;
+    expect(app.autosave).toBe(own);
+
+    layout.store = "sketchbook";
+    await layout.updateComplete;
+    const started = app.autosave;
+    expect(started?.store.name).toBe("sketchbook");
+    const next = createApp();
+    layout.app = next;
+    await layout.updateComplete;
+    expect(app.autosave).toBeUndefined();
+    expect(next.autosave?.store.name).toBe("sketchbook");
+    // A canvas given with its own autosave keeps it when there's no name
+    layout.store = undefined;
+    await layout.updateComplete;
+    expect(next.autosave).toBeUndefined();
+    const another = createApp();
+    const kept = another.useLayerStore(new MemoryLayerStore(), {
+      locks: null,
+      document: null,
+    });
+    layout.app = another;
+    await layout.updateComplete;
+    expect(another.autosave).toBe(kept);
+  });
+
+  it("should block the layout while another window draws on the drawing, until taking it over", async () => {
+    const { layout, app } = await setup();
+    const { locks } = createFakeLocks();
+    // Another window has the drawing
+    locks
+      .request("paintcanvas:test", {}, () => new Promise(() => {}))
+      // Taken over below
+      .catch(() => undefined);
+    const autosave = app.useLayerStore(new MemoryLayerStore(), {
+      locks,
+      document: null,
+    });
+    await layout.updateComplete;
+    expect(layout.blocked).toBe(true);
+    const dialog = query<PcDialog>(layout, "pc-dialog.elsewhere");
+    expect([dialog.heading, dialog.message]).toEqual([
+      "You are already drawing in another window",
+      'This drawing is open in another window or tab, and only one can draw on it at a time. Choose "Draw here instead" to continue in this window; the other one stops.',
+    ]);
+    expect(dialog.choices.map((choice) => choice.label)).toEqual([
+      "Draw here instead",
+    ]);
+    expect(queryAll(layout, "[inert]")).toHaveLength(7);
+    // Shortcuts don't change the drawing
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "e" }));
+    expect(app.tool).toBe(Tool.Brush);
+    // Escape leaves it blocked
+    dialog.choose("cancel");
+    await layout.updateComplete;
+    expect(layout.blocked).toBe(true);
+
+    dialog.choose("take-over");
+    await vi.waitFor(() => expect(autosave?.state).toBe(AutosaveState.Ready));
+    await layout.updateComplete;
+    expect(layout.blocked).toBe(false);
+    expect(queryAll(layout, "pc-dialog")).toHaveLength(0);
+    expect(queryAll(layout, "[inert]")).toHaveLength(0);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "e" }));
+    expect(app.tool).toBe(Tool.Eraser);
+    layout.remove();
+  });
+
+  it("should tell the user when the drawing can't be loaded or saved", async () => {
+    const { layout, app } = await setup();
+    const toasts = events(layout, "pc-toast");
+    const first = app.useLayerStore(new MemoryLayerStore(), {
+      locks: null,
+      document: null,
+      encode: async () => new Blob(),
+    });
+    await layout.updateComplete;
+    first?.dispatchEvent(new CustomEvent(AUTOSAVE_ERROR_EVENT));
+    expect(toasts).toEqual([
+      {
+        message: "Couldn't keep the drawing in this browser",
+        kind: "error",
+      },
+    ]);
+    // Only the current autosave's errors
+    app.useLayerStore(undefined);
+    await layout.updateComplete;
+    first?.dispatchEvent(new CustomEvent(AUTOSAVE_ERROR_EVENT));
+    expect(toasts).toHaveLength(1);
   });
 });
