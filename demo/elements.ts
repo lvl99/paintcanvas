@@ -1,6 +1,6 @@
 // Preview of PaintCanvas's base elements: switch language and theme to check them.
 import "../src/ui";
-import { translations } from "../src/lib/i18n";
+import { languageName, translations } from "../src/lib/i18n";
 import type { PcContextMenu } from "../src/ui/elements/PcContextMenu";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
 
@@ -9,10 +9,11 @@ const find = <T extends Element = HTMLElement>(selector: string): T =>
   document.querySelector<T>(selector) as T;
 
 const select = find<HTMLSelectElement>("#language");
-for (const locale of translations.locales)
-  select.add(
-    new Option(translations.t(`paintCanvas.language.${locale}`), locale),
-  );
+for (const locale of translations.locales) {
+  const option = new Option(languageName(locale), locale);
+  option.lang = locale;
+  select.add(option);
+}
 await translations.useDeviceLocale();
 select.value = translations.locale;
 select.addEventListener(

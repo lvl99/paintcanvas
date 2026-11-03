@@ -112,6 +112,30 @@ export const interpolate = (
     Object.hasOwn(values, name) ? String(values[name]) : placeholder,
   );
 
+/**
+ * A locale's language name, written in that language (so people can find their own), with its first letter in
+ * capitals. Gives the tag itself if the browser can't name it.
+ *
+ * @example
+ * languageName("ja"); // "日本語"
+ * languageName("fr"); // "Français"
+ * languageName("en-GB"); // "English (United Kingdom)"
+ */
+export const languageName = (locale: string): string => {
+  try {
+    const name = new Intl.DisplayNames([locale], {
+      type: "language",
+      languageDisplay: "standard",
+      fallback: "none",
+    }).of(locale);
+    return name
+      ? name.charAt(0).toLocaleUpperCase(locale) + name.slice(1)
+      : locale;
+  } catch {
+    return locale;
+  }
+};
+
 /** Options for translations */
 export interface TranslationsOptions {
   /** Locales that can be used, and how to load each (default: all the locales that come with PaintCanvas) */

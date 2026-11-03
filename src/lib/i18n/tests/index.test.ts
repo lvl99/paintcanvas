@@ -3,6 +3,7 @@ import Translations, {
   BUILT_IN_LOCALES,
   FALLBACK_LOCALE,
   interpolate,
+  languageName,
   matchLocale,
   translations,
 } from "..";
@@ -56,6 +57,19 @@ describe("interpolate", () => {
     );
     expect(interpolate("{count} left", { count: 2 })).toBe("2 left");
     expect(interpolate("No values")).toBe("No values");
+  });
+});
+
+describe("languageName", () => {
+  it("should name a locale's language in that language, starting with a capital", () => {
+    expect(languageName("ja")).toBe("日本語");
+    expect(languageName("fr")).toBe("Français");
+    expect(languageName("en-GB")).toBe("English (United Kingdom)");
+  });
+
+  it("should give the tag for locales it can't name", () => {
+    expect(languageName("qaa")).toBe("qaa");
+    expect(languageName("not a tag")).toBe("not a tag");
   });
 });
 

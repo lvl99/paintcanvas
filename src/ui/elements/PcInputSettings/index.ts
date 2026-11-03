@@ -1,6 +1,7 @@
 import { css, html, nothing } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
 import ChangeController from "../../ChangeController";
+import { languageName } from "../../../lib/i18n";
 import {
   isTouchDevice,
   zoomModifierName,
@@ -197,9 +198,10 @@ export class PcInputSettings extends PcElement {
           (locale) =>
             html`<option
               value=${locale}
+              lang=${locale}
               ?selected=${translations.locale === locale}
             >
-              ${this.t(`paintCanvas.language.${locale}`)}
+              ${languageName(locale)}
             </option>`,
         )}
       </select>

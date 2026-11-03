@@ -85,6 +85,8 @@ describe("pc-input-settings", () => {
       translations.locales,
     );
     expect(language.value).toBe("en-US");
+    const ja = [...language.options].find((o) => o.value === "ja");
+    expect([ja?.text.trim(), ja?.lang]).toEqual(["日本語", "ja"]);
     const changes = events(element, "pc-language-change");
     language.value = "ko";
     language.dispatchEvent(new Event("change"));
