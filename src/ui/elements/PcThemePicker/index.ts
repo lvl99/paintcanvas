@@ -2,6 +2,7 @@ import { css, html, unsafeCSS } from "lit";
 import { ICON_CONTROLS_CSS as iconControls } from "../../styles";
 import { PcElement, defineElement, emit } from "../../base";
 import type { IconName } from "../../icons";
+import "../PcButtonGroup";
 
 /** The themes to pick from: light, dark, or following the device (auto) */
 export const THEMES = ["light", "dark", "auto"] as const;
@@ -26,10 +27,10 @@ export const isTheme = (value: unknown): value is Theme =>
   THEMES.includes(value as Theme);
 
 /**
- * Picks the light, dark or automatic theme (which follows the device), as a labelled group of three radios, each with
- * its icon (sun, moon and star) and name; the picked one is purple. Shows the theme of its `target` (the page's root
- * element by default; light unless it has another), and sets the target's `data-pc-theme` when the user picks one,
- * firing `change` (detail: the theme).
+ * Picks the light, dark or automatic theme (which follows the device), as a labelled group of three radios joined into
+ * one pill (a joined `<pc-button-group>`), each with its icon (sun, moon and star) and name; the picked one is purple.
+ * Shows the theme of its `target` (the page's root element by default; light unless it has another), and sets the
+ * target's `data-pc-theme` when the user picks one, firing `change` (detail: the theme).
  *
  * @example
  * html`<pc-theme-picker @change=${(e) => save(e.detail)}></pc-theme-picker>`
@@ -60,19 +61,29 @@ export class PcThemePicker extends PcElement {
         margin-bottom: var(--pc-space-1);
         padding: 0;
       }
-      .options {
+      /* As wide as the picker, with the options sharing the width */
+      pc-button-group {
         display: flex;
-        gap: var(--pc-space-1);
       }
+      pc-button-group::part(group) {
+        flex: 1;
+      }
+      /* One pill: the button group gives each option its corners */
       .icon-toggle {
         flex: 1;
         align-items: center;
         justify-content: center;
         gap: 4px;
-        padding: 2px var(--pc-space-1);
+        padding: 2px var(--pc-space-2);
+        border-radius: var(--pc-group-radius, var(--pc-radius-small));
       }
+      /* The picked option's border shows over its neighbours' */
       .icon-toggle:has(input:checked) {
+        z-index: 1;
         color: var(--pc-accent-text);
+      }
+      .icon-toggle:has(input:focus-visible) {
+        z-index: 2;
       }
     `,
   ];
@@ -114,7 +125,7 @@ export class PcThemePicker extends PcElement {
   override render() {
     return html`<fieldset>
       <legend>${this.t("theme.label")}</legend>
-      <div class="options">
+      <pc-button-group joined>
         ${THEMES.map(
           (theme) =>
             html`<label class="icon-toggle" data-theme=${theme}>
@@ -129,7 +140,7 @@ export class PcThemePicker extends PcElement {
               <span>${this.t(`theme.${theme}`)}</span>
             </label>`,
         )}
-      </div>
+      </pc-button-group>
     </fieldset>`;
   }
 }
