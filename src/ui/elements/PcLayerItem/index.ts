@@ -16,12 +16,12 @@ export const BLEND_MODE_OPTIONS: readonly {
   value: BlendMode;
   label: string;
 }[] = [
-  { value: BlendMode.Normal, label: "blendMode.normal" },
-  { value: BlendMode.Screen, label: "blendMode.screen" },
-  { value: BlendMode.Lighten, label: "blendMode.lighten" },
-  { value: BlendMode.Multiply, label: "blendMode.multiply" },
-  { value: BlendMode.Darken, label: "blendMode.darken" },
-  { value: BlendMode.Overlay, label: "blendMode.overlay" },
+  { value: BlendMode.Normal, label: "paintCanvas.blendMode.normal" },
+  { value: BlendMode.Screen, label: "paintCanvas.blendMode.screen" },
+  { value: BlendMode.Lighten, label: "paintCanvas.blendMode.lighten" },
+  { value: BlendMode.Multiply, label: "paintCanvas.blendMode.multiply" },
+  { value: BlendMode.Darken, label: "paintCanvas.blendMode.darken" },
+  { value: BlendMode.Overlay, label: "paintCanvas.blendMode.overlay" },
 ];
 
 /** Actions in the reorder handle's context menu */
@@ -39,15 +39,15 @@ export type LayerAction =
 /** Context menu options in display order, with the translation keys of their labels */
 export const LAYER_ACTIONS: readonly { action: LayerAction; label: string }[] =
   [
-    { action: "mask", label: "layers.createMask" },
-    { action: "duplicate", label: "layers.duplicate" },
-    { action: "merge", label: "layers.mergeDown" },
-    { action: "clear", label: "layers.clear" },
-    { action: "delete", label: "layers.delete" },
-    { action: "up", label: "layers.moveUp" },
-    { action: "top", label: "layers.moveToTop" },
-    { action: "down", label: "layers.moveDown" },
-    { action: "bottom", label: "layers.moveToBottom" },
+    { action: "mask", label: "paintCanvas.layers.createMask" },
+    { action: "duplicate", label: "paintCanvas.layers.duplicate" },
+    { action: "merge", label: "paintCanvas.layers.mergeDown" },
+    { action: "clear", label: "paintCanvas.layers.clear" },
+    { action: "delete", label: "paintCanvas.layers.delete" },
+    { action: "up", label: "paintCanvas.layers.moveUp" },
+    { action: "top", label: "paintCanvas.layers.moveToTop" },
+    { action: "down", label: "paintCanvas.layers.moveDown" },
+    { action: "bottom", label: "paintCanvas.layers.moveToBottom" },
   ];
 
 /** Context menu actions that ask first */
@@ -64,27 +64,39 @@ export const CONFIRMATIONS: Readonly<
   >
 > = {
   merge: {
-    heading: "layers.mergeDownTitle",
-    message: "layers.mergeDownConfirm",
+    heading: "paintCanvas.layers.mergeDownTitle",
+    message: "paintCanvas.layers.mergeDownConfirm",
     choices: [
-      { value: "merge", label: "layers.mergeLayer" },
-      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
+      { value: "merge", label: "paintCanvas.layers.mergeLayer" },
+      {
+        value: CANCEL_CHOICE,
+        label: "paintCanvas.common.dismiss",
+        variant: "dismiss",
+      },
     ],
   },
   clear: {
-    heading: "layers.clearTitle",
-    message: "layers.clearConfirm",
+    heading: "paintCanvas.layers.clearTitle",
+    message: "paintCanvas.layers.clearConfirm",
     choices: [
-      { value: "clear", label: "common.clear" },
-      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
+      { value: "clear", label: "paintCanvas.common.clear" },
+      {
+        value: CANCEL_CHOICE,
+        label: "paintCanvas.common.dismiss",
+        variant: "dismiss",
+      },
     ],
   },
   delete: {
-    heading: "layers.deleteTitle",
-    message: "layers.deleteConfirm",
+    heading: "paintCanvas.layers.deleteTitle",
+    message: "paintCanvas.layers.deleteConfirm",
     choices: [
-      { value: "delete", label: "common.delete" },
-      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
+      { value: "delete", label: "paintCanvas.common.delete" },
+      {
+        value: CANCEL_CHOICE,
+        label: "paintCanvas.common.dismiss",
+        variant: "dismiss",
+      },
     ],
   },
 };
@@ -563,7 +575,7 @@ export class PcLayerItem extends PcElement {
       <button
         type="button"
         class="handle"
-        aria-label=${this.t("layers.reorder", { name: layer.name })}
+        aria-label=${this.t("paintCanvas.layers.reorder", { name: layer.name })}
         aria-haspopup="menu"
         aria-expanded=${this.menuOpen ? "true" : "false"}
         @contextmenu=${this.onContextMenu}
@@ -579,7 +591,7 @@ export class PcLayerItem extends PcElement {
         <canvas class="thumbnail" aria-hidden="true"></canvas>
         <input
           class="name ${active ? "active" : ""}"
-          aria-label=${this.t("layers.name")}
+          aria-label=${this.t("paintCanvas.layers.name")}
           .value=${layer.name}
           @change=${(e: Event) => this.onRename(e, stack, layer)}
         />
@@ -587,7 +599,7 @@ export class PcLayerItem extends PcElement {
           type="range"
           min="0"
           max="100"
-          aria-label=${this.t("common.opacity")}
+          aria-label=${this.t("paintCanvas.common.opacity")}
           .value=${String(Math.round(layer.opacity * 100))}
           @change=${(e: Event) =>
             stack.update(layer.id, {
@@ -595,7 +607,7 @@ export class PcLayerItem extends PcElement {
             })}
         />
         <select
-          aria-label=${this.t("layers.blendMode")}
+          aria-label=${this.t("paintCanvas.layers.blendMode")}
           @change=${(e: Event) =>
             stack.update(layer.id, {
               blendMode: (e.target as HTMLSelectElement).value as BlendMode,
@@ -615,7 +627,7 @@ export class PcLayerItem extends PcElement {
       <button
         type="button"
         class="alpha-lock"
-        aria-label=${this.t("layers.alphaLock")}
+        aria-label=${this.t("paintCanvas.layers.alphaLock")}
         aria-pressed=${layer.alphaLock}
         @click=${() => stack.update(layer.id, { alphaLock: !layer.alphaLock })}
       >
@@ -627,7 +639,7 @@ export class PcLayerItem extends PcElement {
       <button
         type="button"
         class="visibility"
-        aria-label=${this.t("layers.visible")}
+        aria-label=${this.t("paintCanvas.layers.visible")}
         aria-pressed=${layer.visible}
         @click=${() => stack.update(layer.id, { visible: !layer.visible })}
       >
@@ -635,7 +647,7 @@ export class PcLayerItem extends PcElement {
       </button>
       ${
         this.menuOpen
-          ? html`<menu aria-label=${this.t("layers.actions")}>
+          ? html`<menu aria-label=${this.t("paintCanvas.layers.actions")}>
               ${LAYER_ACTIONS.map(
                 ({ action, label }) =>
                   html`<li>

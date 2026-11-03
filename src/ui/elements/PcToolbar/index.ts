@@ -20,39 +20,64 @@ export const TOOLBAR_TOOLS: readonly {
   /** The tool's keyboard shortcut, shown with its name */
   shortcut: string;
 }[] = [
-  { tool: Tool.Brush, icon: "brush", name: "tool.brush", shortcut: "B" },
-  { tool: Tool.Eraser, icon: "eraser", name: "tool.eraser", shortcut: "E" },
-  { tool: Tool.Move, icon: "cursor", name: "tool.move", shortcut: "V" },
+  {
+    tool: Tool.Brush,
+    icon: "brush",
+    name: "paintCanvas.tool.brush",
+    shortcut: "B",
+  },
+  {
+    tool: Tool.Eraser,
+    icon: "eraser",
+    name: "paintCanvas.tool.eraser",
+    shortcut: "E",
+  },
+  {
+    tool: Tool.Move,
+    icon: "cursor",
+    name: "paintCanvas.tool.move",
+    shortcut: "V",
+  },
   {
     tool: Tool.RectangleLasso,
     icon: "rectangleMask",
-    name: "tool.rectangleLasso",
+    name: "paintCanvas.tool.rectangleLasso",
     shortcut: "M",
   },
   {
     tool: Tool.CircleLasso,
     icon: "circleMask",
-    name: "tool.circleLasso",
+    name: "paintCanvas.tool.circleLasso",
     shortcut: "Shift+M",
   },
   {
     tool: Tool.PolygonLasso,
     icon: "polygonMask",
-    name: "tool.polygonLasso",
+    name: "paintCanvas.tool.polygonLasso",
     shortcut: "L",
   },
   {
     tool: Tool.FreeformLasso,
     icon: "freehandMask",
-    name: "tool.freeformLasso",
+    name: "paintCanvas.tool.freeformLasso",
     shortcut: "Shift+L",
   },
-  { tool: Tool.Pan, icon: "pan", name: "tool.pan", shortcut: "Space" },
-  { tool: Tool.Zoom, icon: "zoom", name: "tool.zoom", shortcut: "Z" },
+  {
+    tool: Tool.Pan,
+    icon: "pan",
+    name: "paintCanvas.tool.pan",
+    shortcut: "Space",
+  },
+  {
+    tool: Tool.Zoom,
+    icon: "zoom",
+    name: "paintCanvas.tool.zoom",
+    shortcut: "Z",
+  },
   {
     tool: Tool.ColourSample,
     icon: "eyedropper",
-    name: "tool.colourSample",
+    name: "paintCanvas.tool.colourSample",
     shortcut: "I",
   },
 ];
@@ -131,12 +156,12 @@ export class PcToolbar extends PcElement {
     return html`
       <input
         type="color"
-        aria-label=${this.t("toolbar.currentColour")}
+        aria-label=${this.t("paintCanvas.toolbar.currentColour")}
         .value=${app.colour}
         @input=${this.onColourInput}
       />
       ${TOOLBAR_TOOLS.map(({ tool, icon, name, shortcut }) => {
-        const label = this.t("tool.withShortcut", {
+        const label = this.t("paintCanvas.tool.withShortcut", {
           tool: this.t(name),
           shortcut,
         });
@@ -157,8 +182,8 @@ export class PcToolbar extends PcElement {
       <button
         type="button"
         data-action="undo"
-        title=${this.t("toolbar.undoWithShortcut", { shortcut: `${cmd}Z` })}
-        aria-label=${this.t("common.undo")}
+        title=${this.t("paintCanvas.toolbar.undoWithShortcut", { shortcut: `${cmd}Z` })}
+        aria-label=${this.t("paintCanvas.common.undo")}
         aria-keyshortcuts="${cmdKey}+Z"
         ?disabled=${!app.history.canUndo}
         @click=${() => app.undo()}
@@ -168,8 +193,8 @@ export class PcToolbar extends PcElement {
       <button
         type="button"
         data-action="redo"
-        title=${this.t("toolbar.redoWithShortcut", { shortcut: `⇧${cmd}Z` })}
-        aria-label=${this.t("common.redo")}
+        title=${this.t("paintCanvas.toolbar.redoWithShortcut", { shortcut: `⇧${cmd}Z` })}
+        aria-label=${this.t("paintCanvas.common.redo")}
         aria-keyshortcuts="Shift+${cmdKey}+Z"
         ?disabled=${!app.history.canRedo}
         @click=${() => app.redo()}
@@ -181,8 +206,8 @@ export class PcToolbar extends PcElement {
           ? html`<button
               type="button"
               data-panel=${Panel.Layers}
-              title=${this.t("toolbar.layers")}
-              aria-label=${this.t("toolbar.layers")}
+              title=${this.t("paintCanvas.toolbar.layers")}
+              aria-label=${this.t("paintCanvas.toolbar.layers")}
               aria-expanded=${app.panel === Panel.Layers}
               @click=${() => app.togglePanel(Panel.Layers)}
             >
@@ -195,7 +220,7 @@ export class PcToolbar extends PcElement {
           ? html`<button
               type="button"
               data-panel=${Panel.Menu}
-              aria-label=${this.menuLabel || this.t("toolbar.menu")}
+              aria-label=${this.menuLabel || this.t("paintCanvas.toolbar.menu")}
               aria-expanded=${app.panel === Panel.Menu}
               @click=${() => app.togglePanel(Panel.Menu)}
             >

@@ -63,17 +63,19 @@ describe("Translations", () => {
   it("should start in US English and translate keys, falling back to the key", () => {
     const t = new Translations();
     expect(t.locale).toBe(FALLBACK_LOCALE);
-    expect(t.t("tool.brush")).toBe("Brush");
-    expect(t.t("presets.deleted", { name: "Soft" })).toBe('Deleted "Soft"');
+    expect(t.t("paintCanvas.tool.brush")).toBe("Brush");
+    expect(t.t("paintCanvas.presets.deleted", { name: "Soft" })).toBe(
+      'Deleted "Soft"',
+    );
     expect(t.t("missing.key")).toBe("missing.key");
   });
 
   it("should use plural forms for counts", () => {
     const t = new Translations();
-    expect(t.t("presets.imported", { count: 1 })).toBe(
+    expect(t.t("paintCanvas.presets.imported", { count: 1 })).toBe(
       "Imported 1 brush preset",
     );
-    expect(t.t("presets.imported", { count: 3 })).toBe(
+    expect(t.t("paintCanvas.presets.imported", { count: 3 })).toBe(
       "Imported 3 brush presets",
     );
     t.addStrings("en-US", {
@@ -86,7 +88,7 @@ describe("Translations", () => {
 
   it("should load a locale when first used, tell listeners, and fall back for missing strings", async () => {
     const loader = vi.fn(async () => ({
-      default: { "tool.brush": "Pinceau" },
+      default: { "paintCanvas.tool.brush": "Pinceau" },
     }));
     const t = new Translations({
       locales: { "en-US": async () => enUS, fr: loader },
@@ -96,8 +98,8 @@ describe("Translations", () => {
     t.addEventListener("change", listener);
     await t.setLocale("fr-CA");
     expect(t.locale).toBe("fr");
-    expect(t.t("tool.brush")).toBe("Pinceau");
-    expect(t.t("tool.eraser")).toBe("Eraser");
+    expect(t.t("paintCanvas.tool.brush")).toBe("Pinceau");
+    expect(t.t("paintCanvas.tool.eraser")).toBe("Eraser");
     await t.setLocale("en-US");
     await t.setLocale("fr");
     expect(loader).toHaveBeenCalledOnce();
@@ -106,10 +108,10 @@ describe("Translations", () => {
 
   it("should accept loaders that give the strings directly", async () => {
     const t = new Translations({
-      locales: { de: async () => ({ "tool.brush": "Pinsel" }) },
+      locales: { de: async () => ({ "paintCanvas.tool.brush": "Pinsel" }) },
     });
     await t.setLocale("de");
-    expect(t.t("tool.brush")).toBe("Pinsel");
+    expect(t.t("paintCanvas.tool.brush")).toBe("Pinsel");
   });
 
   it("should keep the latest choice when an earlier locale loads later", async () => {
@@ -118,9 +120,9 @@ describe("Translations", () => {
       locales: {
         slow: () =>
           new Promise((resolve) => {
-            finish = () => resolve({ "tool.brush": "Slow" });
+            finish = () => resolve({ "paintCanvas.tool.brush": "Slow" });
           }),
-        fast: async () => ({ "tool.brush": "Fast" }),
+        fast: async () => ({ "paintCanvas.tool.brush": "Fast" }),
       },
     });
     const slow = t.setLocale("slow");
@@ -142,7 +144,7 @@ describe("Translations", () => {
     const t = new Translations();
     await t.useDeviceLocale(["zh-TW"]);
     expect(t.locale).toBe("zh-Hant");
-    expect(t.t("tool.brush")).toBe("筆刷");
+    expect(t.t("paintCanvas.tool.brush")).toBe("筆刷");
     await t.useDeviceLocale();
     expect(t.locale).toBe(matchLocale(navigator.languages, t.locales));
   });
@@ -159,12 +161,12 @@ describe("Translations", () => {
     const t = new Translations();
     const listener = vi.fn();
     t.addEventListener("change", listener);
-    t.addStrings("en-US", { "tool.brush": "Paintbrush" });
-    t.addStrings("ja", { "tool.brush": "筆" });
-    expect(t.t("tool.brush")).toBe("Paintbrush");
+    t.addStrings("en-US", { "paintCanvas.tool.brush": "Paintbrush" });
+    t.addStrings("ja", { "paintCanvas.tool.brush": "筆" });
+    expect(t.t("paintCanvas.tool.brush")).toBe("Paintbrush");
     expect(listener).toHaveBeenCalledOnce();
     await t.setLocale("ja");
-    expect(t.t("tool.brush")).toBe("筆");
+    expect(t.t("paintCanvas.tool.brush")).toBe("筆");
   });
 
   it("should use the given fallback locale and strings", () => {

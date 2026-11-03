@@ -1305,7 +1305,7 @@ export class PcCanvas extends PcElement {
   override render() {
     return html`<canvas
         class="scene"
-        aria-label=${this.t("canvas.label")}
+        aria-label=${this.t("paintCanvas.canvas.label")}
         @pointerdown=${this.onPointerDown}
         @pointermove=${this.onPointerMove}
         @pointerup=${this.onPointerUp}

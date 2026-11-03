@@ -44,7 +44,7 @@ export const emit = <T>(
  * @example
  * class PcThing extends PcElement {
  *   override render() {
- *     return html`<button>${this.t("common.close")}</button>`;
+ *     return html`<button>${this.t("paintCanvas.common.close")}</button>`;
  *   }
  * }
  */

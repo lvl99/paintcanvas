@@ -132,7 +132,7 @@ export interface TranslationsOptions {
  * @example
  * const translations = new Translations({ locales: { "en-US": ..., ja: () => import("./ja.json") } });
  * await translations.useDeviceLocale();
- * translations.t("layers.delete", { name: "Sketch" });
+ * translations.t("paintCanvas.layers.delete", { name: "Sketch" });
  */
 export default class Translations extends EventTarget {
   private readonly loaders: Record<string, LocaleLoader>;
@@ -216,11 +216,11 @@ export default class Translations extends EventTarget {
 
   /**
    * Translate a key, putting values into its `{name}` placeholders. With a numeric `count`, the key's plural form for
-   * the locale is used when there is one (e.g. `presets.imported.one` and `presets.imported.other`). Falls back to the
+   * the locale is used when there is one (e.g. `paintCanvas.presets.imported.one` and `paintCanvas.presets.imported.other`). Falls back to the
    * fallback locale, then the key.
    *
    * @example
-   * translations.t("presets.imported", { count: 3 }); // "Imported 3 brush presets"
+   * translations.t("paintCanvas.presets.imported", { count: 3 }); // "Imported 3 brush presets"
    */
   t(key: string, values?: Record<string, string | number>): string {
     const count = values?.count;

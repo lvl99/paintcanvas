@@ -31,10 +31,10 @@ import {
 
 /** Translation keys of the preset file error messages */
 const PRESET_FILE_ERROR_KEYS: Record<string, string> = {
-  [PRESET_FILE_ERRORS.incompatible]: "presets.fileIncompatible",
-  [PRESET_FILE_ERRORS.read]: "presets.fileReadFailed",
-  [PRESET_FILE_ERRORS.export]: "presets.exportFailed",
-  [PRESET_FILE_ERRORS.empty]: "presets.nothingToExport",
+  [PRESET_FILE_ERRORS.incompatible]: "paintCanvas.presets.fileIncompatible",
+  [PRESET_FILE_ERRORS.read]: "paintCanvas.presets.fileReadFailed",
+  [PRESET_FILE_ERRORS.export]: "paintCanvas.presets.exportFailed",
+  [PRESET_FILE_ERRORS.empty]: "paintCanvas.presets.nothingToExport",
 };
 
 /** Cursor over a preset that a click deletes (Alt/Option held) */
@@ -196,16 +196,17 @@ export class PcBrushMenu extends PcElement {
     const app = this.app;
     if (!app) return;
     const name = preset.name ?? preset.id;
-    if (!this.confirm(this.t("presets.deleteConfirm", { name }))) return;
+    if (!this.confirm(this.t("paintCanvas.presets.deleteConfirm", { name })))
+      return;
     try {
       await app.customPresets.remove(preset.id);
       this.emit("pc-toast", {
-        message: this.t("presets.deleted", { name }),
+        message: this.t("paintCanvas.presets.deleted", { name }),
         kind: "success",
       });
     } catch {
       this.emit("pc-toast", {
-        message: this.t("presets.deleteFailed", { name }),
+        message: this.t("paintCanvas.presets.deleteFailed", { name }),
         kind: "error",
       });
     }
@@ -234,7 +235,9 @@ export class PcBrushMenu extends PcElement {
       ]);
       await app.customPresets.save(...presets);
       this.emit("pc-toast", {
-        message: this.t("presets.imported", { count: presets.length }),
+        message: this.t("paintCanvas.presets.imported", {
+          count: presets.length,
+        }),
         kind: "success",
       });
     } catch (error) {
@@ -281,8 +284,9 @@ export class PcBrushMenu extends PcElement {
    * A preset group's heading in the chosen language ("My presets" and "Unknown" are translated; author names aren't).
    */
   private groupLabel(label: string): string {
-    if (label === MY_PRESETS) return this.t("presets.myPresets");
-    if (label === UNKNOWN_AUTHOR) return this.t("presets.unknownAuthor");
+    if (label === MY_PRESETS) return this.t("paintCanvas.presets.myPresets");
+    if (label === UNKNOWN_AUTHOR)
+      return this.t("paintCanvas.presets.unknownAuthor");
     return label;
   }
 
@@ -365,7 +369,11 @@ export class PcBrushMenu extends PcElement {
   override render() {
     const settings = this.settings;
     if (!settings) return html``;
-    const title = this.t(this.kind === "eraser" ? "tool.eraser" : "tool.brush");
+    const title = this.t(
+      this.kind === "eraser"
+        ? "paintCanvas.tool.eraser"
+        : "paintCanvas.tool.brush",
+    );
     const presets = Object.values(settings.presets);
     const sizes = previewSizes(presets);
     // Settings only exist with an app
@@ -394,9 +402,9 @@ export class PcBrushMenu extends PcElement {
         <div
           class="size"
           role="slider"
-          aria-label=${this.t("brushMenu.size", { tool: title })}
+          aria-label=${this.t("paintCanvas.brushMenu.size", { tool: title })}
           aria-valuenow=${settings.width}
-          title=${this.t("brushMenu.dragToResize")}
+          title=${this.t("paintCanvas.brushMenu.dragToResize")}
           @pointerdown=${this.onPointerDown}
           @pointermove=${this.onPointerMove}
           @pointerup=${this.onPointerUp}
@@ -407,7 +415,7 @@ export class PcBrushMenu extends PcElement {
       </div>
       <div
         class="presets"
-        aria-label=${this.t("brushMenu.presets", { tool: title })}
+        aria-label=${this.t("paintCanvas.brushMenu.presets", { tool: title })}
       >
         ${groups.map(
           (group) => html`
@@ -426,7 +434,7 @@ export class PcBrushMenu extends PcElement {
           class="pill new-preset"
           @click=${() => this.emit("pc-new-preset", this.kind)}
         >
-          ${this.t("brushMenu.create")}
+          ${this.t("paintCanvas.brushMenu.create")}
         </button>
         <button
           type="button"
@@ -436,11 +444,11 @@ export class PcBrushMenu extends PcElement {
               .querySelector<HTMLInputElement>(".import-file")
               ?.click()}
         >
-          ${this.t("brushMenu.import")}
+          ${this.t("paintCanvas.brushMenu.import")}
         </button>
         <!-- Chosen through "Import" -->
         <label class="visually-hidden">
-          ${this.t("brushMenu.importFile")}
+          ${this.t("paintCanvas.brushMenu.importFile")}
           <input
             type="file"
             class="import-file"
@@ -459,7 +467,7 @@ export class PcBrushMenu extends PcElement {
           class="pill export"
           @click=${() => void this.exportFile()}
         >
-          ${this.t("brushMenu.export")}
+          ${this.t("paintCanvas.brushMenu.export")}
         </button>
       </div>
     `;

@@ -159,14 +159,14 @@ export class PcBrushTest extends PcElement {
       <canvas
         width=${TEST_AREA_WIDTH}
         height=${TEST_AREA_HEIGHT}
-        aria-label=${this.t("brushConfig.testArea")}
+        aria-label=${this.t("paintCanvas.brushConfig.testArea")}
         @pointerdown=${this.onPointerDown}
         @pointermove=${this.onPointerMove}
         @pointerup=${this.onPointerUp}
         @pointercancel=${this.onPointerUp}
       ></canvas>
       <button type="button" class="clear" @click=${() => this.clear()}>
-        ${this.t("common.clear")}
+        ${this.t("paintCanvas.common.clear")}
       </button>
     `;
   }

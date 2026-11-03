@@ -282,7 +282,7 @@ export class PcLayersMenu extends PcElement {
         ?disabled=${!layers.canCreate}
         @click=${() => layers.create()}
       >
-        ${this.t("layers.new")}
+        ${this.t("paintCanvas.layers.new")}
       </button>
       <p class="announcement" role="status" aria-live="polite">
         ${this.announcement || nothing}

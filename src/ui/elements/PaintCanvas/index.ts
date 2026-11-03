@@ -221,7 +221,7 @@ export class PaintCanvasElement extends PcElement {
   // Tell the user when the drawing can't be loaded or saved
   private readonly onAutosaveError = () =>
     emit(this, "pc-toast", {
-      message: this.t("autosave.failed"),
+      message: this.t("paintCanvas.autosave.failed"),
       kind: "error",
     });
 
@@ -465,7 +465,7 @@ export class PaintCanvasElement extends PcElement {
       kind,
       config: {
         ...settings.preset,
-        name: this.t("brushConfig.newPresetName"),
+        name: this.t("paintCanvas.brushConfig.newPresetName"),
         width: settings.width,
         height: settings.height,
       },
@@ -585,7 +585,7 @@ export class PaintCanvasElement extends PcElement {
             title=${panel.label}
             aria-label=${
               panel.badge
-                ? this.t("layout.new", { name: panel.label })
+                ? this.t("paintCanvas.layout.new", { name: panel.label })
                 : panel.label
             }
             aria-expanded=${String(this.openPanel === panel)}
@@ -602,7 +602,11 @@ export class PaintCanvasElement extends PcElement {
   /** A side, in its mode */
   private renderSide(side: Side, app: PaintCanvas, blocked: boolean) {
     const mode = this.modeOf(side);
-    const label = this.t(side === "left" ? "layout.tools" : "layout.panels");
+    const label = this.t(
+      side === "left"
+        ? "paintCanvas.layout.tools"
+        : "paintCanvas.layout.panels",
+    );
     const slot = html`<slot
       name=${side}
       @slotchange=${(event: Event) => this.onSideSlotChange(side, event)}
@@ -625,7 +629,7 @@ export class PaintCanvasElement extends PcElement {
           type="button"
           class="collapse"
           aria-expanded=${String(!collapsed)}
-          aria-label=${this.t(collapsed ? "layout.show" : "layout.hide", { name: label })}
+          aria-label=${this.t(collapsed ? "paintCanvas.layout.show" : "paintCanvas.layout.hide", { name: label })}
           @click=${() =>
             (this.collapsed = { ...this.collapsed, [side]: !collapsed })}
         >
@@ -687,12 +691,15 @@ export class PaintCanvasElement extends PcElement {
   /** The message blocking the layout while another window is drawing on the stored drawing */
   private renderBlocked(app: PaintCanvas) {
     const choices: DialogChoice[] = [
-      { value: TAKE_OVER_CHOICE, label: this.t("autosave.takeOver") },
+      {
+        value: TAKE_OVER_CHOICE,
+        label: this.t("paintCanvas.autosave.takeOver"),
+      },
     ];
     return html`<pc-dialog
       class="elsewhere"
-      heading=${this.t("autosave.elsewhere")}
-      message=${this.t("autosave.elsewhereMessage")}
+      heading=${this.t("paintCanvas.autosave.elsewhere")}
+      message=${this.t("paintCanvas.autosave.elsewhereMessage")}
       .choices=${choices}
       @pc-choose=${(event: CustomEvent<{ value: string }>) => {
         // Escape leaves the message showing: this window can't draw until it takes over
@@ -713,7 +720,7 @@ export class PaintCanvasElement extends PcElement {
         class="top"
         part="top"
         role="region"
-        aria-label=${this.t("layout.toolSettings")}
+        aria-label=${this.t("paintCanvas.layout.toolSettings")}
         ?inert=${blocked}
       >
         ${this.slotWithDefault(
@@ -732,7 +739,7 @@ export class PaintCanvasElement extends PcElement {
         class="center"
         part="center"
         role="region"
-        aria-label=${this.t("layout.canvas")}
+        aria-label=${this.t("paintCanvas.layout.canvas")}
         ?inert=${blocked}
       >
         ${this.slotWithDefault(
@@ -757,7 +764,7 @@ export class PaintCanvasElement extends PcElement {
         class="bottom"
         part="bottom"
         role="region"
-        aria-label=${this.t("layout.status")}
+        aria-label=${this.t("paintCanvas.layout.status")}
         ?inert=${blocked}
       >
         <slot name="bottom"></slot>

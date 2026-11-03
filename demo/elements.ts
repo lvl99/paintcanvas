@@ -10,7 +10,9 @@ const find = <T extends Element = HTMLElement>(selector: string): T =>
 
 const select = find<HTMLSelectElement>("#language");
 for (const locale of translations.locales)
-  select.add(new Option(translations.t(`language.${locale}`), locale));
+  select.add(
+    new Option(translations.t(`paintCanvas.language.${locale}`), locale),
+  );
 await translations.useDeviceLocale();
 select.value = translations.locale;
 select.addEventListener(
@@ -27,14 +29,16 @@ find<HTMLInputElement>("#dark").addEventListener("change", (event) => {
 
 find("#dialog-button").addEventListener("click", () => {
   const dialog = document.createElement("pc-dialog") as PcDialog;
-  dialog.heading = translations.t("layers.deleteConfirm", { name: "Sketch" });
+  dialog.heading = translations.t("paintCanvas.layers.deleteConfirm", {
+    name: "Sketch",
+  });
   dialog.choices = [
     {
       value: "delete",
-      label: translations.t("common.delete"),
+      label: translations.t("paintCanvas.common.delete"),
       cancelling: true,
     },
-    { value: "cancel", label: translations.t("common.cancel") },
+    { value: "cancel", label: translations.t("paintCanvas.common.cancel") },
   ];
   dialog.addEventListener("pc-choose", () => dialog.remove());
   document.body.append(dialog);
