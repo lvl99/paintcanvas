@@ -28,10 +28,23 @@ const copyValidatorTypes = (): Plugin => ({
   },
 });
 
+/**
+ * Keep every import between PaintCanvas's own modules. package.json's `sideEffects` names only `dist/` files, so the
+ * build would treat the source files as side-effect free and remove imports kept only for their side effects, such as
+ * `import "../PcButton"`, which registers the elements an element uses.
+ */
+const keepSideEffectImports = (): Plugin => ({
+  name: "paintcanvas:keep-side-effect-imports",
+  apply: "build",
+  transform(_code, id) {
+    if (id.includes("/src/")) return { moduleSideEffects: true };
+  },
+});
+
 // Builds PaintCanvas as ES modules in `dist/`, one file per source file in the same folders as `src/`, so each exported
 // path has its own file and implementers' bundlers only include what they import
 export default defineConfig({
-  plugins: [copyValidatorTypes()],
+  plugins: [copyValidatorTypes(), keepSideEffectImports()],
   build: {
     lib: { entry: entries, formats: ["es"] },
     rolldownOptions: {
