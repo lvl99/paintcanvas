@@ -1,0 +1,18 @@
+{
+  // Writes the published type definitions (`dist/**/*.d.ts`) for the source, without tests
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src"],
+  "exclude": [
+    "src/**/tests",
+    "src/**/*.generated.js",
+    // Only used by scripts/build-validators.ts, so it isn't published
+    "src/lib/validation/standalone.ts"
+  ]
+}

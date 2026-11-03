@@ -1,6 +1,6 @@
 import { html, nothing, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
-import { PcElement, defineElement } from "../../base";
+import { PcElement, defineElement, emit } from "../../base";
 import ChangeController from "../../ChangeController";
 import PaintCanvas, { Panel } from "../../../lib/classes/PaintCanvas";
 import KeyboardShortcuts, {
@@ -9,6 +9,11 @@ import KeyboardShortcuts, {
 import { isTouchDevice } from "../../../lib/classes/InputSettings";
 import type { Insets } from "../../../lib/classes/Viewport";
 import type { ShortcutAction } from "../../../lib/utils/shortcuts";
+import IndexedDbLayerStore from "../../../lib/storage";
+import LayerAutosave, {
+  AUTOSAVE_ERROR_EVENT,
+  AutosaveState,
+} from "../../../lib/classes/LayerAutosave";
 import type { BrushConfig } from "../../../lib/brushes/types";
 import { isOwnAuthor } from "../../../lib/brushes/authors";
 import {
@@ -37,12 +42,18 @@ import "../PcCanvasMap";
 import "../PcBrushMenu";
 import "../PcLayersMenu";
 import "../PcBrushConfig";
+import "../PcStats";
+import "../PcDialog";
+import type { DialogChoice } from "../PcDialog";
 
 /** A side of the layout */
 type Side = "left" | "right";
 
 /** No space kept clear */
 const NO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/** The choice that takes the drawing over from another window */
+const TAKE_OVER_CHOICE = "take-over";
 
 /** Elements that can take keyboard focus */
 const FOCUSABLE =
@@ -52,17 +63,19 @@ const FOCUSABLE =
  * A ready-made painting app: the drawing elements arranged around the canvas, sized to its container (not the
  * window), with slots to add or replace content:
  *
- * - `header` and `footer`: across the top and bottom (empty by default)
+ * - `header`: across the top (empty by default)
  * - `left`: `<pc-toolbar>` by default
  * - `top`: `<pc-tool-settings>` (for tools that have settings) by default
  * - `right`: empty by default (e.g. a `<pc-panel>` with a layers menu or chat)
  * - `center`: `<pc-canvas>` by default
  * - `overlay`: drawn over the canvas; `<pc-canvas-map>` by default
  * - `bottom`: under the canvas (empty by default)
+ * - `footer`: across the bottom; `<pc-stats>` by default
  * - `menu`: the app menu the toolbar's menu button opens (the button shows only with a menu)
  *
  * Content given for a slot replaces its default; an empty element clears it. Empty slots take no space. Hiding the
- * interface (Tab key) leaves only the canvas and overlay.
+ * interface (Tab key) leaves only the canvas and overlay. A `<pc-layers-menu>` given in a side (e.g. in a `<pc-panel>`)
+ * replaces the toolbar's layers menu button.
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
  * rail@600"`): `docked` beside the canvas; `rail`, a column of buttons (one per `<pc-panel>`) that open each panel over
@@ -71,6 +84,10 @@ const FOCUSABLE =
  * Reports its state for styling as attributes (`narrow`, `input="pen|touch|mouse"`, `ui-hidden`, `left-mode`,
  * `right-mode`) and as `pc-state-change` events (see `LayoutState`). Creates its own canvas unless given one, and
  * handles keyboard shortcuts unless `shortcuts` is false.
+ *
+ * With a `store` name, the user's layers are kept in the browser (IndexedDB) under that name, so the drawing survives
+ * reloading the page (see `LayerAutosave`). While another window is drawing on it, the layout is blocked by a message
+ * that offers to draw here instead. Fires `pc-toast` when the drawing can't be loaded or saved.
  *
  * @example
  * html`<paint-canvas style="height: 600px"></paint-canvas>`
@@ -88,6 +105,7 @@ export class PaintCanvasElement extends PcElement {
     menuText: { type: String, attribute: "menu-text" },
     menuLabel: { type: String, attribute: "menu-label" },
     shortcuts: { type: Boolean },
+    store: { type: String },
     width: { state: true },
     input: { state: true },
     configuring: { state: true },
@@ -118,6 +136,9 @@ export class PaintCanvasElement extends PcElement {
   /** Whether the layout handles keyboard shortcuts (default true) */
   declare shortcuts: boolean;
 
+  /** Name to keep the user's layers under in the browser, so the drawing survives reloading the page (none by default) */
+  declare store?: string;
+
   /** The layout's width in CSS pixels */
   declare width: number;
 
@@ -141,10 +162,25 @@ export class PaintCanvasElement extends PcElement {
   saveFile: (blob: Blob, name: string) => Promise<SaveMethod | undefined> =
     saveFileToDisk;
 
-  private changes = new ChangeController(this, () => [this.app]);
+  private changes = new ChangeController(this, () => [
+    this.app,
+    this.app?.autosave,
+  ]);
+
+  /** The autosave the layout started for `store`, if any */
+  private ownAutosave?: LayerAutosave;
+
+  /** The autosave whose errors are shown */
+  private watchedAutosave?: LayerAutosave;
+
+  /** Whether drawing was blocked when shortcuts were last watched */
+  private blockedShortcuts = false;
 
   /** The panels in each side's slot */
   private panels: Record<Side, PcPanel[]> = { left: [], right: [] };
+
+  /** Whether each side's slot has a layers menu (the toolbar's isn't needed then) */
+  private sideLayers: Record<Side, boolean> = { left: false, right: false };
 
   /** Whether the implementer gave a menu */
   private hasMenu = false;
@@ -182,6 +218,13 @@ export class PaintCanvasElement extends PcElement {
     this.input = kind === "pen" || kind === "touch" ? kind : "mouse";
   };
 
+  // Tell the user when the drawing can't be loaded or saved
+  private readonly onAutosaveError = () =>
+    emit(this, "pc-toast", {
+      message: this.t("autosave.failed"),
+      kind: "error",
+    });
+
   // Cmd/Ctrl + S saves a screenshot
   private readonly onShortcut = (event: Event) => {
     if ((event as CustomEvent<ShortcutAction>).detail.type === "save")
@@ -215,6 +258,11 @@ export class PaintCanvasElement extends PcElement {
     this.input = isTouchDevice() ? "touch" : "mouse";
     // Floating sides start as a button, so they don't cover the canvas until wanted
     this.collapsed = { left: true, right: true };
+  }
+
+  /** Whether another window is drawing on the stored drawing, so this one is blocked */
+  get blocked(): boolean {
+    return this.app?.autosave?.state === AutosaveState.Elsewhere;
   }
 
   /** The layout's state now (see `LayoutState`) */
@@ -268,7 +316,15 @@ export class PaintCanvasElement extends PcElement {
 
   protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
     super.willUpdate(changed);
-    if (this.isConnected && (changed.has("app") || changed.has("shortcuts")))
+    if (changed.has("app") || changed.has("store"))
+      this.useStore(changed.get("app") as PaintCanvas | undefined);
+    this.watchAutosaveErrors();
+    if (
+      this.isConnected &&
+      (changed.has("app") ||
+        changed.has("shortcuts") ||
+        this.blocked !== this.blockedShortcuts)
+    )
       this.watchShortcuts();
     // A panel opened from a rail closes when its side stops being a rail
     const panel = this.openPanel;
@@ -307,10 +363,42 @@ export class PaintCanvasElement extends PcElement {
     this.requestUpdate();
   }
 
-  /** Handle keyboard shortcuts for the current canvas, if asked to */
+  /**
+   * Keep the canvas's layers under the `store` name, replacing an autosave the layout started earlier (also on the
+   * previous canvas). An autosave the implementer started is left alone when there's no name.
+   */
+  private useStore(previousApp?: PaintCanvas): void {
+    const app = this.app as PaintCanvas;
+    const own = this.ownAutosave;
+    if (own && previousApp?.autosave === own)
+      previousApp.useLayerStore(undefined);
+    const name = this.store || undefined;
+    if (name === undefined) {
+      if (own && app.autosave === own)
+        this.ownAutosave = app.useLayerStore(undefined);
+      return;
+    }
+    if (app.autosave?.store.name !== name)
+      this.ownAutosave = app.useLayerStore(new IndexedDbLayerStore(name));
+  }
+
+  /** Show errors from the canvas's current autosave */
+  private watchAutosaveErrors(): void {
+    const autosave = this.app?.autosave;
+    if (autosave === this.watchedAutosave) return;
+    this.watchedAutosave?.removeEventListener(
+      AUTOSAVE_ERROR_EVENT,
+      this.onAutosaveError,
+    );
+    this.watchedAutosave = autosave;
+    autosave?.addEventListener(AUTOSAVE_ERROR_EVENT, this.onAutosaveError);
+  }
+
+  /** Handle keyboard shortcuts for the current canvas, if asked to (not while blocked) */
   private watchShortcuts(): void {
     this.unwatchShortcuts();
-    if (!this.shortcuts || !this.app) return;
+    this.blockedShortcuts = this.blocked;
+    if (!this.shortcuts || !this.app || this.blockedShortcuts) return;
     this.keys = new KeyboardShortcuts(this.app);
     this.keys.attach(window);
     window.addEventListener(SHORTCUT_EVENT, this.onShortcut);
@@ -438,15 +526,20 @@ export class PaintCanvasElement extends PcElement {
     >`;
   }
 
-  /** Follow the panels given for a side */
+  /** Follow the panels given for a side, and whether it has a layers menu */
   private onSideSlotChange(side: Side, event: Event): void {
+    const assigned = (event.target as HTMLSlotElement).assignedElements();
     this.panels = {
       ...this.panels,
-      [side]: (event.target as HTMLSlotElement)
-        .assignedElements()
-        .filter(
-          (element): element is PcPanel => element.localName === "pc-panel",
-        ),
+      [side]: assigned.filter(
+        (element): element is PcPanel => element.localName === "pc-panel",
+      ),
+    };
+    this.sideLayers = {
+      ...this.sideLayers,
+      [side]: assigned.some((element) =>
+        element.matches("pc-layers-menu, :has(pc-layers-menu)"),
+      ),
     };
     this.onSlotChange(event);
   }
@@ -458,11 +551,17 @@ export class PaintCanvasElement extends PcElement {
     this.requestUpdate();
   }
 
+  /** Whether a side has a layers menu, replacing the toolbar's */
+  private get layersInSide(): boolean {
+    return this.sideLayers.left || this.sideLayers.right;
+  }
+
   /** The toolbar shown on the left unless the implementer gives other content */
   private renderToolbar(app: PaintCanvas) {
     return html`<pc-toolbar
       .app=${app}
       .menu=${this.hasMenu}
+      .layers=${!this.layersInSide}
       .menuText=${this.menuText}
       .menuLabel=${this.menuLabel}
     ></pc-toolbar>`;
@@ -501,7 +600,7 @@ export class PaintCanvasElement extends PcElement {
   }
 
   /** A side, in its mode */
-  private renderSide(side: Side, app: PaintCanvas) {
+  private renderSide(side: Side, app: PaintCanvas, blocked: boolean) {
     const mode = this.modeOf(side);
     const label = this.t(side === "left" ? "layout.tools" : "layout.panels");
     const slot = html`<slot
@@ -541,6 +640,7 @@ export class PaintCanvasElement extends PcElement {
       data-mode=${mode}
       role="region"
       aria-label=${label}
+      ?inert=${blocked}
     >
       ${content}
     </div>`;
@@ -558,7 +658,7 @@ export class PaintCanvasElement extends PcElement {
     return html`${app.panel === Panel.Brush ? brushMenu("brush") : nothing}
       ${app.panel === Panel.Eraser ? brushMenu("eraser") : nothing}
       ${
-        app.panel === Panel.Layers
+        app.panel === Panel.Layers && !this.layersInSide
           ? html`<pc-layers-menu class="panel" .app=${app}></pc-layers-menu>`
           : nothing
       }
@@ -584,16 +684,37 @@ export class PaintCanvasElement extends PcElement {
     ></pc-brush-config>`;
   }
 
+  /** The message blocking the layout while another window is drawing on the stored drawing */
+  private renderBlocked(app: PaintCanvas) {
+    const choices: DialogChoice[] = [
+      { value: TAKE_OVER_CHOICE, label: this.t("autosave.takeOver") },
+    ];
+    return html`<pc-dialog
+      class="elsewhere"
+      heading=${this.t("autosave.elsewhere")}
+      message=${this.t("autosave.elsewhereMessage")}
+      .choices=${choices}
+      @pc-choose=${(event: CustomEvent<{ value: string }>) => {
+        // Escape leaves the message showing: this window can't draw until it takes over
+        if (event.detail.value === TAKE_OVER_CHOICE) app.autosave?.takeOver();
+      }}
+    ></pc-dialog>`;
+  }
+
   override render() {
     const app = this.app as PaintCanvas;
     const showsToolSettings = app.interfaceVisible && hasToolSettings(app.tool);
-    return html`<header part="header"><slot name="header"></slot></header>
-      ${this.renderSide("left", app)}
+    const blocked = this.blocked;
+    return html`<header part="header" ?inert=${blocked}>
+        <slot name="header"></slot>
+      </header>
+      ${this.renderSide("left", app, blocked)}
       <div
         class="top"
         part="top"
         role="region"
         aria-label=${this.t("layout.toolSettings")}
+        ?inert=${blocked}
       >
         ${this.slotWithDefault(
           "top",
@@ -612,6 +733,7 @@ export class PaintCanvasElement extends PcElement {
         part="center"
         role="region"
         aria-label=${this.t("layout.canvas")}
+        ?inert=${blocked}
       >
         ${this.slotWithDefault(
           "center",
@@ -636,12 +758,15 @@ export class PaintCanvasElement extends PcElement {
         part="bottom"
         role="region"
         aria-label=${this.t("layout.status")}
+        ?inert=${blocked}
       >
         <slot name="bottom"></slot>
       </div>
-      ${this.renderSide("right", app)}
-      <footer part="footer"><slot name="footer"></slot></footer>
-      ${this.renderConfig(app)}`;
+      ${this.renderSide("right", app, blocked)}
+      <footer part="footer" ?inert=${blocked}>
+        ${this.slotWithDefault("footer", html`<pc-stats .app=${app}></pc-stats>`)}
+      </footer>
+      ${this.renderConfig(app)} ${blocked ? this.renderBlocked(app) : nothing}`;
   }
 }
 

@@ -1,0 +1,8 @@
+/* The light theme's background is transparent by default, which shows whatever the browser draws behind the page */
+:root {
+  --ifm-background-color: #fff;
+}
+
+[data-theme="dark"] {
+  --ifm-background-color: #1b1b1d;
+}

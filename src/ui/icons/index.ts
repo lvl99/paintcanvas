@@ -34,6 +34,9 @@ import clipboard from "./images/clipboard.png?url";
 import smoothingLinear from "./images/smoothing-linear.png?url";
 import smoothingBezierQuad from "./images/smoothing-bezier-quad.png?url";
 import smoothingBezierCubic from "./images/smoothing-bezier-cubic.png?url";
+import sun from "./images/sun.png?url";
+import moon from "./images/moon.png?url";
+import star from "./images/star.png?url";
 
 /** Names of the icons that come with PaintCanvas */
 export type IconName =
@@ -69,7 +72,10 @@ export type IconName =
   | "clipboard"
   | "smoothingLinear"
   | "smoothingBezierQuad"
-  | "smoothingBezierCubic";
+  | "smoothingBezierCubic"
+  | "sun"
+  | "moon"
+  | "star";
 
 /** The icons that come with PaintCanvas, as URLs */
 export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
@@ -106,6 +112,9 @@ export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
   smoothingLinear,
   smoothingBezierQuad,
   smoothingBezierCubic,
+  sun,
+  moon,
+  star,
 };
 
 /**

@@ -8,7 +8,7 @@ import Translations, {
 } from "..";
 import enUS from "../../../../locales/en-US.json";
 
-const LOCALE_FILES = ["en-GB", "ja", "ko", "zh-Hans", "zh-Hant"];
+const LOCALE_FILES = ["en-GB", "fr", "ja", "ko", "zh-Hans", "zh-Hant"];
 
 describe("matchLocale", () => {
   const available = ["en-US", "en-GB", "ja", "ko", "zh-Hans", "zh-Hant"];
@@ -36,6 +36,10 @@ describe("matchLocale", () => {
 
   it("should use another locale of the same language when the preferred English isn't available", () => {
     expect(matchLocale(["en-AU"], ["en-US", "ja"])).toBe("en-US");
+    expect(matchLocale(["fr-CA"], Object.keys(BUILT_IN_LOCALES))).toBe("fr");
+    expect(matchLocale(["fr-FR", "en"], Object.keys(BUILT_IN_LOCALES))).toBe(
+      "fr",
+    );
     expect(matchLocale(["zh-TW"], ["zh-Hans"])).toBe("zh-Hans");
   });
 

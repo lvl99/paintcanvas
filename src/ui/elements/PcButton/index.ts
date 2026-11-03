@@ -42,7 +42,8 @@ export class PcButton extends PcElement {
         min-height: var(--pc-control-size);
         padding: var(--pc-space-1) var(--pc-space-3);
         border: 0;
-        border-radius: var(--pc-radius-pill);
+        /* A joined button group gives each button its corners */
+        border-radius: var(--pc-group-radius, var(--pc-radius-pill));
         background: var(--pc-accent);
         color: var(--pc-accent-text);
         font: inherit;
@@ -82,7 +83,7 @@ export class PcButton extends PcElement {
         min-height: 0;
         padding: 2px;
         border: 1px solid var(--pc-border);
-        border-radius: var(--pc-radius-small);
+        border-radius: var(--pc-group-radius, var(--pc-radius-small));
         background: var(--pc-surface);
         color: var(--pc-text);
       }

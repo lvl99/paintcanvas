@@ -1,0 +1,6 @@
+{
+  // Editor support for the site's config files; Docusaurus type checks nothing itself
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": { "baseUrl": "." },
+  "exclude": [".docusaurus", "build"]
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
+import type { PcDialog } from "../../PcDialog";
 import {
   DRAG_THRESHOLD,
   LAYER_ACTIONS,
@@ -12,6 +13,7 @@ import {
 } from "..";
 import { CHECKER_DARK } from "../../../../lib/rendering/checkerboard";
 import { createRecordingContext } from "../../../../testing/recordingContext";
+import type Layer from "../../../../lib/classes/Layer";
 import { BlendMode } from "../../../../lib/classes/Layer";
 import {
   mount,
@@ -144,20 +146,81 @@ describe("pc-layer-item", () => {
     expect(stack.layers.at(-1)!.name).toBe("Layer 2");
   });
 
-  it("should confirm before clearing or deleting", async () => {
+  it("should label clearing and deleting as asking first, and ask before doing them", async () => {
     const { element, stack, layer } = await mountItem();
-    const clear = vi.spyOn(layer, "clear");
-    element.confirm = vi.fn(() => false);
-    await runFromMenu(element, "clear");
-    await runFromMenu(element, "delete");
+    const clear = vi.spyOn(stack, "clear");
+    const dialog = () => queryAll<PcDialog>(element, "pc-dialog")[0];
+    for (const [action, label, heading, message, button] of [
+      [
+        "clear",
+        "Clear…",
+        "Clear layer",
+        'Clear all image data on "Layer 2"?',
+        "Clear",
+      ],
+      ["delete", "Delete…", "Delete layer", 'Delete "Layer 2"?', "Delete"],
+    ] as const) {
+      query(element, ".handle").dispatchEvent(
+        new MouseEvent("contextmenu", { cancelable: true }),
+      );
+      await element.updateComplete;
+      expect(
+        query(element, `[data-action="${action}"]`).textContent?.trim(),
+      ).toBe(label);
+      element.runAction(action);
+      await element.updateComplete;
+      expect([dialog()?.heading, dialog()?.message]).toEqual([
+        heading,
+        message,
+      ]);
+      expect(
+        queryAll(dialog()!, "pc-button").map((b) => [
+          b.textContent?.trim(),
+          b.getAttribute("variant"),
+        ]),
+      ).toEqual([
+        [button, "accent"],
+        ["Dismiss", "dismiss"],
+      ]);
+      // Dismissing (or Escape) changes nothing
+      query(dialog()!, `pc-button[data-value="cancel"]`).click();
+      await element.updateComplete;
+      expect(dialog()).toBeUndefined();
+    }
     expect(clear).not.toHaveBeenCalled();
     expect(stack.layers).toHaveLength(2);
 
-    element.confirm = vi.fn(() => true);
     await runFromMenu(element, "clear");
-    expect(clear).toHaveBeenCalled();
+    query(dialog()!, `pc-button[data-value="clear"]`).click();
+    expect(clear).toHaveBeenCalledWith(layer.id);
     await runFromMenu(element, "delete");
+    query(dialog()!, `pc-button[data-value="delete"]`).click();
+    await element.updateComplete;
     expect(stack.layers).toHaveLength(1);
+    expect(dialog()).toBeUndefined();
+  });
+
+  it("should not offer to delete the only layer", async () => {
+    const app = createApp();
+    const element = await mount<PcLayerItem>("pc-layer-item", {
+      stack: app.layers,
+      layer: app.layers.active,
+    });
+    query(element, ".handle").dispatchEvent(
+      new MouseEvent("contextmenu", { cancelable: true }),
+    );
+    await element.updateComplete;
+    expect(
+      query<HTMLButtonElement>(element, '[data-action="delete"]').disabled,
+    ).toBe(true);
+    element.runAction("delete");
+    await element.updateComplete;
+    expect(queryAll(element, "pc-dialog")).toHaveLength(0);
+  });
+
+  it("should do nothing when confirmed without a layer", async () => {
+    const element = await mount<PcLayerItem>("pc-layer-item", {});
+    expect(() => element.confirmed("delete")).not.toThrow();
   });
 
   it("should merge the layer down after asking, and not from the bottom layer", async () => {
@@ -184,6 +247,47 @@ describe("pc-layer-item", () => {
     expect(dialog()).toBeUndefined();
   });
 
+  it("should only offer moves the layer can make: not up from the top, nor down or merging from the bottom", async () => {
+    const app = createApp();
+    const stack = app.layers;
+    stack.create();
+    stack.create();
+    const disabled = async (layer: (typeof stack.layers)[number]) => {
+      const element = await mount<PcLayerItem>("pc-layer-item", {
+        stack,
+        layer,
+      });
+      query(element, ".handle").dispatchEvent(
+        new MouseEvent("contextmenu", { cancelable: true }),
+      );
+      await element.updateComplete;
+      const actions = queryAll<HTMLButtonElement>(element, "menu [data-action]")
+        .filter((button) => button.disabled)
+        .map((button) => button.dataset.action);
+      element.remove();
+      return actions;
+    };
+    const [top, middle, bottom] = stack.layers as [Layer, Layer, Layer];
+    expect(await disabled(top)).toEqual(["up", "top"]);
+    expect(await disabled(middle)).toEqual([]);
+    expect(await disabled(bottom)).toEqual(["merge", "down", "bottom"]);
+    // Asked from code anyway: nothing happens
+    const element = await mount<PcLayerItem>("pc-layer-item", {
+      stack,
+      layer: top,
+    });
+    const order = stack.layers.map((layer) => layer.id);
+    element.runAction("up");
+    element.runAction("top");
+    element.layer = bottom;
+    element.runAction("down");
+    element.runAction("bottom");
+    expect(stack.layers.map((layer) => layer.id)).toEqual(order);
+    expect(element.canRun("duplicate")).toBe(true);
+    element.stack = undefined;
+    expect(element.canRun("duplicate")).toBe(false);
+  });
+
   it("should not offer to merge down the bottom layer", async () => {
     const app = createApp();
     const element = await mount<PcLayerItem>("pc-layer-item", {
@@ -200,14 +304,6 @@ describe("pc-layer-item", () => {
     element.runAction("merge");
     await element.updateComplete;
     expect(queryAll(element, "pc-dialog")).toHaveLength(0);
-  });
-
-  it("should use window.confirm by default", async () => {
-    const { element } = await mountItem();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    element.runAction("clear");
-    expect(confirm).toHaveBeenCalledWith('Clear all image data on "Layer 2"?');
-    confirm.mockRestore();
   });
 
   it("should drag the layer by its handle once the pointer has moved far enough, capturing it", async () => {

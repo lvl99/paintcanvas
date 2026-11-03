@@ -58,9 +58,14 @@ menu button {
   white-space: nowrap;
   cursor: pointer;
 }
-menu button:hover,
+menu button:hover:not(:disabled),
 menu button:focus-visible {
   background: var(--pc-bar);
+}
+/* Actions the layer can't take (e.g. moving the top layer up) */
+menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 /* The reorder handle drags with mouse, pen or touch (touch drags it rather than scrolling the panel) */
 .handle {

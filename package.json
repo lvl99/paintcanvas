@@ -2,36 +2,98 @@
   "name": "paintcanvas",
   "version": "0.1.0",
   "description": "Open-source painting engine and renderer for the browser, with optional UI.",
+  "keywords": [
+    "drawing",
+    "painting",
+    "canvas",
+    "brush",
+    "pen",
+    "stylus",
+    "web-components",
+    "lit"
+  ],
+  "author": "Matt Scheurich <matt@lvl99.com>",
   "license": "Apache-2.0",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/ui/index.js",
+    "./dist/ui/elements/*/index.js"
+  ],
   "exports": {
-    ".": "./src/index.ts",
-    "./ui": "./src/ui/index.ts",
-    "./ui/*": "./src/ui/*/index.ts",
-    "./lib/*": "./src/lib/*/index.ts",
-    "./testing/*": "./src/testing/*.ts",
-    "./locales/*": "./locales/*"
-  },
-  "scripts": {
-    "build": "rm -rf dist && tsc -p . && vite build",
-    "typecheck": "tsc -p .",
-    "build:validators": "node scripts/build-validators.ts",
-    "demo": "vite demo --port 5190 --strictPort"
-  },
-  "peerDependencies": {
-    "lit": "^3.3.3"
-  },
-  "devDependencies": {
-    "ajv": "^8.20.0",
-    "jsdom": "^30.1.3",
-    "lit": "^3.3.3",
-    "fake-indexeddb": "^6.2.6"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "default": "./dist/ui/index.js"
+    },
+    "./ui/*": {
+      "types": "./dist/ui/*/index.d.ts",
+      "default": "./dist/ui/*/index.js"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*/index.d.ts",
+      "default": "./dist/lib/*/index.js"
+    },
+    "./testing/*": {
+      "types": "./dist/testing/*.d.ts",
+      "default": "./dist/testing/*.js"
+    },
+    "./locales/*": "./locales/*",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "locales",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p .",
+    "test": "vitest --run --project paintcanvas",
+    "test:browser": "vitest --run --project paintcanvas-browser",
+    "test:all": "vitest --run",
+    "coverage": "vitest --run --coverage",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build:validators": "node scripts/build-validators.ts",
+    "dev": "vite demo --port 5190 --strictPort --open",
+    "demo": "pnpm dev",
+    "docs": "pnpm --filter paintcanvas-docs start",
+    "docs:build": "pnpm --filter paintcanvas-docs build",
+    "prepack": "pnpm build"
+  },
+  "packageManager": "pnpm@12.10.1",
+  "peerDependencies": {
+    "lit": "^3.3.3",
+    "vitest": "^4.1.12"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "@vitest/browser-playwright": "^4.1.12",
+    "@vitest/coverage-v8": "^4.1.12",
+    "ajv": "^8.20.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-lit": "^2.3.1",
+    "fake-indexeddb": "^6.2.7",
+    "globals": "^17.14.0",
+    "jsdom": "^30.1.3",
+    "lit": "^3.3.3",
+    "playwright": "^1.64.1",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
+    "vitest": "^4.1.12"
+  }
 }

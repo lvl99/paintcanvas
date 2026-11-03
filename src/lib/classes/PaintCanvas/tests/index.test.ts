@@ -5,7 +5,13 @@ import {
   STROKE_BEGIN_EVENT,
   STROKE_END_EVENT,
 } from "../../../brushes/StrokeEngine";
-import { createFakeCanvasFactory } from "../../../../testing/fakeCanvas";
+import {
+  createFakeCanvasFactory,
+  fakeContext,
+} from "../../../../testing/fakeCanvas";
+import { MemoryLayerStore } from "../../../../testing/layerStore";
+import { AutosaveState } from "../../LayerAutosave";
+import { BlendMode } from "../../Layer";
 
 const createApp = (options = {}) =>
   new PaintCanvas({ createCanvas: createFakeCanvasFactory(), ...options });
@@ -342,5 +348,79 @@ describe("PaintCanvas", () => {
     });
     await vi.waitFor(() => expect(store.list).toHaveBeenCalled());
     expect(app.customPresets.presets).toEqual([]);
+  });
+
+  it("should restore layers: the size, each layer's settings and image, and the selected one, starting undo history again", () => {
+    const app = createApp();
+    app.layers.create();
+    expect(app.history.canUndo).toBe(true);
+    const images = [{}, {}] as CanvasImageSource[];
+    app.restoreLayers(
+      30,
+      20,
+      [
+        { id: "top", name: "Ink", blendMode: BlendMode.Screen, opacity: 0.5 },
+        { id: "bottom", name: "Sketch", visible: false },
+      ],
+      images,
+      "bottom",
+    );
+    expect([app.width, app.height]).toEqual([30, 20]);
+    expect(app.layers.layers.map((layer) => layer.toConfig())).toEqual([
+      {
+        id: "top",
+        name: "Ink",
+        blendMode: BlendMode.Screen,
+        opacity: 0.5,
+        visible: true,
+        alphaLock: false,
+      },
+      {
+        id: "bottom",
+        name: "Sketch",
+        blendMode: BlendMode.Normal,
+        opacity: 1,
+        visible: false,
+        alphaLock: false,
+      },
+    ]);
+    app.layers.layers.forEach((layer, i) =>
+      expect(fakeContext(layer.canvas).drawImage).toHaveBeenCalledWith(
+        images[i],
+        0,
+        0,
+      ),
+    );
+    expect(app.layers.active.id).toBe("bottom");
+    expect(app.history.canUndo).toBe(false);
+    // More layers than allowed: nothing changes
+    expect(() =>
+      createApp({ maxLayers: 1 }).restoreLayers(
+        30,
+        20,
+        [{ name: "A" }, { name: "B" }],
+        images,
+        "a",
+      ),
+    ).toThrow("Cannot have more than 1 layers");
+  });
+
+  it("should keep its layers in a store when given one, and change or stop using stores", async () => {
+    const store = new MemoryLayerStore();
+    const app = createApp({ layerStore: store });
+    expect(app.autosave?.store).toBe(store);
+    const changes = vi.fn();
+    app.addEventListener("change", changes);
+    const first = app.autosave;
+    const other = new MemoryLayerStore("other");
+    const autosave = app.useLayerStore(other, { locks: null, document: null });
+    expect(autosave).toBe(app.autosave);
+    expect(autosave?.store).toBe(other);
+    await vi.waitFor(() => expect(first?.state).toBe(AutosaveState.Stopped));
+    expect(app.useLayerStore(undefined)).toBeUndefined();
+    expect(app.autosave).toBeUndefined();
+    await vi.waitFor(() => expect(autosave?.state).toBe(AutosaveState.Stopped));
+    expect(changes).toHaveBeenCalledTimes(2);
+    expect(createApp().autosave).toBeUndefined();
   });
 });

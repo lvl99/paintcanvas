@@ -3,7 +3,8 @@
   flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
-  width: 290px;
+  /* The layout makes it fill its panel when narrow */
+  width: var(--pc-layers-menu-width, 290px);
   padding: 8px;
   /* Light grey, like the bars */
   background: var(--pc-bar);

@@ -48,16 +48,27 @@ describe("pc-toolbar", () => {
     expect([menu.textContent?.trim(), menu.getAttribute("aria-label")]).toEqual(
       ["☰", "Menu"],
     );
-    element.menuText = "LC";
-    element.menuLabel = "LiveCanvas menu";
+    element.menuText = "App";
+    element.menuLabel = "My app menu";
     await element.updateComplete;
     expect([menu.textContent?.trim(), menu.getAttribute("aria-label")]).toEqual(
-      ["LC", "LiveCanvas menu"],
+      ["App", "My app menu"],
     );
     query(element, `[data-panel="${Panel.Layers}"]`).click();
     expect(app.panel).toBe(Panel.Layers);
     query(element, `[data-panel="${Panel.Menu}"]`).click();
     expect(app.panel).toBe(Panel.Menu);
+  });
+
+  it("should leave out the layers menu button when asked to", async () => {
+    const element = await mount<PcToolbar>("pc-toolbar", {
+      app: createApp(),
+      layers: false,
+    });
+    expect(queryAll(element, `[data-panel="${Panel.Layers}"]`)).toHaveLength(0);
+    element.layers = true;
+    await element.updateComplete;
+    expect(queryAll(element, `[data-panel="${Panel.Layers}"]`)).toHaveLength(1);
   });
 
   it("should change the colour", async () => {

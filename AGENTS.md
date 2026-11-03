@@ -132,7 +132,7 @@ If any new features or functionality require UI elements, ensure they are incorp
 
 Adhere to semver.
 
-Before PR, ensure to bump appropriate version.
+Don't bump the version in collaboration project branches or PRs. The version is bumped when a release is made (see below).
 
 For each version release, collate and summarise relevant actions undertaken since last release under the new version's heading with three sub-headings (Fixed, Added, Changed) and put them in [CHANGELOG.md] which will be committed to the project before each release.
 
@@ -142,8 +142,15 @@ Human will create collaboration project brief and prompt agent to review, or can
 
 When agent has work ready for UAT (after lint and unit tests have passed 100%), human will test locally first.
 
-Human will signal to agent if UAT has passed and when to prepare a release, or will update agent on any new work to complete via brief or prompt.
+Human will signal to agent if UAT has passed and when to prepare a PR, or will update agent on any new work to complete via brief or prompt.
 
-Releases will be will be made via NPM.
+PRs will be submitted, reviewed, and hopefully merged into `main`.
+
+Releases will be made via NPM, and only from the `main` branch, when human signals to prepare a release:
+
+1. Update [CHANGELOG.md] for the new version and commit it to `main`.
+2. Bump the version, commit and tag in one step with `pnpm version <patch|minor|major> -m "PaintCanvas %s"`. This makes the commit "PaintCanvas <version>" and the annotated tag `v<version>`, so the tagged release includes its changelog.
+3. Push the commit and the tag: `git push --follow-tags`.
+4. Publish to NPM: `pnpm publish`.
 
 Code will be provided only as ESM with TypeScript definitions in released NPM package.

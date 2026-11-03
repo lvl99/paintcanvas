@@ -1,0 +1,29 @@
+{
+  "name": "paintcanvas-docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PaintCanvas documentation site: guides and API pages generated from the source.",
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "clear": "docusaurus clear"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@mdx-js/react": "^3.1.1",
+    "clsx": "^2.1.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "^3.10.2",
+    "@docusaurus/tsconfig": "^3.10.2",
+    "@docusaurus/types": "^3.10.2",
+    "docusaurus-plugin-typedoc": "^1.4.3",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.14.1"
+  }
+}

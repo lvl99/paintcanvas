@@ -20,4 +20,12 @@ describe("pc-button-group", () => {
     expect(group.getAttribute("orientation")).toBe("vertical");
     expect(inner.getAttribute("aria-orientation")).toBe("vertical");
   });
+
+  it("should join its buttons into one pill when asked", async () => {
+    const group = await mount<PcButtonGroup>("pc-button-group");
+    expect(group.joined).toBe(false);
+    group.joined = true;
+    await group.updateComplete;
+    expect(group.hasAttribute("joined")).toBe(true);
+  });
 });

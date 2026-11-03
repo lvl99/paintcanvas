@@ -13,5 +13,9 @@ collaboration
 # Local tooling
 # Screenshots Vitest saves when a browser test fails
 .vitest-attachments/
-.firebase/
 .claude/
+
+# Documentation site: build output, cache and the API pages TypeDoc generates
+docs/build
+docs/.docusaurus
+docs/docs/api

@@ -25,7 +25,10 @@ import Layer, {
   createOffscreenCanvas,
   type BlendMode,
   type CanvasFactory,
+  type LayerConfig,
 } from "../Layer";
+import LayerAutosave, { type AutosaveOptions } from "../LayerAutosave";
+import type { LayerStoreLike } from "../../storage";
 import { brushPresets, eraserPresets } from "../../brushes";
 import type { AssetAuthor, BrushConfig } from "../../brushes/types";
 import {
@@ -239,6 +242,8 @@ export interface PaintCanvasOptions {
   presetAuthor?: () => AssetAuthor;
   /** Names to use instead of PaintCanvas's own (see `DEFAULT_NAMES`) */
   names?: Partial<PaintCanvasNames>;
+  /** Where to keep the user's layers so the drawing survives reloading the page (see `useLayerStore`) */
+  layerStore?: LayerStoreLike;
 }
 
 /**
@@ -408,6 +413,9 @@ export default class PaintCanvas extends EventTarget {
   /** Gives the author of presets made with `newPreset` */
   private readonly presetAuthor: () => AssetAuthor;
 
+  /** Keeps the user's layers in a store, while one is used */
+  private layerAutosave?: LayerAutosave;
+
   constructor(options: PaintCanvasOptions = {}) {
     super();
     // Nothing is logged for debugging until the debug log shows
@@ -462,6 +470,7 @@ export default class PaintCanvas extends EventTarget {
         options.height ?? this.canvasHeight,
       );
     }
+    if (options.layerStore) this.useLayerStore(options.layerStore);
   }
   /** Canvas width in pixels */
   get width(): number {
@@ -686,28 +695,82 @@ export default class PaintCanvas extends EventTarget {
       ...doc.external.map((sheet) => fromPngDataUrl(sheet.image)),
     ]).catch(() => undefined);
     if (!images) return false;
-    this.setCanvasSize(doc.width, doc.height);
-    const layers = this.layerStack.replace(
-      doc.layers.map(({ name, visible, opacity, blendMode, alphaLock }) => ({
+    const configs = doc.layers.map(
+      ({ name, visible, opacity, blendMode, alphaLock }) => ({
+        id: crypto.randomUUID(),
         name,
         visible,
         opacity,
         blendMode: blendMode as BlendMode,
         alphaLock,
-      })),
+      }),
     );
-    layers.forEach((layer, i) =>
-      layer.context.drawImage(images[i] as ImageBitmap, 0, 0),
+    this.restoreLayers(
+      doc.width,
+      doc.height,
+      configs,
+      images,
+      (configs[doc.activeLayer] as LayerConfig & { id: string }).id,
     );
     doc.external.forEach((sheet, i) =>
       this.externalSheets.restore(
         sheet.source,
-        images[layers.length + i] as ImageBitmap,
+        images[configs.length + i] as ImageBitmap,
       ),
     );
-    this.layerStack.select((layers[doc.activeLayer] as Layer).id);
-    this.history.clear();
     return true;
+  }
+
+  /**
+   * Replace the canvas size and the user's layers (top first, each with its image) and select one by ID. Undo history
+   * starts again. Throws if the size or number of layers isn't allowed.
+   *
+   * @example
+   * canvas.restoreLayers(800, 600, [{ id: "a", name: "Sketch" }], [sketchImage], "a");
+   */
+  restoreLayers(
+    width: number,
+    height: number,
+    layers: readonly LayerConfig[],
+    images: readonly CanvasImageSource[],
+    activeLayer: string,
+  ): void {
+    if (layers.length > this.maxLayers)
+      throw new Error(`Cannot have more than ${this.maxLayers} layers`);
+    this.setCanvasSize(width, height);
+    this.layerStack
+      .replace(layers)
+      .forEach((layer, i) =>
+        layer.context.drawImage(images[i] as CanvasImageSource, 0, 0),
+      );
+    this.layerStack.select(activeLayer);
+    this.history.clear();
+  }
+
+  /** Keeps the user's layers in a store, while one is used (see `useLayerStore`) */
+  get autosave(): LayerAutosave | undefined {
+    return this.layerAutosave;
+  }
+
+  /**
+   * Keep the user's layers in a store (or stop, without one), so the drawing survives reloading the page: the saved
+   * drawing is restored, then changes are saved. Only one window draws on a drawing at a time (see `LayerAutosave`).
+   * Returns the autosave.
+   *
+   * @example
+   * canvas.useLayerStore(new IndexedDbLayerStore("my-drawing"));
+   */
+  useLayerStore(
+    store: LayerStoreLike | undefined,
+    options?: AutosaveOptions,
+  ): LayerAutosave | undefined {
+    void this.layerAutosave?.stop();
+    this.layerAutosave = store
+      ? new LayerAutosave(this, store, options)
+      : undefined;
+    this.layerAutosave?.start();
+    this.notify();
+    return this.layerAutosave;
   }
 
   /**

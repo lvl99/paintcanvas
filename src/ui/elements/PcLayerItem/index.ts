@@ -42,22 +42,52 @@ export const LAYER_ACTIONS: readonly { action: LayerAction; label: string }[] =
     { action: "mask", label: "layers.createMask" },
     { action: "duplicate", label: "layers.duplicate" },
     { action: "merge", label: "layers.mergeDown" },
-    { action: "clear", label: "common.clear" },
-    { action: "delete", label: "common.delete" },
+    { action: "clear", label: "layers.clear" },
+    { action: "delete", label: "layers.delete" },
     { action: "up", label: "layers.moveUp" },
     { action: "top", label: "layers.moveToTop" },
     { action: "down", label: "layers.moveDown" },
     { action: "bottom", label: "layers.moveToBottom" },
   ];
 
-/** The choices when asked whether to merge a layer down, with the translation keys of their labels */
-export const MERGE_CHOICES: readonly DialogChoice[] = [
-  { value: "merge", label: "layers.mergeLayer" },
-  { value: CANCEL_CHOICE, label: "common.dismiss" },
-];
+/** Context menu actions that ask first */
+export type ConfirmedAction = "merge" | "clear" | "delete";
 
-/** Asks the user to confirm an action; replaceable for tests */
-export type ConfirmFn = (message: string) => boolean;
+/**
+ * What the user is asked before each confirmed action: the dialog's heading and message, and its choices (the first
+ * does the action), as translation keys. The message is given the layer's `name`.
+ */
+export const CONFIRMATIONS: Readonly<
+  Record<
+    ConfirmedAction,
+    { heading: string; message: string; choices: readonly DialogChoice[] }
+  >
+> = {
+  merge: {
+    heading: "layers.mergeDownTitle",
+    message: "layers.mergeDownConfirm",
+    choices: [
+      { value: "merge", label: "layers.mergeLayer" },
+      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
+    ],
+  },
+  clear: {
+    heading: "layers.clearTitle",
+    message: "layers.clearConfirm",
+    choices: [
+      { value: "clear", label: "common.clear" },
+      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
+    ],
+  },
+  delete: {
+    heading: "layers.deleteTitle",
+    message: "layers.deleteConfirm",
+    choices: [
+      { value: "delete", label: "common.delete" },
+      { value: CANCEL_CHOICE, label: "common.dismiss", variant: "dismiss" },
+    ],
+  },
+};
 
 /** Thumbnail size in CSS pixels */
 export const THUMBNAIL_SIZE = 30;
@@ -134,7 +164,7 @@ export class PcLayerItem extends PcElement {
     layer: { attribute: false },
     background: { attribute: false },
     menuOpen: { state: true },
-    askingMerge: { state: true },
+    confirming: { state: true },
     dragging: { type: Boolean, reflect: true },
     dropAction: { attribute: "drop-action", reflect: true },
   };
@@ -157,8 +187,8 @@ export class PcLayerItem extends PcElement {
   /** Whether the reorder handle's context menu is open */
   declare menuOpen: boolean;
 
-  /** Whether the user is being asked to merge the layer down */
-  declare askingMerge: boolean;
+  /** The action the user is being asked to confirm, if any */
+  declare confirming?: ConfirmedAction;
 
   /** Whether this row's layer is being dragged (set by the layers menu; the row floats with the pointer) */
   declare dragging: boolean;
@@ -179,26 +209,22 @@ export class PcLayerItem extends PcElement {
 
   private changes = new ChangeController(this, () => [this.stack]);
 
-  /** Confirmation prompt (defaults to `window.confirm`) */
-  confirm: ConfirmFn = (message) => window.confirm(message);
-
   /** Device pixels per CSS pixel (replaceable for tests) */
   pixelRatio = () => window.devicePixelRatio || 1;
 
   constructor() {
     super();
     this.menuOpen = false;
-    this.askingMerge = false;
     this.dragging = false;
   }
 
   /**
-   * Run a context menu action. Merging down, clearing and deleting ask for confirmation first.
+   * Run a context menu action. Merging down, clearing and deleting ask for confirmation first (see `confirmed`).
    */
   runAction(action: LayerAction): void {
     const { stack, layer } = this;
     this.menuOpen = false;
-    if (!stack || !layer) return;
+    if (!stack || !layer || !this.canRun(action)) return;
     switch (action) {
       case "mask":
         this.requestMask(layer, { shiftKey: false, altKey: false });
@@ -207,15 +233,9 @@ export class PcLayerItem extends PcElement {
         stack.duplicate(layer.id);
         break;
       case "merge":
-        if (stack.canMergeDown(layer.id)) this.askingMerge = true;
-        break;
       case "clear":
-        if (this.confirm(this.t("layers.clearConfirm", { name: layer.name })))
-          stack.clear(layer.id);
-        break;
       case "delete":
-        if (this.confirm(this.t("layers.deleteConfirm", { name: layer.name })))
-          stack.remove(layer.id);
+        this.confirming = action;
         break;
       case "up":
         stack.moveUp(layer.id);
@@ -230,6 +250,43 @@ export class PcLayerItem extends PcElement {
         stack.moveToBottom(layer.id);
         break;
     }
+  }
+
+  /**
+   * Whether a context menu action can be done to the layer now: not merging down the bottom layer (or with a hidden
+   * layer), deleting the only layer, or moving a layer further up or down than it can go.
+   */
+  canRun(action: LayerAction): boolean {
+    const { stack, layer } = this;
+    if (!stack || !layer) return false;
+    const index = stack.indexOf(layer.id);
+    const last = stack.layers.length - 1;
+    switch (action) {
+      case "merge":
+        return stack.canMergeDown(layer.id);
+      case "delete":
+        return last > 0;
+      case "up":
+      case "top":
+        return index > 0;
+      case "down":
+      case "bottom":
+        return index < last;
+      default:
+        return true;
+    }
+  }
+
+  /**
+   * Do an action the user confirmed.
+   */
+  confirmed(action: ConfirmedAction): void {
+    const { stack, layer } = this;
+    this.confirming = undefined;
+    if (!stack || !layer) return;
+    if (action === "merge") stack.mergeDown(layer.id);
+    else if (action === "clear") stack.clear(layer.id);
+    else stack.remove(layer.id);
   }
 
   // Close the context menu when clicking anywhere outside it, or pressing Escape
@@ -478,6 +535,26 @@ export class PcLayerItem extends PcElement {
     );
   }
 
+  /** The dialog asking the user to confirm an action, while asking */
+  private renderConfirmation(layer: Layer) {
+    const action = this.confirming;
+    if (!action) return nothing;
+    const { heading, message, choices } = CONFIRMATIONS[action];
+    return html`<pc-dialog
+      heading=${this.t(heading)}
+      message=${this.t(message, { name: layer.name })}
+      .choices=${choices.map((choice) => ({
+        ...choice,
+        label: this.t(choice.label),
+      }))}
+      @pc-choose=${(e: CustomEvent<{ value: string }>) => {
+        e.stopPropagation();
+        if (e.detail.value === action) this.confirmed(action);
+        else this.confirming = undefined;
+      }}
+    ></pc-dialog>`;
+  }
+
   override render() {
     const { stack, layer } = this;
     if (!stack || !layer) return html``;
@@ -565,9 +642,7 @@ export class PcLayerItem extends PcElement {
                     <button
                       type="button"
                       data-action=${action}
-                      ?disabled=${
-                        action === "merge" && !stack.canMergeDown(layer.id)
-                      }
+                      ?disabled=${!this.canRun(action)}
                       @click=${() => this.runAction(action)}
                     >
                       ${this.t(label)}
@@ -577,23 +652,7 @@ export class PcLayerItem extends PcElement {
             </menu>`
           : nothing
       }
-      ${
-        this.askingMerge
-          ? html`<pc-dialog
-              heading=${this.t("layers.mergeDownTitle")}
-              message=${this.t("layers.mergeDownConfirm")}
-              .choices=${MERGE_CHOICES.map((choice) => ({
-                ...choice,
-                label: this.t(choice.label),
-              }))}
-              @pc-choose=${(e: CustomEvent<{ value: string }>) => {
-                e.stopPropagation();
-                this.askingMerge = false;
-                if (e.detail.value === "merge") stack.mergeDown(layer.id);
-              }}
-            ></pc-dialog>`
-          : nothing
-      }
+      ${this.renderConfirmation(layer)}
     `;
   }
 }

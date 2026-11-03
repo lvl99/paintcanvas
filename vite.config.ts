@@ -1,17 +1,53 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from "vite";
+import { globSync, readFileSync } from "node:fs";
+import { defineConfig, type Plugin } from "vite";
 
-// Builds PaintCanvas as an ES module library: the engine (`paintcanvas`) and the optional UI (`paintcanvas/ui`)
+// Every module the package exports (see `exports` in package.json): the engine (`paintcanvas`), the optional UI
+// (`paintcanvas/ui`), each engine and UI folder (`paintcanvas/lib/*`, `paintcanvas/ui/*`) and the test helpers
+// (`paintcanvas/testing/*`)
+const entries = globSync(
+  ["src/index.ts", "src/{lib,ui}/**/index.ts", "src/testing/*.ts"],
+  { exclude: (path) => path.includes("/tests/") || path.endsWith("/tests") },
+);
+
+// The pre-compiled validators are plain JavaScript typed by a hand-written `.d.ts`, which TypeScript doesn't copy
+const validatorTypesPath = "lib/validation/validators.generated.d.ts";
+
+/**
+ * Copy the validators' type definitions into `dist/` beside their built JavaScript.
+ */
+const copyValidatorTypes = (): Plugin => ({
+  name: "paintcanvas:copy-validator-types",
+  apply: "build",
+  generateBundle() {
+    this.emitFile({
+      type: "asset",
+      fileName: validatorTypesPath,
+      source: readFileSync(`src/${validatorTypesPath}`, "utf8"),
+    });
+  },
+});
+
+// Builds PaintCanvas as ES modules in `dist/`, one file per source file in the same folders as `src/`, so each exported
+// path has its own file and implementers' bundlers only include what they import
 export default defineConfig({
+  plugins: [copyValidatorTypes()],
   build: {
-    lib: {
-      entry: { index: "src/index.ts", ui: "src/ui/index.ts" },
-      formats: ["es"],
+    lib: { entry: entries, formats: ["es"] },
+    rolldownOptions: {
+      // Lit is a peer dependency, so implementers share one copy. Vitest is only used by the test helpers.
+      external: [/^lit($|\/)/, /^vitest($|\/)/],
+      output: {
+        preserveModules: true,
+        preserveModulesRoot: "src",
+        entryFileNames: "[name].js",
+      },
     },
-    // Lit is a peer dependency, so implementers share one copy
-    rollupOptions: { external: [/^lit($|\/)/] },
     outDir: "dist",
-    emptyOutDir: false,
+    // The type definitions are written into `dist/` after this build (see tsconfig.build.json)
+    emptyOutDir: true,
+    // Implementers' bundlers minify; readable output is easier to debug
+    minify: false,
   },
   test: {
     name: "paintcanvas",
