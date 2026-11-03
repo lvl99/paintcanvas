@@ -4,7 +4,8 @@ import { PcElement, defineElement } from "../../base";
 /**
  * Wraps content docked at a side of the `<paint-canvas>` layout (e.g. the layers menu or a chat window). Its `icon`,
  * `label` and `badge` are what the layout shows for it when the side narrows to a rail of buttons; the badge is a dot
- * meaning something new (e.g. unread messages). It names its region for screen readers.
+ * meaning something new (e.g. unread messages). It names its region for screen readers. It's at most 290px wide
+ * (`--pc-panel-max-width`).
  *
  * @example
  * html`<pc-panel slot="right" icon="layers" label="Layers"><my-layers></my-layers></pc-panel>`
@@ -23,6 +24,7 @@ export class PcPanel extends PcElement {
       :host {
         display: flex;
         min-width: 0;
+        max-width: var(--pc-panel-max-width, 290px);
         min-height: 0;
         flex-direction: column;
       }
