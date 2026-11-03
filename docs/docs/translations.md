@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # Translations
 
-The UI's text comes from `translations` (`paintcanvas/lib/i18n`). Built-in locales: `en-US` (fallback), `en-GB`, `ja`, `ko`, `zh-Hans` and `zh-Hant`. Locale files load when first used, and the UI switches language without reloading.
+The UI's text comes from `translations` (`paintcanvas/lib/i18n`). Built-in locales: `en-US` (fallback), `en-GB`, `fr`, `ja`, `ko`, `zh-Hans` and `zh-Hant`. Locale files load when first used, and the UI switches language without reloading.
 
 ```ts
 import { translations } from "paintcanvas/lib/i18n";

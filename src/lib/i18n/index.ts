@@ -13,6 +13,7 @@ export const FALLBACK_LOCALE = "en-US";
 export const BUILT_IN_LOCALES: Record<string, LocaleLoader> = {
   "en-US": async () => enUS,
   "en-GB": () => import("../../../locales/en-GB.json"),
+  fr: () => import("../../../locales/fr.json"),
   ja: () => import("../../../locales/ja.json"),
   ko: () => import("../../../locales/ko.json"),
   "zh-Hans": () => import("../../../locales/zh-Hans.json"),
