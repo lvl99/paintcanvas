@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
+import type { PcDialog } from "../../PcDialog";
 import {
   DRAG_THRESHOLD,
   LAYER_ACTIONS,
@@ -144,20 +145,81 @@ describe("pc-layer-item", () => {
     expect(stack.layers.at(-1)!.name).toBe("Layer 2");
   });
 
-  it("should confirm before clearing or deleting", async () => {
+  it("should label clearing and deleting as asking first, and ask before doing them", async () => {
     const { element, stack, layer } = await mountItem();
-    const clear = vi.spyOn(layer, "clear");
-    element.confirm = vi.fn(() => false);
-    await runFromMenu(element, "clear");
-    await runFromMenu(element, "delete");
+    const clear = vi.spyOn(stack, "clear");
+    const dialog = () => queryAll<PcDialog>(element, "pc-dialog")[0];
+    for (const [action, label, heading, message, button] of [
+      [
+        "clear",
+        "Clear…",
+        "Clear layer",
+        'Clear all image data on "Layer 2"?',
+        "Clear",
+      ],
+      ["delete", "Delete…", "Delete layer", 'Delete "Layer 2"?', "Delete"],
+    ] as const) {
+      query(element, ".handle").dispatchEvent(
+        new MouseEvent("contextmenu", { cancelable: true }),
+      );
+      await element.updateComplete;
+      expect(
+        query(element, `[data-action="${action}"]`).textContent?.trim(),
+      ).toBe(label);
+      element.runAction(action);
+      await element.updateComplete;
+      expect([dialog()?.heading, dialog()?.message]).toEqual([
+        heading,
+        message,
+      ]);
+      expect(
+        queryAll(dialog()!, "pc-button").map((b) => [
+          b.textContent?.trim(),
+          b.getAttribute("variant"),
+        ]),
+      ).toEqual([
+        [button, "accent"],
+        ["Dismiss", "cancel"],
+      ]);
+      // Dismissing (or Escape) changes nothing
+      query(dialog()!, `pc-button[data-value="cancel"]`).click();
+      await element.updateComplete;
+      expect(dialog()).toBeUndefined();
+    }
     expect(clear).not.toHaveBeenCalled();
     expect(stack.layers).toHaveLength(2);
 
-    element.confirm = vi.fn(() => true);
     await runFromMenu(element, "clear");
-    expect(clear).toHaveBeenCalled();
+    query(dialog()!, `pc-button[data-value="clear"]`).click();
+    expect(clear).toHaveBeenCalledWith(layer.id);
     await runFromMenu(element, "delete");
+    query(dialog()!, `pc-button[data-value="delete"]`).click();
+    await element.updateComplete;
     expect(stack.layers).toHaveLength(1);
+    expect(dialog()).toBeUndefined();
+  });
+
+  it("should not offer to delete the only layer", async () => {
+    const app = createApp();
+    const element = await mount<PcLayerItem>("pc-layer-item", {
+      stack: app.layers,
+      layer: app.layers.active,
+    });
+    query(element, ".handle").dispatchEvent(
+      new MouseEvent("contextmenu", { cancelable: true }),
+    );
+    await element.updateComplete;
+    expect(
+      query<HTMLButtonElement>(element, '[data-action="delete"]').disabled,
+    ).toBe(true);
+    element.runAction("delete");
+    await element.updateComplete;
+    expect(queryAll(element, "pc-dialog")).toHaveLength(0);
+  });
+
+  it("should do nothing when confirmed without a layer", async () => {
+    const element = await mount<PcLayerItem>("pc-layer-item", {});
+    expect(() => element.confirmed("delete")).not.toThrow();
   });
 
   it("should merge the layer down after asking, and not from the bottom layer", async () => {
@@ -200,14 +262,6 @@ describe("pc-layer-item", () => {
     element.runAction("merge");
     await element.updateComplete;
     expect(queryAll(element, "pc-dialog")).toHaveLength(0);
-  });
-
-  it("should use window.confirm by default", async () => {
-    const { element } = await mountItem();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    element.runAction("clear");
-    expect(confirm).toHaveBeenCalledWith('Clear all image data on "Layer 2"?');
-    confirm.mockRestore();
   });
 
   it("should drag the layer by its handle once the pointer has moved far enough, capturing it", async () => {
