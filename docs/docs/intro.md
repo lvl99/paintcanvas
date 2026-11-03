@@ -70,6 +70,6 @@ Each folder of the engine and UI has its own import path, matching the [API](/ap
 - [Using the engine](engine.md): build your own UI on the engine.
 - [Messages and events](messages.md): share a drawing over your own transport.
 - [Saving and opening drawings](documents.md): as files, and kept in the browser.
-- [Translations](translations.md)
+- [Translations](translations.md): choose the language, and add your app's own text.
 - [Icons](icons.md)
 - [Theming](theming.md)
