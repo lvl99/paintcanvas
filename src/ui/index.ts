@@ -31,6 +31,13 @@ export {
 } from "./elements/PcInputSettings";
 export { PcMatch } from "./elements/PcMatch";
 export { PcStats, formatBytes } from "./elements/PcStats";
+export {
+  PcThemePicker,
+  THEMES,
+  THEME_ICONS,
+  isTheme,
+  type Theme,
+} from "./elements/PcThemePicker";
 export { PaintCanvasElement } from "./elements/PaintCanvas";
 export {
   DEFAULT_NARROW_WIDTH,

@@ -1,4 +1,4 @@
-// A full-page PaintCanvas with a layers panel on the right, an app menu with input settings, a theme switch and a
+// A full-page PaintCanvas with a layers panel on the right, an app menu with input settings, a theme picker and a
 // "New drawing" button. The drawing is kept in the browser (`store="demo"`), so it survives reloading the page.
 import "../src/ui";
 import { translations } from "../src/lib/i18n";
@@ -20,12 +20,6 @@ const app = layout.app as NonNullable<PaintCanvasElement["app"]>;
 find<PcLayersMenu>("#layers").app = app;
 find<PcCanvasMap>("#map").app = app;
 find<PcInputSettings>("#settings").settings = app.input;
-find<HTMLInputElement>("#dark").addEventListener("change", (event) => {
-  document.documentElement.dataset.pcTheme = (event.target as HTMLInputElement)
-    .checked
-    ? "dark"
-    : "light";
-});
 
 // Start again with one empty layer, after asking (the saved drawing is replaced)
 find("#new-drawing").addEventListener("click", () => {
