@@ -28,6 +28,21 @@
         right: 20px;
         bottom: 20px;
       }
+      .toasts {
+        position: fixed;
+        z-index: 30;
+        right: 16px;
+        bottom: 16px;
+        left: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        pointer-events: none;
+      }
+      .toasts pc-toast {
+        pointer-events: auto;
+      }
       .narrow-note {
         position: absolute;
         top: 8px;
@@ -43,13 +58,14 @@
     </style>
   </head>
   <body>
-    <paint-canvas right-modes="docked, rail@800, floating@400">
+    <paint-canvas store="demo" right-modes="docked, rail@800, floating@400">
       <pc-panel slot="right" icon="layers" label="Layers">
         <pc-layers-menu id="layers"></pc-layers-menu>
       </pc-panel>
       <div slot="menu" class="menu">
         <pc-input-settings id="settings"></pc-input-settings>
         <label><input id="dark" type="checkbox" /> Dark theme</label>
+        <pc-button id="new-drawing" variant="cancel">New drawing</pc-button>
       </div>
       <div slot="overlay">
         <pc-canvas-map id="map"></pc-canvas-map>
@@ -58,6 +74,7 @@
         </pc-match>
       </div>
     </paint-canvas>
+    <div class="toasts" id="toasts"></div>
     <script type="module" src="./index.ts"></script>
   </body>
 </html>
