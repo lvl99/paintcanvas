@@ -29,9 +29,9 @@ export const formatBytes = (bytes: number, locale?: string): string => {
 };
 
 /**
- * A line of small text about the canvas: its size, the zoom level, the colour under the pointer (with a swatch; a dash
- * when the pointer isn't over the canvas) and, while the drawing is kept in the browser, how much its layer images
- * take there. The colour follows the pointer at most once a frame. It's not announced to screen readers as it
+ * A line of small text about the canvas: its size; while the drawing is kept in the browser, how much its layer
+ * images take there; the zoom level; and the colour under the pointer (with a swatch; a dash when the pointer isn't
+ * over the canvas). The colour follows the pointer at most once a frame. It's not announced to screen readers as it
  * changes, as it changes with every pointer move.
  *
  * @example
@@ -136,6 +136,18 @@ export class PcStats extends PcElement {
       <li class="size">
         ${this.t("stats.size", { width: app.width, height: app.height })}
       </li>
+      ${
+        autosave
+          ? html`<li class="stored">
+              ${this.t("stats.stored", {
+                size: formatBytes(
+                  autosave.storedBytes,
+                  this.translations.locale,
+                ),
+              })}
+            </li>`
+          : nothing
+      }
       <li class="zoom">
         ${this.t("stats.zoom", { zoom: zoomPercent(app.viewport.zoom) })}
       </li>
@@ -150,18 +162,6 @@ export class PcStats extends PcElement {
             : nothing
         }
       </li>
-      ${
-        autosave
-          ? html`<li class="stored">
-              ${this.t("stats.stored", {
-                size: formatBytes(
-                  autosave.storedBytes,
-                  this.translations.locale,
-                ),
-              })}
-            </li>`
-          : nothing
-      }
     </ul>`;
   }
 }

@@ -92,6 +92,12 @@ describe("pc-stats", () => {
     await vi.waitFor(() => expect(autosave?.storedBytes).toBe(2_500));
     await element.updateComplete;
     expect(stat(element, "stored")).toBe("Stored: 2.5 kB");
+    expect(queryAll(element, "li").map((item) => item.className)).toEqual([
+      "size",
+      "stored",
+      "zoom",
+      "colour",
+    ]);
   });
 
   it("should follow a new canvas's pointer, and stop following when removed", async () => {
