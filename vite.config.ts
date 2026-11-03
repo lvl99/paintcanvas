@@ -2,9 +2,9 @@
 import { globSync, readFileSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
 
-// Every module the package exports (see `exports` in package.json): the engine (`paintcanvas`), the optional UI
-// (`paintcanvas/ui`), each engine and UI folder (`paintcanvas/lib/*`, `paintcanvas/ui/*`) and the test helpers
-// (`paintcanvas/testing/*`)
+// Every module the package exports (see `exports` in package.json): the engine (`@lvl99dotcom/paintcanvas`), the optional UI
+// (`@lvl99dotcom/paintcanvas/ui`), each engine and UI folder (`@lvl99dotcom/paintcanvas/lib/*`, `@lvl99dotcom/paintcanvas/ui/*`) and the test helpers
+// (`@lvl99dotcom/paintcanvas/testing/*`)
 const entries = globSync(
   ["src/index.ts", "src/{lib,ui}/**/index.ts", "src/testing/*.ts"],
   { exclude: (path) => path.includes("/tests/") || path.endsWith("/tests") },

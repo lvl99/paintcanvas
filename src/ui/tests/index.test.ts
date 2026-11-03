@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as ui from "..";
 
-describe("paintcanvas/ui", () => {
+describe("@lvl99dotcom/paintcanvas/ui", () => {
   it("should register every base element", () => {
     for (const tag of [
       "pc-icon",

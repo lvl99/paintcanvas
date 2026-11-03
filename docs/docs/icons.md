@@ -7,7 +7,7 @@ sidebar_position: 7
 Replace any icon, or add your own, with an image URL (e.g. an SVG data URL):
 
 ```ts
-import { icons } from "paintcanvas/ui";
+import { icons } from "@lvl99dotcom/paintcanvas/ui";
 
 icons.register({ brush: "/my-icons/brush.svg", chat: "/my-icons/chat.svg" });
 ```

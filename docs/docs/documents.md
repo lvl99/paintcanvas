@@ -22,7 +22,7 @@ To keep the user's layers through a page reload, give the layout a `store` name.
 Or give the engine a store yourself:
 
 ```ts
-import IndexedDbLayerStore from "paintcanvas/lib/storage";
+import IndexedDbLayerStore from "@lvl99dotcom/paintcanvas/lib/storage";
 
 canvas.useLayerStore(new IndexedDbLayerStore("my-drawing"));
 // or: new PaintCanvas({ layerStore: new IndexedDbLayerStore("my-drawing") })
@@ -34,4 +34,4 @@ canvas.useLayerStore(new IndexedDbLayerStore("my-drawing"));
 - If the saved drawing can't be loaded (e.g. it was saved by another version), saving stops so it isn't overwritten, and `pc-toast` tells the user. `canvas.autosave.store.clear()` deletes it.
 - To start again with an empty drawing, replace the layers, e.g. `canvas.layers.replace([{ name: "Layer 1" }])`. The saved drawing follows.
 
-`canvas.autosave` (a `LayerAutosave`) has the state (`starting`, `elsewhere`, `ready` or `stopped`) and dispatches `change` and `error`. To keep layers somewhere else (e.g. your server), pass your own store with the same methods as `LayerStoreLike`: `load`, `save` and `clear`. The test helpers include `MemoryLayerStore` (`paintcanvas/testing/layerStore`) and fake Web Locks (`paintcanvas/testing/locks`).
+`canvas.autosave` (a `LayerAutosave`) has the state (`starting`, `elsewhere`, `ready` or `stopped`) and dispatches `change` and `error`. To keep layers somewhere else (e.g. your server), pass your own store with the same methods as `LayerStoreLike`: `load`, `save` and `clear`. The test helpers include `MemoryLayerStore` (`@lvl99dotcom/paintcanvas/testing/layerStore`) and fake Web Locks (`@lvl99dotcom/paintcanvas/testing/locks`).
