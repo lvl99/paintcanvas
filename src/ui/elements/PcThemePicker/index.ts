@@ -124,7 +124,7 @@ export class PcThemePicker extends PcElement {
 
   override render() {
     return html`<fieldset>
-      <legend>${this.t("theme.label")}</legend>
+      <legend>${this.t("paintCanvas.theme.label")}</legend>
       <pc-button-group joined>
         ${THEMES.map(
           (theme) =>
@@ -137,7 +137,7 @@ export class PcThemePicker extends PcElement {
                 @change=${() => this.pick(theme)}
               />
               <img src=${this.iconUrl(THEME_ICONS[theme])} alt="" />
-              <span>${this.t(`theme.${theme}`)}</span>
+              <span>${this.t(`paintCanvas.theme.${theme}`)}</span>
             </label>`,
         )}
       </pc-button-group>

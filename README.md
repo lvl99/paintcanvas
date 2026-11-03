@@ -75,7 +75,7 @@ Guides and API pages are in [docs/](docs/), a [Docusaurus](https://docusaurus.io
 - [Building your own UI on the engine](docs/docs/engine.md)
 - [Messages and events](docs/docs/messages.md)
 - [Saving and opening drawings](docs/docs/documents.md)
-- [Translations](docs/docs/translations.md)
+- [Translations, and adding your app's own](docs/docs/translations.md)
 - [Icons](docs/docs/icons.md)
 - [Theming](docs/docs/theming.md)
 
@@ -92,7 +92,7 @@ Starts a development server and opens the demo in your browser. It uses the sour
 
 To try it with a pen or touch on another device (e.g. a tablet) on the same network, run `pnpm dev --host` and open the network address it prints. This makes the server reachable by anyone on that network.
 
-The UI text follows your device's languages: on an English (UK) device, edit `locales/en-GB.json` to see text changes.
+The UI text follows your device's languages: on an English (UK) device, edit `locales/en-GB.json` to see text changes. The demo's own text (e.g. the "New drawing" button) is in `demo/locales/`, added the way an app adds its translations.
 
 ## Development
 

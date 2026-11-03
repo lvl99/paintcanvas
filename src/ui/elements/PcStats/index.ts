@@ -132,14 +132,17 @@ export class PcStats extends PcElement {
     if (!app) return nothing;
     const colour = app.pointer && app.sampleColour(app.pointer);
     const autosave = app.autosave;
-    return html`<ul part="stats" aria-label=${this.t("stats.label")}>
+    return html`<ul
+      part="stats"
+      aria-label=${this.t("paintCanvas.stats.label")}
+    >
       <li class="size">
-        ${this.t("stats.size", { width: app.width, height: app.height })}
+        ${this.t("paintCanvas.stats.size", { width: app.width, height: app.height })}
       </li>
       ${
         autosave
           ? html`<li class="stored">
-              ${this.t("stats.stored", {
+              ${this.t("paintCanvas.stats.stored", {
                 size: formatBytes(
                   autosave.storedBytes,
                   this.translations.locale,
@@ -149,10 +152,10 @@ export class PcStats extends PcElement {
           : nothing
       }
       <li class="zoom">
-        ${this.t("stats.zoom", { zoom: zoomPercent(app.viewport.zoom) })}
+        ${this.t("paintCanvas.stats.zoom", { zoom: zoomPercent(app.viewport.zoom) })}
       </li>
       <li class="colour">
-        ${this.t("stats.colour", { colour: colour ?? "—" })}
+        ${this.t("paintCanvas.stats.colour", { colour: colour ?? "—" })}
         ${
           colour
             ? html`<span

@@ -212,7 +212,7 @@ export class PcCanvasMap extends PcElement {
       : { left: 0, top: 0, width: 100, height: 100 };
     return html`
       <canvas
-        aria-label=${this.t("canvas.map")}
+        aria-label=${this.t("paintCanvas.canvas.map")}
         @pointerdown=${this.onPointerDown}
         @pointermove=${this.onPointerMove}
         @pointerup=${() => (this.dragging = false)}

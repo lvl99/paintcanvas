@@ -92,7 +92,7 @@ export class PcInfoTip extends PcElement {
     return html`<button
         part="button"
         type="button"
-        aria-label=${this.label || this.t("common.moreInformation")}
+        aria-label=${this.label || this.t("paintCanvas.common.moreInformation")}
         aria-expanded=${String(this.open)}
         aria-describedby=${this.open ? "tip" : nothing}
         @click=${() => (this.open = !this.open)}

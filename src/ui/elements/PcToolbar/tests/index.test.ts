@@ -159,10 +159,14 @@ describe("pc-toolbar", () => {
     expect(query(element, "input[type=color]").getAttribute("aria-label")).toBe(
       "Current color",
     );
-    element.translations.addStrings("en-US", { "tool.brush": "Paintbrush" });
+    element.translations.addStrings("en-US", {
+      "paintCanvas.tool.brush": "Paintbrush",
+    });
     await element.updateComplete;
     expect(brush.title).toBe("Paintbrush (B)");
-    element.translations.addStrings("en-US", { "tool.brush": "Brush" });
+    element.translations.addStrings("en-US", {
+      "paintCanvas.tool.brush": "Brush",
+    });
   });
 
   it("should leave out the app menu button when asked", async () => {

@@ -40,17 +40,17 @@ export type PromptFn = (message: string, value: string) => string | null;
 export const SMOOTHING_CHOICES = [
   {
     value: SmoothingType.Linear,
-    label: "brushConfig.smoothingLinear",
+    label: "paintCanvas.brushConfig.smoothingLinear",
     icon: "smoothingLinear",
   },
   {
     value: SmoothingType.BezierQuad,
-    label: "brushConfig.smoothingQuadratic",
+    label: "paintCanvas.brushConfig.smoothingQuadratic",
     icon: "smoothingBezierQuad",
   },
   {
     value: SmoothingType.BezierCubic,
-    label: "brushConfig.smoothingCubic",
+    label: "paintCanvas.brushConfig.smoothingCubic",
     icon: "smoothingBezierCubic",
   },
 ] as const;
@@ -64,17 +64,17 @@ const SOURCE_ICONS: Record<VariationSource, string> = {
 
 /** Translation keys of the variation sources' names */
 const SOURCE_LABELS: Record<VariationSource, string> = {
-  pressure: "toolSettings.pressure",
-  tilt: "toolSettings.tilt",
-  randomise: "brushConfig.randomise",
+  pressure: "paintCanvas.toolSettings.pressure",
+  tilt: "paintCanvas.toolSettings.tilt",
+  randomise: "paintCanvas.brushConfig.randomise",
 };
 
 /** Translation keys of the brush shape error messages */
 const SHAPE_ERROR_KEYS: Record<string, string> = {
-  [SHAPE_ERRORS.type]: "shape.notPng",
-  [SHAPE_ERRORS.size]: "shape.tooLarge",
-  [SHAPE_ERRORS.decode]: "shape.readFailed",
-  [SHAPE_ERRORS.noImage]: "shape.noPngToPaste",
+  [SHAPE_ERRORS.type]: "paintCanvas.shape.notPng",
+  [SHAPE_ERRORS.size]: "paintCanvas.shape.tooLarge",
+  [SHAPE_ERRORS.decode]: "paintCanvas.shape.readFailed",
+  [SHAPE_ERRORS.noImage]: "paintCanvas.shape.noPngToPaste",
 };
 
 /** Largest stamp spacing in pixels */
@@ -236,7 +236,7 @@ export class PcBrushConfig extends PcElement {
         message: this.t(
           (error instanceof ShapeImageError &&
             SHAPE_ERROR_KEYS[error.message]) ||
-            "brushConfig.shapeFailed",
+            "paintCanvas.brushConfig.shapeFailed",
         ),
         kind: "error",
       });
@@ -252,7 +252,7 @@ export class PcBrushConfig extends PcElement {
     const draft = this.draft;
     if (!app || !draft) return;
     const name = this.prompt(
-      this.t("brushConfig.presetName"),
+      this.t("paintCanvas.brushConfig.presetName"),
       draft.name ?? "",
     )?.trim();
     if (!name) return;
@@ -261,7 +261,10 @@ export class PcBrushConfig extends PcElement {
       app.authorHandle,
       app.names.unknownAuthor,
     );
-    if (existing && !this.confirm(this.t("presets.replaceConfirm", { name })))
+    if (
+      existing &&
+      !this.confirm(this.t("paintCanvas.presets.replaceConfirm", { name }))
+    )
       return;
     const preset = {
       ...app.newPreset(draft, name),
@@ -272,13 +275,13 @@ export class PcBrushConfig extends PcElement {
       await app.customPresets.save(preset);
       (this.kind === "eraser" ? app.eraser : app.brush).select(preset.id);
       this.emit("pc-toast", {
-        message: this.t("presets.saved", { name }),
+        message: this.t("paintCanvas.presets.saved", { name }),
         kind: "success",
       });
       this.close();
     } catch {
       this.emit("pc-toast", {
-        message: this.t("presets.saveFailed", { name }),
+        message: this.t("paintCanvas.presets.saveFailed", { name }),
         kind: "error",
       });
     } finally {
@@ -294,18 +297,19 @@ export class PcBrushConfig extends PcElement {
     const id = this.editingId;
     if (!app || !id) return;
     const name = app.customPresets.get(id)?.name ?? "this preset";
-    if (!this.confirm(this.t("presets.deleteConfirm", { name }))) return;
+    if (!this.confirm(this.t("paintCanvas.presets.deleteConfirm", { name })))
+      return;
     this.busy = true;
     try {
       await app.customPresets.remove(id);
       this.emit("pc-toast", {
-        message: this.t("presets.deleted", { name }),
+        message: this.t("paintCanvas.presets.deleted", { name }),
         kind: "success",
       });
       this.close();
     } catch {
       this.emit("pc-toast", {
-        message: this.t("presets.deleteFailed", { name }),
+        message: this.t("paintCanvas.presets.deleteFailed", { name }),
         kind: "error",
       });
     } finally {
@@ -385,7 +389,7 @@ export class PcBrushConfig extends PcElement {
             <input
               type="checkbox"
               class=${`${param} ${source}`}
-              aria-label=${this.t("brushConfig.variation", { param: label, source: this.t(SOURCE_LABELS[source]) })}
+              aria-label=${this.t("paintCanvas.brushConfig.variation", { param: label, source: this.t(SOURCE_LABELS[source]) })}
               .checked=${range.sources[source]}
               ?disabled=${disabled || this.busy}
               @change=${(e: Event) =>
@@ -413,7 +417,7 @@ export class PcBrushConfig extends PcElement {
         ? SmoothingType.Linear
         : draft.smoothingType;
     return html`<div class="row shape-row">
-      <span class="label">${this.t("brushConfig.shape")}</span>
+      <span class="label">${this.t("paintCanvas.brushConfig.shape")}</span>
       <span
         class=${draft.image ? "shape-preview image" : "shape-preview"}
         style=${styleMap({
@@ -432,7 +436,7 @@ export class PcBrushConfig extends PcElement {
             .querySelector<HTMLInputElement>("input.shape")
             ?.click()}
       >
-        ${this.t("brushConfig.upload")}
+        ${this.t("paintCanvas.brushConfig.upload")}
       </button>
       <!-- Chosen through "Upload" -->
       <label class="visually-hidden">
@@ -454,14 +458,14 @@ export class PcBrushConfig extends PcElement {
       <button
         type="button"
         class="icon-button paste"
-        title=${this.t("brushConfig.paste")}
+        title=${this.t("paintCanvas.brushConfig.paste")}
         ?disabled=${this.busy}
         @click=${() => void this.useShape(this.readClipboard)}
       >
-        ${iconLabel(this.iconUrl("clipboard"), this.t("brushConfig.paste"))}
+        ${iconLabel(this.iconUrl("clipboard"), this.t("paintCanvas.brushConfig.paste"))}
       </button>
       <fieldset class="smoothing">
-        <legend>${this.t("brushConfig.smoothing")}</legend>
+        <legend>${this.t("paintCanvas.brushConfig.smoothing")}</legend>
         ${SMOOTHING_CHOICES.map(
           (choice) =>
             html`<label class="icon-toggle" title=${this.t(choice.label)}>
@@ -489,11 +493,11 @@ export class PcBrushConfig extends PcElement {
     return html`<div
       role="dialog"
       aria-modal="true"
-      aria-label=${this.t(this.kind === "eraser" ? "brushConfig.eraserTitle" : "brushConfig.brushTitle")}
+      aria-label=${this.t(this.kind === "eraser" ? "paintCanvas.brushConfig.eraserTitle" : "paintCanvas.brushConfig.brushTitle")}
     >
       <div class="row header">
         <label>
-          ${this.t("brushConfig.name")}
+          ${this.t("paintCanvas.brushConfig.name")}
           <input
             class="name"
             .value=${draft.name ?? ""}
@@ -507,17 +511,17 @@ export class PcBrushConfig extends PcElement {
           class="close dismiss"
           @click=${() => this.close()}
         >
-          ${this.t("common.dismiss")}
+          ${this.t("paintCanvas.common.dismiss")}
         </button>
       </div>
       <pc-brush-test .config=${draft} .tips=${this.app?.tips}></pc-brush-test>
       ${this.renderShape(draft)}
-      ${this.renderParam(draft, "width", this.t("common.width"))}
+      ${this.renderParam(draft, "width", this.t("paintCanvas.common.width"))}
       <div class="row">
         <span class="label"></span>
         <label
           class="icon-toggle"
-          title=${this.t("toolSettings.constrainProportions")}
+          title=${this.t("paintCanvas.toolSettings.constrainProportions")}
         >
           <input
             type="checkbox"
@@ -529,19 +533,21 @@ export class PcBrushConfig extends PcElement {
                 constrainProportions: (e.target as HTMLInputElement).checked,
               })}
           />
-          ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("toolSettings.constrainProportions"))}
+          ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
         </label>
       </div>
-      ${this.renderParam(draft, "height", this.t("common.height"), constrained)}
-      ${this.renderParam(draft, "alpha", this.t("common.opacity"))}
-      ${this.renderParam(draft, "rotation", this.t("brushConfig.rotation"))}
-      ${this.renderParam(draft, "offsetX", this.t("brushConfig.offsetX"))}
-      ${this.renderParam(draft, "offsetY", this.t("brushConfig.offsetY"))}
+      ${this.renderParam(draft, "height", this.t("paintCanvas.common.height"), constrained)}
+      ${this.renderParam(draft, "alpha", this.t("paintCanvas.common.opacity"))}
+      ${this.renderParam(draft, "rotation", this.t("paintCanvas.brushConfig.rotation"))}
+      ${this.renderParam(draft, "offsetX", this.t("paintCanvas.brushConfig.offsetX"))}
+      ${this.renderParam(draft, "offsetY", this.t("paintCanvas.brushConfig.offsetY"))}
       <div class="row">
-        <span class="label">${this.t("brushConfig.sampleRate")}</span>
+        <span class="label"
+          >${this.t("paintCanvas.brushConfig.sampleRate")}</span
+        >
         ${this.number("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
         ${this.slider("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
-        <span class="label">${this.t("brushConfig.spacing")}</span>
+        <span class="label">${this.t("paintCanvas.brushConfig.spacing")}</span>
         ${this.number("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
         ${this.slider("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
       </div>
@@ -556,7 +562,7 @@ export class PcBrushConfig extends PcElement {
               snapToPixelGrid: (e.target as HTMLInputElement).checked,
             })}
         />
-        ${this.t("brushConfig.snapToPixelGrid")}
+        ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
       </label>
       <div class="row">
         ${
@@ -567,7 +573,7 @@ export class PcBrushConfig extends PcElement {
                 ?disabled=${this.busy}
                 @click=${() => void this.deletePreset()}
               >
-                ${this.t("brushConfig.deletePreset")}
+                ${this.t("paintCanvas.brushConfig.deletePreset")}
               </button>`
             : nothing
         }
@@ -577,7 +583,7 @@ export class PcBrushConfig extends PcElement {
           ?disabled=${this.busy}
           @click=${() => void this.addToPresets()}
         >
-          ${this.t("brushConfig.addToPresets")}
+          ${this.t("paintCanvas.brushConfig.addToPresets")}
         </button>
         <button
           type="button"
@@ -585,7 +591,7 @@ export class PcBrushConfig extends PcElement {
           ?disabled=${this.busy}
           @click=${() => this.save()}
         >
-          ${this.t("common.save")}
+          ${this.t("paintCanvas.common.save")}
         </button>
       </div>
     </div>`;

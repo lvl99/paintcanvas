@@ -208,7 +208,7 @@ export class PcToolSettings extends PcElement {
   private renderFocusPen(app: PaintCanvas) {
     return html`<label
       class="icon-toggle focus-pen"
-      title=${this.t("toolSettings.focusPenHint")}
+      title=${this.t("paintCanvas.toolSettings.focusPenHint")}
     >
       <input
         type="checkbox"
@@ -218,7 +218,7 @@ export class PcToolSettings extends PcElement {
             focusPen: (e.target as HTMLInputElement).checked,
           })}
       />
-      ${iconLabel(this.iconUrl("focusPen"), this.t("toolSettings.focusPen"))}
+      ${iconLabel(this.iconUrl("focusPen"), this.t("paintCanvas.toolSettings.focusPen"))}
     </label>`;
   }
 
@@ -233,16 +233,18 @@ export class PcToolSettings extends PcElement {
       (param) => preset[param]?.usePressure,
     );
     const tilt = TILT_PARAMS.some((param) => preset[param]?.useTilt);
-    const label = this.t(kind === "eraser" ? "tool.eraser" : "tool.brush");
+    const label = this.t(
+      kind === "eraser" ? "paintCanvas.tool.eraser" : "paintCanvas.tool.brush",
+    );
     const panel = kind === "eraser" ? Panel.Eraser : Panel.Brush;
     return html`<div
       role="toolbar"
-      aria-label=${this.t("toolSettings.settings", { tool: label })}
+      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: label })}
     >
       <button
         type="button"
         class="preset"
-        title=${this.t("toolSettings.presets", { tool: label })}
+        title=${this.t("paintCanvas.toolSettings.presets", { tool: label })}
         aria-expanded=${app.panel === panel ? "true" : "false"}
         @click=${() => app.togglePanel(panel)}
       >
@@ -258,7 +260,7 @@ export class PcToolSettings extends PcElement {
         ${preset.name ?? preset.id}
       </button>
       <label>
-        ${this.t("common.width")}
+        ${this.t("paintCanvas.common.width")}
         <input
           type="number"
           class="width"
@@ -273,7 +275,7 @@ export class PcToolSettings extends PcElement {
       </label>
       <label
         class="icon-toggle"
-        title=${this.t("toolSettings.constrainProportions")}
+        title=${this.t("paintCanvas.toolSettings.constrainProportions")}
       >
         <input
           type="checkbox"
@@ -284,10 +286,10 @@ export class PcToolSettings extends PcElement {
               constrainProportions: (e.target as HTMLInputElement).checked,
             })}
         />
-        ${iconLabel(this.iconUrl(preset.constrainProportions ? "linked" : "unlinked"), this.t("toolSettings.constrainProportions"))}
+        ${iconLabel(this.iconUrl(preset.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
       </label>
       <label>
-        ${this.t("common.height")}
+        ${this.t("paintCanvas.common.height")}
         <input
           type="number"
           class="height"
@@ -300,7 +302,10 @@ export class PcToolSettings extends PcElement {
           }}
         />
       </label>
-      <label class="icon-toggle" title=${this.t("toolSettings.pressure")}>
+      <label
+        class="icon-toggle"
+        title=${this.t("paintCanvas.toolSettings.pressure")}
+      >
         <input
           type="checkbox"
           class="pressure"
@@ -315,9 +320,12 @@ export class PcToolSettings extends PcElement {
               ),
             )}
         />
-        ${iconLabel(this.iconUrl("pressure"), this.t("toolSettings.pressure"))}
+        ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
       </label>
-      <label class="icon-toggle" title=${this.t("toolSettings.tilt")}>
+      <label
+        class="icon-toggle"
+        title=${this.t("paintCanvas.toolSettings.tilt")}
+      >
         <input
           type="checkbox"
           class="tilt"
@@ -332,10 +340,10 @@ export class PcToolSettings extends PcElement {
               ),
             )}
         />
-        ${iconLabel(this.iconUrl("tilt"), this.t("toolSettings.tilt"))}
+        ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
       </label>
       <label>
-        ${this.t("common.opacity")}
+        ${this.t("paintCanvas.common.opacity")}
         <input
           type="number"
           class="opacity"
@@ -357,7 +365,7 @@ export class PcToolSettings extends PcElement {
         class="configure"
         @click=${() => this.emit("pc-configure-brush", kind)}
       >
-        ${this.t("toolSettings.configure")}
+        ${this.t("paintCanvas.toolSettings.configure")}
       </button>
       ${this.renderFocusPen(app)}
     </div>`;
@@ -367,14 +375,14 @@ export class PcToolSettings extends PcElement {
   private renderMask(app: PaintCanvas) {
     return html`<div
       role="toolbar"
-      aria-label=${this.t("toolSettings.maskSettings")}
+      aria-label=${this.t("paintCanvas.toolSettings.maskSettings")}
     >
       <button
         type="button"
         class="pill select-all"
         @click=${() => app.selection.selectAll()}
       >
-        ${this.t("toolSettings.selectAll")}
+        ${this.t("paintCanvas.toolSettings.selectAll")}
       </button>
       <button
         type="button"
@@ -382,7 +390,7 @@ export class PcToolSettings extends PcElement {
         ?disabled=${!app.selection.active}
         @click=${() => app.selection.invert()}
       >
-        ${this.t("toolSettings.invertSelection")}
+        ${this.t("paintCanvas.toolSettings.invertSelection")}
       </button>
       <button
         type="button"
@@ -390,7 +398,7 @@ export class PcToolSettings extends PcElement {
         ?disabled=${!app.selection.active}
         @click=${() => app.selection.clear()}
       >
-        ${this.t("toolSettings.deselect")}
+        ${this.t("paintCanvas.toolSettings.deselect")}
       </button>
       ${this.renderFocusPen(app)}
     </div>`;
@@ -453,12 +461,12 @@ export class PcToolSettings extends PcElement {
       }));
     return html`<div
       role="toolbar"
-      aria-label=${this.t("toolSettings.settings", { tool: this.t("tool.move") })}
+      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: this.t("paintCanvas.tool.move") })}
     >
-      ${side("width", this.t("common.width"))}
+      ${side("width", this.t("paintCanvas.common.width"))}
       <label
         class="icon-toggle"
-        title=${this.t("toolSettings.constrainProportions")}
+        title=${this.t("paintCanvas.toolSettings.constrainProportions")}
       >
         <input
           type="checkbox"
@@ -467,9 +475,9 @@ export class PcToolSettings extends PcElement {
           @change=${(e: Event) =>
             app.setConstrainProportions((e.target as HTMLInputElement).checked)}
         />
-        ${iconLabel(this.iconUrl(app.constrainProportions ? "linked" : "unlinked"), this.t("toolSettings.constrainProportions"))}
+        ${iconLabel(this.iconUrl(app.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
       </label>
-      ${side("height", this.t("common.height"))}
+      ${side("height", this.t("paintCanvas.common.height"))}
       <label>
         <input
           type="checkbox"
@@ -478,30 +486,30 @@ export class PcToolSettings extends PcElement {
           @change=${(e: Event) =>
             (this.percent = (e.target as HTMLInputElement).checked)}
         />
-        ${this.t("toolSettings.percent")}
+        ${this.t("paintCanvas.toolSettings.percent")}
       </label>
       <button
         type="button"
         class="icon-button flip-horizontal"
-        title=${this.t("toolSettings.flipHorizontal")}
+        title=${this.t("paintCanvas.toolSettings.flipHorizontal")}
         ?disabled=${disabled}
         @click=${() =>
           this.changeBox(app, (current) => ({ width: -current.width }))}
       >
-        ${iconLabel(this.iconUrl("flipHorizontal"), this.t("toolSettings.flipHorizontal"))}
+        ${iconLabel(this.iconUrl("flipHorizontal"), this.t("paintCanvas.toolSettings.flipHorizontal"))}
       </button>
       <button
         type="button"
         class="icon-button flip-vertical"
-        title=${this.t("toolSettings.flipVertical")}
+        title=${this.t("paintCanvas.toolSettings.flipVertical")}
         ?disabled=${disabled}
         @click=${() =>
           this.changeBox(app, (current) => ({ height: -current.height }))}
       >
-        ${iconLabel(this.iconUrl("flipVertical"), this.t("toolSettings.flipVertical"))}
+        ${iconLabel(this.iconUrl("flipVertical"), this.t("paintCanvas.toolSettings.flipVertical"))}
       </button>
       <label>
-        ${this.t("toolSettings.angle")}
+        ${this.t("paintCanvas.toolSettings.angle")}
         <input
           type="number"
           class="angle"
@@ -518,20 +526,20 @@ export class PcToolSettings extends PcElement {
       <button
         type="button"
         class="icon-button rotate-left"
-        title=${this.t("toolSettings.rotateLeft")}
+        title=${this.t("paintCanvas.toolSettings.rotateLeft")}
         ?disabled=${disabled}
         @click=${() => rotate((rotation) => rotation - 90)}
       >
-        ${iconLabel(this.iconUrl("rotate90Left"), this.t("toolSettings.rotateLeft"))}
+        ${iconLabel(this.iconUrl("rotate90Left"), this.t("paintCanvas.toolSettings.rotateLeft"))}
       </button>
       <button
         type="button"
         class="icon-button rotate-right"
-        title=${this.t("toolSettings.rotateRight")}
+        title=${this.t("paintCanvas.toolSettings.rotateRight")}
         ?disabled=${disabled}
         @click=${() => rotate((rotation) => rotation + 90)}
       >
-        ${iconLabel(this.iconUrl("rotate90Right"), this.t("toolSettings.rotateRight"))}
+        ${iconLabel(this.iconUrl("rotate90Right"), this.t("paintCanvas.toolSettings.rotateRight"))}
       </button>
       <button
         type="button"
@@ -539,7 +547,7 @@ export class PcToolSettings extends PcElement {
         ?disabled=${disabled}
         @click=${() => app.cancelTransform()}
       >
-        ${this.t("toolSettings.reset")}
+        ${this.t("paintCanvas.toolSettings.reset")}
       </button>
       ${this.renderFocusPen(app)}
     </div>`;
@@ -551,13 +559,13 @@ export class PcToolSettings extends PcElement {
     const centre = { x: view.width / 2, y: view.height / 2 };
     return html`<div
       role="toolbar"
-      aria-label=${this.t("toolSettings.settings", { tool: this.t("tool.zoom") })}
+      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: this.t("paintCanvas.tool.zoom") })}
     >
       <button
         type="button"
         class="zoom-in"
-        title=${this.t("toolSettings.zoomIn")}
-        aria-label=${this.t("toolSettings.zoomIn")}
+        title=${this.t("paintCanvas.toolSettings.zoomIn")}
+        aria-label=${this.t("paintCanvas.toolSettings.zoomIn")}
         ?disabled=${view.zoom >= MAX_ZOOM}
         @click=${() => view.zoomIn(centre)}
       >
@@ -566,15 +574,15 @@ export class PcToolSettings extends PcElement {
       <button
         type="button"
         class="zoom-out"
-        title=${this.t("toolSettings.zoomOut")}
-        aria-label=${this.t("toolSettings.zoomOut")}
+        title=${this.t("paintCanvas.toolSettings.zoomOut")}
+        aria-label=${this.t("paintCanvas.toolSettings.zoomOut")}
         ?disabled=${view.zoom <= MIN_ZOOM}
         @click=${() => view.zoomOut(centre)}
       >
         <img src=${this.iconUrl("zoomOut")} alt="" />
       </button>
       <label>
-        ${this.t("tool.zoom")}
+        ${this.t("paintCanvas.tool.zoom")}
         <input
           type="range"
           class="zoom"
@@ -595,7 +603,7 @@ export class PcToolSettings extends PcElement {
         class="pill reset"
         @click=${() => view.zoomAt(centre, 1)}
       >
-        ${this.t("toolSettings.reset")}
+        ${this.t("paintCanvas.toolSettings.reset")}
       </button>
       ${this.renderFocusPen(app)}
     </div>`;
@@ -606,20 +614,20 @@ export class PcToolSettings extends PcElement {
     const modes: [SampleMode, string, unknown][] = [
       [
         "point",
-        this.t("toolSettings.pointSample"),
+        this.t("paintCanvas.toolSettings.pointSample"),
         // A target
         svg`<circle cx="10" cy="10" r="6" /><circle cx="10" cy="10" r="1.5" fill="currentColor" /><path d="M10 1 V5 M10 15 V19 M1 10 H5 M15 10 H19" />`,
       ],
       [
         "area",
-        this.t("toolSettings.areaSample"),
+        this.t("paintCanvas.toolSettings.areaSample"),
         // A rectangle filled with a gradient
         svg`<defs><linearGradient id="area-gradient"><stop offset="0" stop-color="currentColor" stop-opacity="0" /><stop offset="1" stop-color="currentColor" /></linearGradient></defs><rect x="2" y="4" width="16" height="12" fill="url(#area-gradient)" />`,
       ],
     ];
     return html`<div
       role="toolbar"
-      aria-label=${this.t("toolSettings.settings", { tool: this.t("tool.colourSample") })}
+      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: this.t("paintCanvas.tool.colourSample") })}
     >
       ${modes.map(
         ([mode, label, icon]) =>

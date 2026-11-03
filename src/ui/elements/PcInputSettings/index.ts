@@ -1,6 +1,7 @@
 import { css, html, nothing } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
 import ChangeController from "../../ChangeController";
+import { languageName } from "../../../lib/i18n";
 import {
   isTouchDevice,
   zoomModifierName,
@@ -26,10 +27,10 @@ type ToggleSetting =
 
 /** Translation keys of the gesture actions' names */
 const ACTION_KEYS: Record<GestureAction, string> = {
-  undo: "common.undo",
-  redo: "common.redo",
-  copy: "common.copy",
-  paste: "common.paste",
+  undo: "paintCanvas.common.undo",
+  redo: "paintCanvas.common.redo",
+  copy: "paintCanvas.common.copy",
+  paste: "paintCanvas.common.paste",
 };
 
 /**
@@ -143,7 +144,7 @@ export class PcInputSettings extends PcElement {
    */
   private renderGestures(data: Readonly<InputSettingsData>) {
     return html`<fieldset part="gestures">
-      <legend>${this.t("inputSettings.gestures")}</legend>
+      <legend>${this.t("paintCanvas.inputSettings.gestures")}</legend>
       ${GESTURE_ACTIONS.map(
         (action) =>
           html`<label for="gesture-${action}"
@@ -168,7 +169,7 @@ export class PcInputSettings extends PcElement {
                     value=${gesture}
                     ?selected=${data.gestures[action] === gesture}
                   >
-                    ${this.t(gesture === "off" ? "common.off" : `gesture.${gesture}`)}
+                    ${this.t(gesture === "off" ? "paintCanvas.common.off" : `paintCanvas.gesture.${gesture}`)}
                   </option>`,
               )}
             </select>`,
@@ -180,7 +181,9 @@ export class PcInputSettings extends PcElement {
   private renderLanguage() {
     const translations = this.translations;
     return html`<fieldset part="language">
-      <label for="language">${this.t("inputSettings.language")}</label>
+      <label for="language"
+        >${this.t("paintCanvas.inputSettings.language")}</label
+      >
       <select
         id="language"
         name="language"
@@ -195,9 +198,10 @@ export class PcInputSettings extends PcElement {
           (locale) =>
             html`<option
               value=${locale}
+              lang=${locale}
               ?selected=${translations.locale === locale}
             >
-              ${this.t(`language.${locale}`)}
+              ${languageName(locale)}
             </option>`,
         )}
       </select>
@@ -208,29 +212,35 @@ export class PcInputSettings extends PcElement {
     const data = this.settings?.data;
     if (!data) return nothing;
     return html`<fieldset part="controls">
-        <legend>${this.t("inputSettings.title")}</legend>
+        <legend>${this.t("paintCanvas.inputSettings.title")}</legend>
         ${this.toggle(
           data,
           "scrollPan",
           this.t(
-            this.touch ? "inputSettings.touchPan" : "inputSettings.scrollPan",
+            this.touch
+              ? "paintCanvas.inputSettings.touchPan"
+              : "paintCanvas.inputSettings.scrollPan",
           ),
         )}
-        ${this.toggle(data, "pinchZoom", this.t("inputSettings.pinchZoom"))}
+        ${this.toggle(data, "pinchZoom", this.t("paintCanvas.inputSettings.pinchZoom"))}
         ${
           this.touch
             ? nothing
             : this.toggle(
                 data,
                 "modifierScrollZoom",
-                this.t("inputSettings.modifierScrollZoom", {
+                this.t("paintCanvas.inputSettings.modifierScrollZoom", {
                   key: this.modifier,
                 }),
               )
         }
         ${
           this.focusPen
-            ? this.toggle(data, "focusPen", this.t("inputSettings.focusPen"))
+            ? this.toggle(
+                data,
+                "focusPen",
+                this.t("paintCanvas.inputSettings.focusPen"),
+              )
             : nothing
         }
       </fieldset>

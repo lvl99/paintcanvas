@@ -7,7 +7,9 @@ import { mount, shadow } from "../../../testing/elements";
 
 class PcSample extends PcElement {
   override render() {
-    return html`<p>${this.t("tool.brush")} ${this.iconUrl("brush")}</p>
+    return html`<p>
+        ${this.t("paintCanvas.tool.brush")} ${this.iconUrl("brush")}
+      </p>
       <i>${this.iconUrl("missing")}</i>`;
   }
 }
@@ -44,18 +46,20 @@ describe("PcElement", () => {
     const element = await mount<PcSample>("pc-sample");
     expect(element.translations).toBe(translations);
     expect(element.icons).toBe(icons);
-    translations.addStrings("en-US", { "tool.brush": "Paintbrush" });
+    translations.addStrings("en-US", {
+      "paintCanvas.tool.brush": "Paintbrush",
+    });
     await element.updateComplete;
     expect(shadow(element, "p").textContent).toContain("Paintbrush");
     expect(() => shadow(element, "nothing")).toThrow("No nothing in PC-SAMPLE");
     expect(shadow(element, "i").textContent).toBe("");
-    translations.addStrings("en-US", { "tool.brush": "Brush" });
+    translations.addStrings("en-US", { "paintCanvas.tool.brush": "Brush" });
   });
 
   it("should follow translations and icons it's given, and stop listening when removed", async () => {
     const own = new Translations({
       locales: {},
-      fallbackStrings: { "tool.brush": "Pinsel" },
+      fallbackStrings: { "paintCanvas.tool.brush": "Pinsel" },
     });
     const ownIcons = new IconRegistry({ brush: "/b.svg" });
     const element = await mount<PcSample>("pc-sample", {

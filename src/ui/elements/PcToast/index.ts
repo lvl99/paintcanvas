@@ -128,7 +128,7 @@ export class PcToast extends PcElement {
             : nothing
         }
         <pc-button variant="dismiss" @click=${() => this.dismiss()}
-          >${this.t("common.dismiss")}</pc-button
+          >${this.t("paintCanvas.common.dismiss")}</pc-button
         >
       </div>
     </div>`;

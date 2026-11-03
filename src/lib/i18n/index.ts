@@ -112,6 +112,72 @@ export const interpolate = (
     Object.hasOwn(values, name) ? String(values[name]) : placeholder,
   );
 
+/**
+ * A locale's language name, written in that language (so people can find their own), with its first letter in
+ * capitals. Gives the tag itself if the browser can't name it.
+ *
+ * @example
+ * languageName("ja"); // "日本語"
+ * languageName("fr"); // "Français"
+ * languageName("en-GB"); // "English (United Kingdom)"
+ */
+export const languageName = (locale: string): string => {
+  try {
+    const name = new Intl.DisplayNames([locale], {
+      type: "language",
+      languageDisplay: "standard",
+      fallback: "none",
+    }).of(locale);
+    return name
+      ? name.charAt(0).toLocaleUpperCase(locale) + name.slice(1)
+      : locale;
+  } catch {
+    return locale;
+  }
+};
+
+/** A locale loader's strings, whether given directly or as a module's default export */
+const unwrap = (module: Strings | { default: Strings }): Strings =>
+  "default" in module && typeof module.default === "object"
+    ? module.default
+    : (module as Strings);
+
+/**
+ * One set of strings for some locales (e.g. PaintCanvas's, or an app's), each loaded once, when first needed.
+ */
+class LocaleSource {
+  /** Strings of each locale loaded so far */
+  readonly strings = new Map<string, Strings>();
+
+  /** Loads started, so a locale loading for two callers loads once */
+  private readonly loading = new Map<string, Promise<void>>();
+
+  constructor(readonly loaders: Record<string, LocaleLoader> = {}) {}
+
+  /**
+   * Load a locale's strings, if this has a loader for it and they aren't loaded yet. A failed load rejects, and can be
+   * tried again.
+   */
+  load(locale: string): Promise<void> {
+    const loader = this.loaders[locale];
+    if (!loader || this.strings.has(locale)) return Promise.resolve();
+    let loading = this.loading.get(locale);
+    if (!loading) {
+      loading = loader().then(
+        (module) => {
+          this.strings.set(locale, unwrap(module));
+        },
+        (error: unknown) => {
+          this.loading.delete(locale);
+          throw error;
+        },
+      );
+      this.loading.set(locale, loading);
+    }
+    return loading;
+  }
+}
+
 /** Options for translations */
 export interface TranslationsOptions {
   /** Locales that can be used, and how to load each (default: all the locales that come with PaintCanvas) */
@@ -127,20 +193,26 @@ export interface TranslationsOptions {
  * match for the device, and `setLocale` to any available locale. Locale files load when first used, without reloading
  * the page. Strings missing from a locale come from the fallback locale, then the key itself.
  *
+ * Other projects can add their own strings and locales with `addLocales` and `addStrings`. A locale's strings from
+ * every set load together and are merged in the order the sets were added (PaintCanvas's first), so a key in a later
+ * set replaces the same key in an earlier one. Keys are prefixed by project by convention: `paintCanvas.` for
+ * PaintCanvas's, and e.g. `liveCanvas.` for an app's.
+ *
  * Dispatches a `change` event when the locale or its strings change, so the UI can show the new text.
  *
  * @example
  * const translations = new Translations({ locales: { "en-US": ..., ja: () => import("./ja.json") } });
  * await translations.useDeviceLocale();
- * translations.t("layers.delete", { name: "Sketch" });
+ * translations.t("paintCanvas.layers.delete", { name: "Sketch" });
  */
 export default class Translations extends EventTarget {
-  private readonly loaders: Record<string, LocaleLoader>;
-
   private readonly fallback: string;
 
-  /** Strings of each locale loaded so far, plus any added */
-  private readonly loaded = new Map<string, Strings>();
+  /** Sets of strings, in the order they were added */
+  private readonly sources: LocaleSource[];
+
+  /** Each locale's strings from every set loaded so far, merged in order */
+  private readonly merged = new Map<string, Strings>();
 
   private current: string;
 
@@ -149,9 +221,11 @@ export default class Translations extends EventTarget {
 
   constructor(options: TranslationsOptions = {}) {
     super();
-    this.loaders = options.locales ?? BUILT_IN_LOCALES;
     this.fallback = options.fallback ?? FALLBACK_LOCALE;
-    this.loaded.set(this.fallback, options.fallbackStrings ?? enUS);
+    const builtIn = new LocaleSource(options.locales ?? BUILT_IN_LOCALES);
+    builtIn.strings.set(this.fallback, options.fallbackStrings ?? enUS);
+    this.sources = [builtIn];
+    this.merge(this.fallback);
     this.current = this.fallback;
   }
 
@@ -160,9 +234,14 @@ export default class Translations extends EventTarget {
     return this.current;
   }
 
-  /** Locales that can be used */
+  /** Locales that can be used: the fallback, and every locale a set of strings can load */
   get locales(): string[] {
-    return [...new Set([this.fallback, ...Object.keys(this.loaders)])];
+    return [
+      ...new Set([
+        this.fallback,
+        ...this.sources.flatMap((source) => Object.keys(source.loaders)),
+      ]),
+    ];
   }
 
   /**
@@ -177,8 +256,8 @@ export default class Translations extends EventTarget {
   }
 
   /**
-   * Switch to a locale (the best available match for the tag), loading its strings if needed. Dispatches `change` once
-   * its strings are ready. If loading fails, the current locale stays and this rejects.
+   * Switch to a locale (the best available match for the tag), loading its strings from every set if needed.
+   * Dispatches `change` once they're ready. If loading fails, the current locale stays and this rejects.
    *
    * @example
    * await translations.setLocale("zh-TW"); // uses zh-Hant
@@ -186,15 +265,7 @@ export default class Translations extends EventTarget {
   async setLocale(tag: string): Promise<void> {
     const locale = matchLocale([tag], this.locales, this.fallback);
     this.requested = locale;
-    if (!this.loaded.has(locale)) {
-      const module = await (this.loaders[locale] as LocaleLoader)();
-      this.loaded.set(
-        locale,
-        "default" in module && typeof module.default === "object"
-          ? (module.default as Strings)
-          : (module as Strings),
-      );
-    }
+    await this.load(locale);
     // A later call chose another locale while this one loaded
     if (this.requested !== locale) return;
     this.current = locale;
@@ -202,25 +273,73 @@ export default class Translations extends EventTarget {
   }
 
   /**
-   * Add or replace strings for a locale (e.g. the implementer's own wording or extra keys). Dispatches `change` if it's
-   * the locale in use or the fallback.
+   * Add a set of strings for some locales, loaded when first used, after the sets already added (so its keys replace
+   * theirs). Its locales become available. The locale in use and the fallback load straight away, then `change` is
+   * dispatched if the set has strings for either.
    *
    * @example
-   * translations.addStrings("en-US", { "toolbar.brush": "Paintbrush" });
+   * await translations.addLocales({
+   *   "en-US": () => import("./locales/en-US.json"),
+   *   fr: () => import("./locales/fr.json"),
+   * });
+   * translations.t("liveCanvas.share");
+   */
+  async addLocales(loaders: Record<string, LocaleLoader>): Promise<void> {
+    this.sources.push(new LocaleSource(loaders));
+    const locales = [...new Set([this.current, this.fallback])];
+    await Promise.all(locales.map((locale) => this.load(locale)));
+    if (locales.some((locale) => Object.hasOwn(loaders, locale)))
+      this.dispatchEvent(new Event("change"));
+  }
+
+  /**
+   * Add or replace strings for a locale (e.g. the implementer's own wording or extra keys), after the sets already
+   * added. Dispatches `change` if it's the locale in use or the fallback.
+   *
+   * @example
+   * translations.addStrings("en-US", { "paintCanvas.tool.brush": "Paintbrush" });
    */
   addStrings(locale: string, strings: Strings): void {
-    this.loaded.set(locale, { ...this.loaded.get(locale), ...strings });
+    const source = new LocaleSource();
+    source.strings.set(locale, strings);
+    this.sources.push(source);
+    this.merge(locale);
     if (locale === this.current || locale === this.fallback)
       this.dispatchEvent(new Event("change"));
   }
 
   /**
+   * Load a locale's strings from every set, including sets added while loading, then merge them.
+   */
+  private async load(locale: string): Promise<void> {
+    let count: number;
+    do {
+      count = this.sources.length;
+      await Promise.all(this.sources.map((source) => source.load(locale)));
+    } while (count !== this.sources.length);
+    this.merge(locale);
+  }
+
+  /**
+   * Merge a locale's strings loaded so far from every set, in the order the sets were added.
+   */
+  private merge(locale: string): void {
+    this.merged.set(
+      locale,
+      Object.assign(
+        {},
+        ...this.sources.map((source) => source.strings.get(locale)),
+      ) as Strings,
+    );
+  }
+
+  /**
    * Translate a key, putting values into its `{name}` placeholders. With a numeric `count`, the key's plural form for
-   * the locale is used when there is one (e.g. `presets.imported.one` and `presets.imported.other`). Falls back to the
-   * fallback locale, then the key.
+   * the locale is used when there is one (e.g. `paintCanvas.presets.imported.one` and
+   * `paintCanvas.presets.imported.other`). Falls back to the fallback locale, then the key.
    *
    * @example
-   * translations.t("presets.imported", { count: 3 }); // "Imported 3 brush presets"
+   * translations.t("paintCanvas.presets.imported", { count: 3 }); // "Imported 3 brush presets"
    */
   t(key: string, values?: Record<string, string | number>): string {
     const count = values?.count;
@@ -233,7 +352,7 @@ export default class Translations extends EventTarget {
           ]
         : [key];
     for (const locale of [this.current, this.fallback]) {
-      const strings = this.loaded.get(locale);
+      const strings = this.merged.get(locale);
       const found = keys.find(
         (each) => strings && Object.hasOwn(strings, each),
       );
