@@ -1,8 +1,36 @@
 /* The light theme's background is transparent by default, which shows whatever the browser draws behind the page */
 :root {
   --ifm-background-color: #fff;
+
+  /* PaintCanvas purple: 5.3:1 contrast on the white background */
+  --ifm-color-primary: #8f3de8;
+  --ifm-color-primary-dark: #8023e5;
+  --ifm-color-primary-darker: #791adf;
+  --ifm-color-primary-darkest: #6316b7;
+  --ifm-color-primary-light: #9e57eb;
+  --ifm-color-primary-lighter: #a664ed;
+  --ifm-color-primary-lightest: #bc8cf1;
+
+  /* PaintCanvas pink, used behind dark text (5.4:1 contrast) */
+  --ifm-color-secondary: #f40f95;
+  --ifm-color-secondary-dark: #df0a87;
+  --ifm-color-secondary-darker: #d30a7f;
+  --ifm-color-secondary-darkest: #ad0869;
+  --ifm-color-secondary-light: #f528a0;
+  --ifm-color-secondary-lighter: #f634a5;
+  --ifm-color-secondary-lightest: #f759b6;
+  --ifm-color-secondary-contrast-foreground: #000;
 }
 
 [data-theme="dark"] {
   --ifm-background-color: #1b1b1d;
+
+  /* The purple is lightened on the dark background, where #8f3de8 has only 3.3:1 contrast; this has 5.7:1 */
+  --ifm-color-primary: #b07bef;
+  --ifm-color-primary-dark: #9e5fec;
+  --ifm-color-primary-darker: #9551ea;
+  --ifm-color-primary-darkest: #7a26e2;
+  --ifm-color-primary-light: #c297f2;
+  --ifm-color-primary-lighter: #cba5f4;
+  --ifm-color-primary-lightest: #e5d3f9;
 }
