@@ -1,0 +1,1 @@
+var e={"demo.newDrawing":`Nouveau dessin`,"demo.newDrawingMessage":`Commencer un nouveau dessin ? Ce dessin sera supprimé.`,"demo.narrowLayout":`Mise en page étroite`};export{e as default};

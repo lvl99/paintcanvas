@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-api/lib/messages/variables/strokeMessageSchema" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.10.2">
+<title data-rh="true">Variable: strokeMessageSchema | PaintCanvas</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://lvl99.github.io/paintcanvas/api/lib/messages/variables/strokeMessageSchema"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Variable: strokeMessageSchema | PaintCanvas"><meta data-rh="true" name="description" content="const strokeMessageSchema: object"><meta data-rh="true" property="og:description" content="const strokeMessageSchema: object"><link data-rh="true" rel="canonical" href="https://lvl99.github.io/paintcanvas/api/lib/messages/variables/strokeMessageSchema"><link data-rh="true" rel="alternate" href="https://lvl99.github.io/paintcanvas/api/lib/messages/variables/strokeMessageSchema" hreflang="en"><link data-rh="true" rel="alternate" href="https://lvl99.github.io/paintcanvas/api/lib/messages/variables/strokeMessageSchema" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"API","item":"https://lvl99.github.io/paintcanvas/api/"},{"@type":"ListItem","position":2,"name":"lib/messages","item":"https://lvl99.github.io/paintcanvas/api/lib/messages/"},{"@type":"ListItem","position":3,"name":"Variable: strokeMessageSchema","item":"https://lvl99.github.io/paintcanvas/api/lib/messages/variables/strokeMessageSchema"}]}</script><link rel="stylesheet" href="/paintcanvas/assets/css/styles.70dcbf72.css">
+<script src="/paintcanvas/assets/js/runtime~main.231cdd27.js" defer="defer"></script>
+<script src="/paintcanvas/assets/js/main.c5a25cb4.js" defer="defer"></script>
+</head>
+<body>
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_Vte8" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/paintcanvas/"><b class="navbar__title text--truncate">PaintCanvas</b></a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/paintcanvas/">Guides</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/paintcanvas/api">API</a><a href="/paintcanvas/app/" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Try it</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/lvl99/paintcanvas" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_ojHW"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_LOj_ colorModeToggle_oovp"><button class="clean-btn toggleButton_ok2y toggleButtonDisabled_YEA2" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_LmAC lightToggleIcon_c767"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_LmAC darkToggleIcon_JSjY"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_LmAC systemToggleIcon_TghP"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_K1ND"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_vm8u"><div class="docsWrapper_Oij5"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_LJ4O" type="button"></button><div class="docRoot_JrlU"><aside class="theme-doc-sidebar-container docSidebarContainer_Sxf2"><div class="sidebarViewport_Nhv4"><div class="sidebar_Q6Aj"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_XVGk"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/"><span class="linkLabel_fcvw">Introduction</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/layout"><span class="linkLabel_fcvw">Layout and slots</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/engine"><span class="linkLabel_fcvw">Using the engine</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/messages"><span class="linkLabel_fcvw">Messages and events</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/documents"><span class="linkLabel_fcvw">Saving and opening drawings</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/translations"><span class="linkLabel_fcvw">Translations</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/icons"><span class="linkLabel_fcvw">Icons</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/paintcanvas/theming"><span class="linkLabel_fcvw">Theming</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--active" href="/paintcanvas/api/"><span class="categoryLinkLabel_nXrf">API</span></a><button aria-label="Collapse sidebar category &#x27;API&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/index/"><span class="categoryLinkLabel_nXrf">index</span></a><button aria-label="Expand sidebar category &#x27;index&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" tabindex="0" href="/paintcanvas/api/lib/brushes/"><span class="categoryLinkLabel_nXrf">lib</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/brushes/"><span class="categoryLinkLabel_nXrf">lib/brushes</span></a><button aria-label="Expand sidebar category &#x27;lib/brushes&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/classes/BackgroundWork/"><span class="categoryLinkLabel_nXrf">classes</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/document/"><span class="categoryLinkLabel_nXrf">lib/document</span></a><button aria-label="Expand sidebar category &#x27;lib/document&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/i18n/"><span class="categoryLinkLabel_nXrf">lib/i18n</span></a><button aria-label="Expand sidebar category &#x27;lib/i18n&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/image/"><span class="categoryLinkLabel_nXrf">lib/image</span></a><button aria-label="Expand sidebar category &#x27;lib/image&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--active" tabindex="0" href="/paintcanvas/api/lib/messages/"><span class="categoryLinkLabel_nXrf">lib/messages</span></a><button aria-label="Collapse sidebar category &#x27;lib/messages&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-4 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/messages/PatchSender/"><span class="categoryLinkLabel_nXrf">lib/messages/PatchSender</span></a><button aria-label="Expand sidebar category &#x27;lib/messages/PatchSender&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-4 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/messages/functions/createPatchMessage"><span class="categoryLinkLabel_nXrf">functions</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-4 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/messages/interfaces/HistoryMessage"><span class="categoryLinkLabel_nXrf">interfaces</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-4 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/messages/type-aliases/CanvasMessage"><span class="categoryLinkLabel_nXrf">type-aliases</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-4 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" tabindex="0" href="/paintcanvas/api/lib/messages/variables/CanvasMessageType"><span class="categoryLinkLabel_nXrf">variables</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/CanvasMessageType"><span class="linkLabel_fcvw">Variable: CanvasMessageType</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/MAX_MESSAGE_CANVAS_SIZE"><span class="linkLabel_fcvw">Variable: MAX\_MESSAGE\_CANVAS\_SIZE</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/MAX_PATCH_DATA_LENGTH"><span class="linkLabel_fcvw">Variable: MAX\_PATCH\_DATA\_LENGTH</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/MAX_STROKE_POINTS"><span class="linkLabel_fcvw">Variable: MAX\_STROKE\_POINTS</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/PROTOCOL_VERSION"><span class="linkLabel_fcvw">Variable: PROTOCOL\_VERSION</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/historyMessageSchema"><span class="linkLabel_fcvw">Variable: historyMessageSchema</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/messageSchemas"><span class="linkLabel_fcvw">Variable: messageSchemas</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/patchMessageSchema"><span class="linkLabel_fcvw">Variable: patchMessageSchema</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/paintcanvas/api/lib/messages/variables/strokeMessageSchema"><span class="linkLabel_fcvw">Variable: strokeMessageSchema</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-5 menu__list-item"><a class="menu__link" tabindex="0" href="/paintcanvas/api/lib/messages/variables/strokePresetSchema"><span class="linkLabel_fcvw">Variable: strokePresetSchema</span></a></li></ul></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/palette/"><span class="categoryLinkLabel_nXrf">lib/palette</span></a><button aria-label="Expand sidebar category &#x27;lib/palette&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/presets/"><span class="categoryLinkLabel_nXrf">lib/presets</span></a><button aria-label="Expand sidebar category &#x27;lib/presets&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/rendering/BrushTip/"><span class="categoryLinkLabel_nXrf">rendering</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/selection/Lasso/"><span class="categoryLinkLabel_nXrf">selection</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/settings/"><span class="categoryLinkLabel_nXrf">lib/settings</span></a><button aria-label="Expand sidebar category &#x27;lib/settings&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/lib/storage/"><span class="categoryLinkLabel_nXrf">lib/storage</span></a><button aria-label="Expand sidebar category &#x27;lib/storage&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/transform/Transformer/"><span class="categoryLinkLabel_nXrf">transform</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-3 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/lib/utils/array/"><span class="categoryLinkLabel_nXrf">utils</span></a></div></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/paintcanvas/api/testing/app/"><span class="categoryLinkLabel_nXrf">testing</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_EdRL menu__link menu__link--sublist" tabindex="0" href="/paintcanvas/api/ui/"><span class="categoryLinkLabel_nXrf">ui</span></a><button aria-label="Expand sidebar category &#x27;ui&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li></ul></li></ul></nav></div></div></aside><main class="docMainContainer_aVtW"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_CDad"><div class="docItemContainer_h5Zw"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Wpwm" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/paintcanvas/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon__iEu"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/paintcanvas/api/"><span>API</span></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">lib</span></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/paintcanvas/api/lib/messages/"><span>lib/messages</span></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">variables</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Variable: strokeMessageSchema</span></li></ul></nav><div class="tocCollapsible_tnqe theme-doc-toc-mobile tocMobile_Frjy"><button type="button" class="clean-btn tocCollapsibleButton_l5ZM">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Variable: strokeMessageSchema</h1></header>
+<blockquote>
+<p><code>const</code> <strong>strokeMessageSchema</strong>: <code>object</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/lvl99/paintcanvas/blob/v0.4.0/src/lib/messages/schema.ts#L133" target="_blank" rel="noopener noreferrer" class="">src/lib/messages/schema.ts:133</a></p>
+<p>JSON schema for a stroke message</p>
+<h2 class="anchor anchorTargetStickyNavbar_FcbR" id="type-declaration">Type Declaration<a href="#type-declaration" class="hash-link" aria-label="Direct link to Type Declaration" title="Direct link to Type Declaration" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_FcbR" id="id">$id<a href="#id" class="hash-link" aria-label="Direct link to $id" title="Direct link to $id" translate="no">​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>$id</strong>: <code>&quot;paintcanvas/message/stroke&quot;</code> = <code>&quot;paintcanvas/message/stroke&quot;</code></p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_FcbR" id="additionalproperties">additionalProperties<a href="#additionalproperties" class="hash-link" aria-label="Direct link to additionalProperties" title="Direct link to additionalProperties" translate="no">​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>additionalProperties</strong>: <code>false</code> = <code>false</code></p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_FcbR" id="properties">properties<a href="#properties" class="hash-link" aria-label="Direct link to properties" title="Direct link to properties" translate="no">​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>properties</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiescolour">properties.colour<a href="#propertiescolour" class="hash-link" aria-label="Direct link to properties.colour" title="Direct link to properties.colour" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>colour</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiescolourpattern">properties.colour.pattern<a href="#propertiescolourpattern" class="hash-link" aria-label="Direct link to properties.colour.pattern" title="Direct link to properties.colour.pattern" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>pattern</strong>: <code>&quot;^#[0-9a-fA-F]{6}$&quot;</code> = <code>&quot;^#[0-9a-fA-F]{6}$&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiescolourtype">properties.colour.type<a href="#propertiescolourtype" class="hash-link" aria-label="Direct link to properties.colour.type" title="Direct link to properties.colour.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;string&quot;</code> = <code>&quot;string&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesispen">properties.isPen<a href="#propertiesispen" class="hash-link" aria-label="Direct link to properties.isPen" title="Direct link to properties.isPen" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>isPen</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesispentype">properties.isPen.type<a href="#propertiesispentype" class="hash-link" aria-label="Direct link to properties.isPen.type" title="Direct link to properties.isPen.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;boolean&quot;</code> = <code>&quot;boolean&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertieslayer">properties.layer<a href="#propertieslayer" class="hash-link" aria-label="Direct link to properties.layer" title="Direct link to properties.layer" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>layer</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertieslayermaxlength">properties.layer.maxLength<a href="#propertieslayermaxlength" class="hash-link" aria-label="Direct link to properties.layer.maxLength" title="Direct link to properties.layer.maxLength" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maxLength</strong>: <code>100</code> = <code>100</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertieslayerminlength">properties.layer.minLength<a href="#propertieslayerminlength" class="hash-link" aria-label="Direct link to properties.layer.minLength" title="Direct link to properties.layer.minLength" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minLength</strong>: <code>1</code> = <code>1</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertieslayertype">properties.layer.type<a href="#propertieslayertype" class="hash-link" aria-label="Direct link to properties.layer.type" title="Direct link to properties.layer.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;string&quot;</code> = <code>&quot;string&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesmode">properties.mode<a href="#propertiesmode" class="hash-link" aria-label="Direct link to properties.mode" title="Direct link to properties.mode" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>mode</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesmodeenum">properties.mode.enum<a href="#propertiesmodeenum" class="hash-link" aria-label="Direct link to properties.mode.enum" title="Direct link to properties.mode.enum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>enum</strong>: readonly [<code>&quot;paint&quot;</code>, <code>&quot;erase&quot;</code>]</p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespoints">properties.points<a href="#propertiespoints" class="hash-link" aria-label="Direct link to properties.points" title="Direct link to properties.points" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>points</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitems">properties.points.items<a href="#propertiespointsitems" class="hash-link" aria-label="Direct link to properties.points.items" title="Direct link to properties.points.items" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>items</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemsadditionalproperties">properties.points.items.additionalProperties<a href="#propertiespointsitemsadditionalproperties" class="hash-link" aria-label="Direct link to properties.points.items.additionalProperties" title="Direct link to properties.points.items.additionalProperties" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>additionalProperties</strong>: <code>false</code> = <code>false</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemsproperties">properties.points.items.properties<a href="#propertiespointsitemsproperties" class="hash-link" aria-label="Direct link to properties.points.items.properties" title="Direct link to properties.points.items.properties" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>properties</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiespressure">properties.points.items.properties.pressure<a href="#propertiespointsitemspropertiespressure" class="hash-link" aria-label="Direct link to properties.points.items.properties.pressure" title="Direct link to properties.points.items.properties.pressure" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>pressure</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiespressuremaximum">properties.points.items.properties.pressure.maximum<a href="#propertiespointsitemspropertiespressuremaximum" class="hash-link" aria-label="Direct link to properties.points.items.properties.pressure.maximum" title="Direct link to properties.points.items.properties.pressure.maximum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maximum</strong>: <code>1</code> = <code>1</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiespressureminimum">properties.points.items.properties.pressure.minimum<a href="#propertiespointsitemspropertiespressureminimum" class="hash-link" aria-label="Direct link to properties.points.items.properties.pressure.minimum" title="Direct link to properties.points.items.properties.pressure.minimum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minimum</strong>: <code>0</code> = <code>0</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiespressuretype">properties.points.items.properties.pressure.type<a href="#propertiespointsitemspropertiespressuretype" class="hash-link" aria-label="Direct link to properties.points.items.properties.pressure.type" title="Direct link to properties.points.items.properties.pressure.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiesrotation">properties.points.items.properties.rotation<a href="#propertiespointsitemspropertiesrotation" class="hash-link" aria-label="Direct link to properties.points.items.properties.rotation" title="Direct link to properties.points.items.properties.rotation" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>rotation</strong>: <code>object</code> = <code>number</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiesrotationtype">properties.points.items.properties.rotation.type<a href="#propertiespointsitemspropertiesrotationtype" class="hash-link" aria-label="Direct link to properties.points.items.properties.rotation.type" title="Direct link to properties.points.items.properties.rotation.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestiltx">properties.points.items.properties.tiltX<a href="#propertiespointsitemspropertiestiltx" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltX" title="Direct link to properties.points.items.properties.tiltX" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>tiltX</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestiltxmaximum">properties.points.items.properties.tiltX.maximum<a href="#propertiespointsitemspropertiestiltxmaximum" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltX.maximum" title="Direct link to properties.points.items.properties.tiltX.maximum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maximum</strong>: <code>90</code> = <code>90</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestiltxminimum">properties.points.items.properties.tiltX.minimum<a href="#propertiespointsitemspropertiestiltxminimum" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltX.minimum" title="Direct link to properties.points.items.properties.tiltX.minimum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minimum</strong>: <code>-90</code> = <code>-90</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestiltxtype">properties.points.items.properties.tiltX.type<a href="#propertiespointsitemspropertiestiltxtype" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltX.type" title="Direct link to properties.points.items.properties.tiltX.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestilty">properties.points.items.properties.tiltY<a href="#propertiespointsitemspropertiestilty" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltY" title="Direct link to properties.points.items.properties.tiltY" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>tiltY</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestiltymaximum">properties.points.items.properties.tiltY.maximum<a href="#propertiespointsitemspropertiestiltymaximum" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltY.maximum" title="Direct link to properties.points.items.properties.tiltY.maximum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maximum</strong>: <code>90</code> = <code>90</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestiltyminimum">properties.points.items.properties.tiltY.minimum<a href="#propertiespointsitemspropertiestiltyminimum" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltY.minimum" title="Direct link to properties.points.items.properties.tiltY.minimum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minimum</strong>: <code>-90</code> = <code>-90</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestiltytype">properties.points.items.properties.tiltY.type<a href="#propertiespointsitemspropertiestiltytype" class="hash-link" aria-label="Direct link to properties.points.items.properties.tiltY.type" title="Direct link to properties.points.items.properties.tiltY.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestime">properties.points.items.properties.time<a href="#propertiespointsitemspropertiestime" class="hash-link" aria-label="Direct link to properties.points.items.properties.time" title="Direct link to properties.points.items.properties.time" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>time</strong>: <code>object</code> = <code>number</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiestimetype">properties.points.items.properties.time.type<a href="#propertiespointsitemspropertiestimetype" class="hash-link" aria-label="Direct link to properties.points.items.properties.time.type" title="Direct link to properties.points.items.properties.time.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiesx">properties.points.items.properties.x<a href="#propertiespointsitemspropertiesx" class="hash-link" aria-label="Direct link to properties.points.items.properties.x" title="Direct link to properties.points.items.properties.x" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>x</strong>: <code>object</code> = <code>number</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiesxtype">properties.points.items.properties.x.type<a href="#propertiespointsitemspropertiesxtype" class="hash-link" aria-label="Direct link to properties.points.items.properties.x.type" title="Direct link to properties.points.items.properties.x.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiesy">properties.points.items.properties.y<a href="#propertiespointsitemspropertiesy" class="hash-link" aria-label="Direct link to properties.points.items.properties.y" title="Direct link to properties.points.items.properties.y" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>y</strong>: <code>object</code> = <code>number</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemspropertiesytype">properties.points.items.properties.y.type<a href="#propertiespointsitemspropertiesytype" class="hash-link" aria-label="Direct link to properties.points.items.properties.y.type" title="Direct link to properties.points.items.properties.y.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemsrequired">properties.points.items.required<a href="#propertiespointsitemsrequired" class="hash-link" aria-label="Direct link to properties.points.items.required" title="Direct link to properties.points.items.required" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>required</strong>: readonly [<code>&quot;x&quot;</code>, <code>&quot;y&quot;</code>, <code>&quot;time&quot;</code>]</p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsitemstype">properties.points.items.type<a href="#propertiespointsitemstype" class="hash-link" aria-label="Direct link to properties.points.items.type" title="Direct link to properties.points.items.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;object&quot;</code> = <code>&quot;object&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsmaxitems">properties.points.maxItems<a href="#propertiespointsmaxitems" class="hash-link" aria-label="Direct link to properties.points.maxItems" title="Direct link to properties.points.maxItems" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maxItems</strong>: <code>100000</code> = <code>MAX_STROKE_POINTS</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointsminitems">properties.points.minItems<a href="#propertiespointsminitems" class="hash-link" aria-label="Direct link to properties.points.minItems" title="Direct link to properties.points.minItems" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minItems</strong>: <code>1</code> = <code>1</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespointstype">properties.points.type<a href="#propertiespointstype" class="hash-link" aria-label="Direct link to properties.points.type" title="Direct link to properties.points.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;array&quot;</code> = <code>&quot;array&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespreset">properties.preset<a href="#propertiespreset" class="hash-link" aria-label="Direct link to properties.preset" title="Direct link to properties.preset" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>preset</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiespresetref">properties.preset.$ref<a href="#propertiespresetref" class="hash-link" aria-label="Direct link to properties.preset.$ref" title="Direct link to properties.preset.$ref" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>$ref</strong>: <code>&quot;../stroke-preset&quot;</code> = <code>&quot;../stroke-preset&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesprotocol">properties.protocol<a href="#propertiesprotocol" class="hash-link" aria-label="Direct link to properties.protocol" title="Direct link to properties.protocol" translate="no">​</a></h4>
+<blockquote>
+<p><strong>protocol</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesprotocolconst">properties.protocol.const<a href="#propertiesprotocolconst" class="hash-link" aria-label="Direct link to properties.protocol.const" title="Direct link to properties.protocol.const" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>const</strong>: <code>1</code> = <code>PROTOCOL_VERSION</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesseed">properties.seed<a href="#propertiesseed" class="hash-link" aria-label="Direct link to properties.seed" title="Direct link to properties.seed" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>seed</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesseedmaximum">properties.seed.maximum<a href="#propertiesseedmaximum" class="hash-link" aria-label="Direct link to properties.seed.maximum" title="Direct link to properties.seed.maximum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maximum</strong>: <code>4294967295</code> = <code>0xffffffff</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesseedminimum">properties.seed.minimum<a href="#propertiesseedminimum" class="hash-link" aria-label="Direct link to properties.seed.minimum" title="Direct link to properties.seed.minimum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minimum</strong>: <code>0</code> = <code>0</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesseedtype">properties.seed.type<a href="#propertiesseedtype" class="hash-link" aria-label="Direct link to properties.seed.type" title="Direct link to properties.seed.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;integer&quot;</code> = <code>&quot;integer&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessize">properties.size<a href="#propertiessize" class="hash-link" aria-label="Direct link to properties.size" title="Direct link to properties.size" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>size</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizeadditionalproperties">properties.size.additionalProperties<a href="#propertiessizeadditionalproperties" class="hash-link" aria-label="Direct link to properties.size.additionalProperties" title="Direct link to properties.size.additionalProperties" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>additionalProperties</strong>: <code>false</code> = <code>false</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizeproperties">properties.size.properties<a href="#propertiessizeproperties" class="hash-link" aria-label="Direct link to properties.size.properties" title="Direct link to properties.size.properties" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>properties</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertiesheight">properties.size.properties.height<a href="#propertiessizepropertiesheight" class="hash-link" aria-label="Direct link to properties.size.properties.height" title="Direct link to properties.size.properties.height" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>height</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertiesheightmaximum">properties.size.properties.height.maximum<a href="#propertiessizepropertiesheightmaximum" class="hash-link" aria-label="Direct link to properties.size.properties.height.maximum" title="Direct link to properties.size.properties.height.maximum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maximum</strong>: <code>10000</code> = <code>MAX_MESSAGE_CANVAS_SIZE</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertiesheightminimum">properties.size.properties.height.minimum<a href="#propertiessizepropertiesheightminimum" class="hash-link" aria-label="Direct link to properties.size.properties.height.minimum" title="Direct link to properties.size.properties.height.minimum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minimum</strong>: <code>0</code> = <code>0</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertiesheighttype">properties.size.properties.height.type<a href="#propertiessizepropertiesheighttype" class="hash-link" aria-label="Direct link to properties.size.properties.height.type" title="Direct link to properties.size.properties.height.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertieswidth">properties.size.properties.width<a href="#propertiessizepropertieswidth" class="hash-link" aria-label="Direct link to properties.size.properties.width" title="Direct link to properties.size.properties.width" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>width</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertieswidthmaximum">properties.size.properties.width.maximum<a href="#propertiessizepropertieswidthmaximum" class="hash-link" aria-label="Direct link to properties.size.properties.width.maximum" title="Direct link to properties.size.properties.width.maximum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>maximum</strong>: <code>10000</code> = <code>MAX_MESSAGE_CANVAS_SIZE</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertieswidthminimum">properties.size.properties.width.minimum<a href="#propertiessizepropertieswidthminimum" class="hash-link" aria-label="Direct link to properties.size.properties.width.minimum" title="Direct link to properties.size.properties.width.minimum" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>minimum</strong>: <code>0</code> = <code>0</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizepropertieswidthtype">properties.size.properties.width.type<a href="#propertiessizepropertieswidthtype" class="hash-link" aria-label="Direct link to properties.size.properties.width.type" title="Direct link to properties.size.properties.width.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;number&quot;</code> = <code>&quot;number&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizerequired">properties.size.required<a href="#propertiessizerequired" class="hash-link" aria-label="Direct link to properties.size.required" title="Direct link to properties.size.required" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>required</strong>: readonly [<code>&quot;width&quot;</code>, <code>&quot;height&quot;</code>]</p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessizetype">properties.size.type<a href="#propertiessizetype" class="hash-link" aria-label="Direct link to properties.size.type" title="Direct link to properties.size.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;object&quot;</code> = <code>&quot;object&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiesstep">properties.step<a href="#propertiesstep" class="hash-link" aria-label="Direct link to properties.step" title="Direct link to properties.step" translate="no">​</a></h4>
+<blockquote>
+<p><strong>step</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessteppattern">properties.step.pattern<a href="#propertiessteppattern" class="hash-link" aria-label="Direct link to properties.step.pattern" title="Direct link to properties.step.pattern" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>pattern</strong>: <code>&quot;^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$&quot;</code> = <code>UUID_PATTERN</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiessteptype">properties.step.type<a href="#propertiessteptype" class="hash-link" aria-label="Direct link to properties.step.type" title="Direct link to properties.step.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;string&quot;</code> = <code>&quot;string&quot;</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiestype">properties.type<a href="#propertiestype" class="hash-link" aria-label="Direct link to properties.type" title="Direct link to properties.type" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>object</code></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_FcbR" id="propertiestypeconst">properties.type.const<a href="#propertiestypeconst" class="hash-link" aria-label="Direct link to properties.type.const" title="Direct link to properties.type.const" translate="no">​</a></h4>
+<blockquote>
+<p><code>readonly</code> <strong>const</strong>: <code>&quot;stroke&quot;</code> = <code>CanvasMessageType.Stroke</code></p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_FcbR" id="required">required<a href="#required" class="hash-link" aria-label="Direct link to required" title="Direct link to required" translate="no">​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>required</strong>: readonly [<code>&quot;protocol&quot;</code>, <code>&quot;type&quot;</code>, <code>&quot;step&quot;</code>, <code>&quot;layer&quot;</code>, <code>&quot;mode&quot;</code>, <code>&quot;preset&quot;</code>, <code>&quot;size&quot;</code>, <code>&quot;colour&quot;</code>, <code>&quot;isPen&quot;</code>, <code>&quot;seed&quot;</code>, <code>&quot;points&quot;</code>]</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_FcbR" id="type">type<a href="#type" class="hash-link" aria-label="Direct link to type" title="Direct link to type" translate="no">​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>type</strong>: <code>&quot;object&quot;</code> = <code>&quot;object&quot;</code></p>
+</blockquote></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/paintcanvas/api/lib/messages/variables/patchMessageSchema"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Variable: patchMessageSchema</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/paintcanvas/api/lib/messages/variables/strokePresetSchema"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Variable: strokePresetSchema</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_L_kA thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#type-declaration" class="table-of-contents__link toc-highlight">Type Declaration</a><ul><li><a href="#id" class="table-of-contents__link toc-highlight">$id</a></li><li><a href="#additionalproperties" class="table-of-contents__link toc-highlight">additionalProperties</a></li><li><a href="#properties" class="table-of-contents__link toc-highlight">properties</a></li><li><a href="#required" class="table-of-contents__link toc-highlight">required</a></li><li><a href="#type" class="table-of-contents__link toc-highlight">type</a></li></ul></li></ul></div></div></div></div></main></div></div></div></div>
+</body>
+</html>

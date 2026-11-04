@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PaintCanvas</title>
+    <style>html,body{height:100%;margin:0}paint-canvas{height:100%}.menu{flex-direction:column;gap:8px;display:flex}#map{position:absolute;bottom:20px;right:20px}.toasts{z-index:30;pointer-events:none;flex-direction:column;align-items:center;gap:8px;display:flex;position:fixed;bottom:16px;left:16px;right:16px}.toasts pc-toast{pointer-events:auto}.narrow-note{background:var(--pc-accent);color:#fff;border-radius:4px;padding:4px 8px;font:12px Arial,sans-serif;position:absolute;top:8px;right:8px}</style>
+    <script type="module" crossorigin src="./assets/index-D9HFbTUs.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/ui-BDD8W1ZW.js">
+  </head>
+  <body>
+    <paint-canvas
+      store="demo"
+      settings-store="demo"
+      right-modes="docked, rail@800, floating@400"
+    >
+      <div slot="menu" class="menu">
+        <pc-input-settings id="settings"></pc-input-settings>
+        <pc-app-settings id="app-settings"></pc-app-settings>
+        <pc-theme-picker></pc-theme-picker>
+        <pc-button id="new-drawing">New drawing</pc-button>
+      </div>
+      <div slot="overlay">
+        <pc-canvas-map id="map"></pc-canvas-map>
+        <pc-match when="narrow">
+          <template><span class="narrow-note">Narrow layout</span></template>
+        </pc-match>
+      </div>
+    </paint-canvas>
+    <div class="toasts" id="toasts"></div>
+  </body>
+</html>

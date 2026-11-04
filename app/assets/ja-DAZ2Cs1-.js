@@ -1,0 +1,1 @@
+var e={"demo.newDrawing":`新しい絵`,"demo.newDrawingMessage":`新しい絵を始めますか？この絵は削除されます。`,"demo.narrowLayout":`狭いレイアウト`};export{e as default};
