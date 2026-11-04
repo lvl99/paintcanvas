@@ -15,7 +15,15 @@ export { PcButtonGroup } from "./elements/PcButtonGroup";
 export { PcIconToggle } from "./elements/PcIconToggle";
 export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
-export { PcContextMenu, type MenuItem } from "./elements/PcContextMenu";
+export { PcMenu, type MenuItem } from "./elements/PcMenu";
+export {
+  PcContextMenu,
+  CONTEXT_MENU_TOGGLE_EVENT,
+  MENU_MARGIN,
+  menuLeft,
+  menuTop,
+  type MenuPlacement,
+} from "./elements/PcContextMenu";
 export {
   PcDialog,
   CANCEL_CHOICE,
@@ -26,10 +34,27 @@ export { PcInfoTip } from "./elements/PcInfoTip";
 export { PcPopover } from "./elements/PcPopover";
 export { PcPanel } from "./elements/PcPanel";
 export {
+  PcPane,
+  PANE_COLLAPSE_EVENT,
+  type PaneEdge,
+  type PaneOrientation,
+} from "./elements/PcPane";
+export {
   PcInputSettings,
   type InputSettingsLike,
 } from "./elements/PcInputSettings";
 export { PcMatch } from "./elements/PcMatch";
+export { PcColourPair, COLOUR_CLICK_EVENT } from "./elements/PcColourPair";
+export {
+  PcShortcutSettings,
+  type ShortcutSettingsLike,
+} from "./elements/PcShortcutSettings";
+export { PcAppSettings } from "./elements/PcAppSettings";
+export {
+  PcPanelColours,
+  LONG_PRESS_MS,
+  type ColourModel,
+} from "./elements/PcPanelColours";
 export { PcStats, formatBytes } from "./elements/PcStats";
 export {
   PcThemePicker,

@@ -121,6 +121,46 @@ describe("cut, copy and paste in a real browser", () => {
     expect(pixels(layer)).toEqual(original);
   });
 
+  it("should paint the masked image data with the background colour when the layer's alpha lock is on", () => {
+    const { app, layer } = setupApp();
+    app.layers.update(layer.id, { alphaLock: true });
+    app.setColour("#00ff00", "background");
+    app.deleteMasked();
+    expect(pixel(layer, 15, 15)).toEqual([0, 255, 0, 255]);
+    // Transparent pixels inside the mask stay transparent
+    expect(pixel(layer, 5, 5)[3]).toBe(0);
+    expect(pixel(layer, 65, 65)).toEqual([0, 0, 255, 255]);
+    app.undo();
+    expect(pixel(layer, 15, 15)).toEqual([255, 0, 0, 255]);
+  });
+
+  it("should fill only the masked area, and undo it", () => {
+    const { app, layer } = setupApp();
+    app.selection.apply(
+      { type: "rect", rect: { x: 0, y: 0, width: 40, height: 40 } },
+      "replace",
+    );
+    app.setColour("#00ff00");
+    app.fill("foreground");
+    expect(pixel(layer, 5, 5)).toEqual([0, 255, 0, 255]);
+    expect(pixel(layer, 15, 15)).toEqual([0, 255, 0, 255]);
+    expect(pixel(layer, 50, 50)[3]).toBe(0);
+    expect(pixel(layer, 65, 65)).toEqual([0, 0, 255, 255]);
+    app.undo();
+    expect(pixel(layer, 5, 5)[3]).toBe(0);
+    expect(pixel(layer, 15, 15)).toEqual([255, 0, 0, 255]);
+  });
+
+  it("should fill the whole layer without a mask, only onto existing pixels with alpha lock", () => {
+    const { app, layer } = setupApp();
+    app.selection.clear();
+    app.layers.update(layer.id, { alphaLock: true });
+    app.fill("background");
+    expect(pixel(layer, 15, 15)).toEqual([255, 255, 255, 255]);
+    expect(pixel(layer, 65, 65)).toEqual([255, 255, 255, 255]);
+    expect(pixel(layer, 50, 50)[3]).toBe(0);
+  });
+
   it("should paste where the image data was copied from, move it, and write it in on Enter", () => {
     const { app, layer } = setupApp();
     app.copy();

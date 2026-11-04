@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import type { PcDialog } from "../../PcDialog";
+import type { PcContextMenu } from "../../PcContextMenu";
 import {
   DRAG_THRESHOLD,
   LAYER_ACTIONS,
@@ -35,13 +36,35 @@ const mountItem = async () => {
   return { app, stack, layer, element };
 };
 
+/** The row's reorder handle: a context menu */
+const handleOf = (element: PcLayerItem) =>
+  query<PcContextMenu>(element, ".handle");
+
+/** The button the handle shows */
+const handleButton = (element: PcLayerItem) =>
+  query<HTMLButtonElement>(handleOf(element), "button");
+
+/** Open the context menu with a right-click on the handle, returning the event */
+const rightClick = async (element: PcLayerItem) => {
+  const event = new MouseEvent("contextmenu", { cancelable: true });
+  handleButton(element).dispatchEvent(event);
+  await element.updateComplete;
+  await handleOf(element).updateComplete;
+  return event;
+};
+
+/** The context menu's items */
+const menuItems = (element: PcLayerItem) =>
+  queryAll<HTMLButtonElement>(handleOf(element).menu!, "button[data-value]");
+
+/** One of the context menu's items */
+const menuItem = (element: PcLayerItem, action: string) =>
+  query<HTMLButtonElement>(handleOf(element).menu!, `[data-value="${action}"]`);
+
 /** Open the context menu and click an action */
 const runFromMenu = async (element: PcLayerItem, action: string) => {
-  query(element, ".handle").dispatchEvent(
-    new MouseEvent("contextmenu", { cancelable: true }),
-  );
-  await element.updateComplete;
-  query(element, `[data-action="${action}"]`).click();
+  await rightClick(element);
+  menuItem(element, action).click();
   await element.updateComplete;
 };
 
@@ -114,13 +137,10 @@ describe("pc-layer-item", () => {
 
   it("should open the context menu on right-click with every action", async () => {
     const { element } = await mountItem();
-    const event = new MouseEvent("contextmenu", { cancelable: true });
-    query(element, ".handle").dispatchEvent(event);
-    await element.updateComplete;
+    const event = await rightClick(element);
     expect(event.defaultPrevented).toBe(true);
-    expect(queryAll(element, "menu [data-action]")).toHaveLength(
-      LAYER_ACTIONS.length,
-    );
+    expect(element.menuOpen).toBe(true);
+    expect(menuItems(element)).toHaveLength(LAYER_ACTIONS.length);
   });
 
   it("should duplicate and reorder from the context menu", async () => {
@@ -160,13 +180,8 @@ describe("pc-layer-item", () => {
       ],
       ["delete", "Delete…", "Delete layer", 'Delete "Layer 2"?', "Delete"],
     ] as const) {
-      query(element, ".handle").dispatchEvent(
-        new MouseEvent("contextmenu", { cancelable: true }),
-      );
-      await element.updateComplete;
-      expect(
-        query(element, `[data-action="${action}"]`).textContent?.trim(),
-      ).toBe(label);
+      await rightClick(element);
+      expect(menuItem(element, action).textContent?.trim()).toBe(label);
       element.runAction(action);
       await element.updateComplete;
       expect([dialog()?.heading, dialog()?.message]).toEqual([
@@ -206,13 +221,8 @@ describe("pc-layer-item", () => {
       stack: app.layers,
       layer: app.layers.active,
     });
-    query(element, ".handle").dispatchEvent(
-      new MouseEvent("contextmenu", { cancelable: true }),
-    );
-    await element.updateComplete;
-    expect(
-      query<HTMLButtonElement>(element, '[data-action="delete"]').disabled,
-    ).toBe(true);
+    await rightClick(element);
+    expect(menuItem(element, "delete").disabled).toBe(true);
     element.runAction("delete");
     await element.updateComplete;
     expect(queryAll(element, "pc-dialog")).toHaveLength(0);
@@ -257,13 +267,10 @@ describe("pc-layer-item", () => {
         stack,
         layer,
       });
-      query(element, ".handle").dispatchEvent(
-        new MouseEvent("contextmenu", { cancelable: true }),
-      );
-      await element.updateComplete;
-      const actions = queryAll<HTMLButtonElement>(element, "menu [data-action]")
+      await rightClick(element);
+      const actions = menuItems(element)
         .filter((button) => button.disabled)
-        .map((button) => button.dataset.action);
+        .map((button) => button.dataset.value);
       element.remove();
       return actions;
     };
@@ -294,13 +301,8 @@ describe("pc-layer-item", () => {
       stack: app.layers,
       layer: app.layers.active,
     });
-    query(element, ".handle").dispatchEvent(
-      new MouseEvent("contextmenu", { cancelable: true }),
-    );
-    await element.updateComplete;
-    expect(
-      query<HTMLButtonElement>(element, '[data-action="merge"]').disabled,
-    ).toBe(true);
+    await rightClick(element);
+    expect(menuItem(element, "merge").disabled).toBe(true);
     element.runAction("merge");
     await element.updateComplete;
     expect(queryAll(element, "pc-dialog")).toHaveLength(0);
@@ -308,7 +310,7 @@ describe("pc-layer-item", () => {
 
   it("should drag the layer by its handle once the pointer has moved far enough, capturing it", async () => {
     const { element, layer } = await mountItem();
-    const handle = query(element, ".handle");
+    const handle = handleButton(element);
     handle.setPointerCapture = vi.fn();
     const drags: LayerDragDetail[] = [];
     document.body.addEventListener(LAYER_DRAG_EVENT, (event) =>
@@ -340,17 +342,17 @@ describe("pc-layer-item", () => {
     ]);
     expect(drags[0]!.layer).toBe(layer);
     // The click that ends a drag doesn't open the menu; the next one does
-    handle.click();
+    handleButton(element).click();
     await element.updateComplete;
     expect(element.menuOpen).toBe(false);
-    handle.click();
+    handleButton(element).click();
     await element.updateComplete;
     expect(element.menuOpen).toBe(true);
   });
 
   it("should open the menu on a click, tap or Enter on the handle without dragging", async () => {
     const { element } = await mountItem();
-    const handle = query(element, ".handle");
+    const handle = handleButton(element);
     handle.setPointerCapture = vi.fn();
     const drags = vi.fn();
     element.addEventListener(LAYER_DRAG_EVENT, drags);
@@ -358,22 +360,23 @@ describe("pc-layer-item", () => {
     handle.dispatchEvent(pointerEvent("pointermove", 11, 12));
     handle.dispatchEvent(pointerEvent("pointerup", 11, 12));
     // A keyboard press (Enter or Space) on the button is a click too
-    handle.click();
+    handleButton(element).click();
     await element.updateComplete;
+    await handleOf(element).updateComplete;
     expect(drags).not.toHaveBeenCalled();
     expect(element.menuOpen).toBe(true);
-    expect(handle.getAttribute("aria-expanded")).toBe("true");
-    expect(handle.getAttribute("aria-label")).toBe(
+    expect(handleButton(element).getAttribute("aria-expanded")).toBe("true");
+    expect(handleButton(element).getAttribute("aria-label")).toBe(
       "Reorder Layer 2: drag, or press for actions",
     );
-    handle.click();
+    handleButton(element).click();
     await element.updateComplete;
     expect(element.menuOpen).toBe(false);
   });
 
   it("should cancel a drag on Escape or when the browser cancels the pointer", async () => {
     const { element } = await mountItem();
-    const handle = query(element, ".handle");
+    const handle = handleButton(element);
     handle.setPointerCapture = vi.fn();
     const phases: string[] = [];
     element.addEventListener(LAYER_DRAG_EVENT, (event) =>
@@ -386,7 +389,7 @@ describe("pc-layer-item", () => {
     // The pointer is no longer followed
     handle.dispatchEvent(pointerEvent("pointermove", 10, 40));
     handle.dispatchEvent(pointerEvent("pointerup", 10, 40));
-    handle.click();
+    handleButton(element).click();
     expect(element.menuOpen).toBe(false);
     expect(phases).toEqual(["start", "move", "cancel"]);
 
@@ -489,57 +492,23 @@ describe("pc-layer-item", () => {
     vi.unstubAllGlobals();
   });
 
-  it("should close the context menu on an outside click or Escape, but not on clicks inside", async () => {
+  it("should close the context menu when it asks to (after choosing, Escape or a press outside)", async () => {
     const { element } = await mountItem();
-    const open = async () => {
-      query(element, ".handle").dispatchEvent(
-        new MouseEvent("contextmenu", { cancelable: true }),
-      );
-      await element.updateComplete;
-    };
-    await open();
-    query(element, "menu").dispatchEvent(
-      new MouseEvent("pointerdown", { bubbles: true, composed: true }),
-    );
-    expect(element.menuOpen).toBe(true);
-    document.body.dispatchEvent(
-      new MouseEvent("pointerdown", { bubbles: true }),
-    );
-    expect(element.menuOpen).toBe(false);
+    await rightClick(element);
+    handleOf(element).menu!.close();
     await element.updateComplete;
-
-    await open();
-    await open();
     expect(element.menuOpen).toBe(false);
-
-    await open();
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
-    expect(element.menuOpen).toBe(true);
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(element.menuOpen).toBe(false);
-  });
-
-  it("should float the context menu beside the handle, within the window, and close it on scroll", async () => {
-    const { element } = await mountItem();
-    const handle = query(element, ".handle");
-    vi.spyOn(handle, "getBoundingClientRect").mockReturnValue(
-      new DOMRect(10, 700, 30, 30),
-    );
-    handle.dispatchEvent(new MouseEvent("contextmenu", { cancelable: true }));
-    await element.updateComplete;
-    const menu = query(element, "menu");
-    expect(menu.style.left).toBe("40px");
-    // jsdom has no layout: the menu is 0px tall, so it stays level with the handle
-    expect(menu.style.top).toBe(`${menuTop(700, 0, window.innerHeight)}px`);
-    window.dispatchEvent(new Event("scroll"));
-    expect(element.menuOpen).toBe(false);
-  });
-
-  it("should not place a menu without a layer", async () => {
-    const element = await mount<PcLayerItem>("pc-layer-item");
+    // Opening it again from code opens the context menu
     element.menuOpen = true;
     await element.updateComplete;
-    expect(queryAll(element, "menu")).toHaveLength(0);
+    expect(handleOf(element).open).toBe(true);
+  });
+
+  it("should open the context menu beside the handle, named for the layer's actions", async () => {
+    const { element } = await mountItem();
+    await rightClick(element);
+    expect(handleOf(element).placement).toBe("beside");
+    expect(handleOf(element).menu!.label).toBe("Layer actions");
   });
 
   it("should move the context menu up to fit in the window, but not above its top", () => {
@@ -548,31 +517,10 @@ describe("pc-layer-item", () => {
     expect(menuTop(700, 900, 800)).toBe(MENU_MARGIN);
   });
 
-  it("should stop listening for outside clicks once closed or removed", async () => {
-    const { element } = await mountItem();
-    const remove = vi.spyOn(window, "removeEventListener");
-    query(element, ".handle").dispatchEvent(
-      new MouseEvent("contextmenu", { cancelable: true }),
-    );
-    await element.updateComplete;
-    element.remove();
-    expect(remove).toHaveBeenCalledWith(
-      "pointerdown",
-      expect.any(Function),
-      true,
-    );
-    remove.mockRestore();
-  });
-
   it("should offer Create mask first in the context menu", async () => {
     const { element } = await mountItem();
-    query(element, ".handle").dispatchEvent(
-      new MouseEvent("contextmenu", { cancelable: true }),
-    );
-    await element.updateComplete;
-    expect(query(element, "menu [data-action]").textContent?.trim()).toBe(
-      "Create mask",
-    );
+    await rightClick(element);
+    expect(menuItems(element)[0]!.textContent?.trim()).toBe("Create mask");
   });
 
   it("should show nothing without a layer", async () => {

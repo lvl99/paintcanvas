@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  DELETE_CURSOR,
   FREEFORM_LASSO_CURSOR,
   POLYGON_LASSO_CURSOR,
   ROTATE_CURSOR,
@@ -18,9 +19,10 @@ describe("svgCursor", () => {
     expect(svg.match(/d="M0 0 L1 1"/g)).toHaveLength(2);
   });
 
-  it("should define lasso and rotate cursors with their hotspots", () => {
+  it("should define lasso, rotate and delete cursors with their hotspots", () => {
     expect(POLYGON_LASSO_CURSOR).toMatch(/\) 3 21, crosshair$/);
     expect(FREEFORM_LASSO_CURSOR).toMatch(/\) 3 21, crosshair$/);
     expect(ROTATE_CURSOR).toBe("grab");
+    expect(DELETE_CURSOR).toMatch(/\) 12 12, not-allowed$/);
   });
 });

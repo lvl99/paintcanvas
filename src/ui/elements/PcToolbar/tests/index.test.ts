@@ -3,6 +3,7 @@ import "..";
 import { TOOLBAR_TOOLS, type PcToolbar } from "..";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import { mount, query, queryAll } from "../../../../testing/elements";
+import type { PcColourPair } from "../../PcColourPair";
 import { createApp } from "../../../../testing/app";
 
 afterEach(() => document.body.replaceChildren());
@@ -71,13 +72,29 @@ describe("pc-toolbar", () => {
     expect(queryAll(element, `[data-panel="${Panel.Layers}"]`)).toHaveLength(1);
   });
 
-  it("should change the colour", async () => {
+  it("should select a pressed colour and open the colour palette, without the browser's colour picker", async () => {
     const app = createApp();
     const element = await mount<PcToolbar>("pc-toolbar", { app });
-    const input = query<HTMLInputElement>(element, "input[type=color]");
-    input.value = "#ff0000";
-    input.dispatchEvent(new Event("input"));
-    expect(app.colour).toBe("#ff0000");
+    const pair = query<PcColourPair>(element, "pc-colour-pair");
+    expect(pair.app).toBe(app);
+    const openPicker = vi
+      .spyOn(pair, "openPicker")
+      .mockImplementation(() => undefined);
+    const press = (slot: string) =>
+      query<HTMLButtonElement>(pair, `button.${slot}`).click();
+    await pair.updateComplete;
+    press("background");
+    expect([app.selectedColour, app.panel]).toEqual([
+      "background",
+      Panel.Palette,
+    ]);
+    press("foreground");
+    // The palette stays open
+    expect([app.selectedColour, app.panel]).toEqual([
+      "foreground",
+      Panel.Palette,
+    ]);
+    expect(openPicker).not.toHaveBeenCalled();
   });
 
   it("should undo and redo, enabling each button only when there is something to undo or redo", async () => {
@@ -156,8 +173,11 @@ describe("pc-toolbar", () => {
       "Brush (B)",
       "Brush (B)",
     ]);
-    expect(query(element, "input[type=color]").getAttribute("aria-label")).toBe(
-      "Current color",
+    expect(query(element, `[data-tool="${Tool.CircleLasso}"]`).title).toBe(
+      "Circle lasso (⇧M)",
+    );
+    expect(query(element, `[data-tool="${Tool.Pan}"]`).title).toBe(
+      "Pan (Space)",
     );
     element.translations.addStrings("en-US", {
       "paintCanvas.tool.brush": "Paintbrush",
@@ -167,6 +187,18 @@ describe("pc-toolbar", () => {
     element.translations.addStrings("en-US", {
       "paintCanvas.tool.brush": "Brush",
     });
+  });
+
+  it("should show the user's keyboard shortcuts, and only the name for a tool without one", async () => {
+    const app = createApp();
+    const element = await mount<PcToolbar>("pc-toolbar", { app });
+    app.shortcuts.set("tool-brush", { key: "p" });
+    app.shortcuts.set("tool-eraser", null);
+    await element.updateComplete;
+    expect(query(element, `[data-tool="${Tool.Brush}"]`).title).toBe(
+      "Brush (P)",
+    );
+    expect(query(element, `[data-tool="${Tool.Eraser}"]`).title).toBe("Eraser");
   });
 
   it("should leave out the app menu button when asked", async () => {

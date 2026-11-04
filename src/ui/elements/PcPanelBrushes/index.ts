@@ -4,7 +4,8 @@ import { PILLS_CSS as pill } from "../../styles";
 import { WINDOWS_CSS as theme } from "../../styles";
 import { styleMap } from "lit/directives/style-map.js";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
-import { PcElement, defineElement } from "../../base";
+import { defineElement } from "../../base";
+import { PcPanel } from "../PcPanel";
 import ChangeController from "../../ChangeController";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import type BrushSettings from "../../../lib/classes/BrushSettings";
@@ -22,7 +23,7 @@ import {
   parsePresetFile,
   presetFileName,
 } from "../../../lib/brushes/presetFile";
-import { svgCursor } from "../../../lib/rendering/cursors";
+import { DELETE_CURSOR } from "../../../lib/rendering/cursors";
 import {
   JSON_FILE_TYPE,
   saveFile,
@@ -37,12 +38,8 @@ const PRESET_FILE_ERROR_KEYS: Record<string, string> = {
   [PRESET_FILE_ERRORS.empty]: "paintCanvas.presets.nothingToExport",
 };
 
-/** Cursor over a preset that a click deletes (Alt/Option held) */
-export const DELETE_CURSOR = svgCursor(
-  "M6 6 L18 18 M18 6 L6 18",
-  [12, 12],
-  "not-allowed",
-);
+/** Cursor over a preset that a click deletes (Alt/Option held): the `--pc-delete-cursor` token's default */
+export { DELETE_CURSOR };
 
 /** Size the previews of presets without a family are measured against, so a 50px preset fills its tile */
 const UNGROUPED_FULL_SIZE = 50;
@@ -105,17 +102,17 @@ export const previewSizes = (
  * importing, exporting or deleting presets, or when that fails.
  *
  * @example
- * html`<pc-brush-menu kind="eraser" .app=${app}></pc-brush-menu>`
+ * html`<pc-panel-brushes kind="eraser" .app=${app}></pc-panel-brushes>`
  */
-export class PcBrushMenu extends PcElement {
+export class PcPanelBrushes extends PcPanel {
   static override properties = {
-    ...PcElement.properties,
+    ...PcPanel.properties,
     app: { attribute: false },
     kind: { type: String },
   };
 
   static override styles = [
-    PcElement.styles,
+    ...PcPanel.styles,
 
     unsafeCSS(noTextSelection),
     unsafeCSS(styles),
@@ -156,8 +153,6 @@ export class PcBrushMenu extends PcElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Set here, not in the constructor: a new element must not have attributes
-    this.style.setProperty("--delete-cursor", DELETE_CURSOR);
     window.addEventListener("keydown", this.onKey);
     window.addEventListener("keyup", this.onKey);
     window.addEventListener("blur", this.onBlur);
@@ -366,9 +361,21 @@ export class PcBrushMenu extends PcElement {
     </li>`;
   }
 
-  override render() {
+  protected override get defaultIcon(): string {
+    return this.kind === "eraser" ? "eraser" : "brush";
+  }
+
+  protected override get defaultLabel(): string {
+    return this.t(
+      this.kind === "eraser"
+        ? "paintCanvas.tool.eraser"
+        : "paintCanvas.tool.brush",
+    );
+  }
+
+  protected override renderBody() {
     const settings = this.settings;
-    if (!settings) return html``;
+    if (!settings) return nothing;
     const title = this.t(
       this.kind === "eraser"
         ? "paintCanvas.tool.eraser"
@@ -474,4 +481,4 @@ export class PcBrushMenu extends PcElement {
   }
 }
 
-defineElement("pc-brush-menu", PcBrushMenu);
+defineElement("pc-panel-brushes", PcPanelBrushes);

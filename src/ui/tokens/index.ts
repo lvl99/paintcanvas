@@ -1,4 +1,5 @@
 import { unsafeCSS } from "lit";
+import { DELETE_CURSOR } from "../../lib/rendering/cursors";
 
 /** Design token values, by name (without the `--pc-` prefix) */
 export type TokenValues = Readonly<Record<string, string>>;
@@ -47,6 +48,8 @@ export const LIGHT_TOKENS: TokenValues = {
   "focus-width": "3px",
   // Native controls (inputs, sliders, checkboxes) follow the theme
   "color-scheme": "light",
+  // Over something a click deletes (e.g. a brush preset or saved colour with Alt/Option held)
+  "delete-cursor": DELETE_CURSOR,
 };
 
 /** The dark theme's tokens that differ from the light theme's */

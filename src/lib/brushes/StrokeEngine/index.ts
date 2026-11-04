@@ -21,7 +21,7 @@ export interface StrokeOptions {
   preset: BrushConfig;
   /** Size chosen by the user */
   size: { width: number; height: number };
-  /** Paint colour as a hex string */
+  /** Paint colour as a hex string (for the eraser, the colour it paints when the layer's alpha lock is on) */
   colour: string;
   tip: BrushTip;
   /** Whether input comes from a pen (enables pressure and tilt) */
@@ -86,13 +86,16 @@ export const clipRect = (
     : undefined;
 };
 
-/** How the stroke buffer is merged into the layer, or null if the stroke cannot change it */
+/**
+ * How the stroke buffer is merged into the layer: with alpha lock on, both brush and eraser paint only onto existing
+ * pixels; otherwise the brush paints over the layer and the eraser removes from it.
+ */
 const compositeOperation = (
   mode: StrokeMode,
   alphaLock: boolean,
-): GlobalCompositeOperation | null => {
-  if (mode === "erase") return alphaLock ? null : "destination-out";
-  return alphaLock ? "source-atop" : "source-over";
+): GlobalCompositeOperation => {
+  if (alphaLock) return "source-atop";
+  return mode === "erase" ? "destination-out" : "source-over";
 };
 
 /** Event dispatched just before a finished stroke is written into its layer */
@@ -131,7 +134,7 @@ interface ActiveStroke {
  * Stamps are drawn at full strength into a stroke buffer, so overlapping stamps within one stroke do not build up opacity.
  * The buffer is merged into the layer with the stroke's opacity (the preset's `alpha`):
  * - Brush: painted over the layer (or only onto existing pixels when the layer's alpha lock is on).
- * - Eraser: removes the buffer's shape from the layer (does nothing when alpha lock is on).
+ * - Eraser: removes the buffer's shape from the layer (or paints its colour onto existing pixels when alpha lock is on).
  * - With a mask, the buffer is first cut to the mask, so the stroke only applies inside it.
  *
  * While drawing, `preview` provides the layer with the stroke merged in, to draw instead of the layer. The stroke is written into the layer when it ends.
@@ -318,7 +321,7 @@ export default class StrokeEngine extends EventTarget {
     const active = this.active as ActiveStroke;
     if (points.length === 0) return;
     if (this.debugEnabled) this.debugTrace.stamps.push(...points);
-    const { preset, size, tip, colour, mode, isPen } = active.options;
+    const { preset, size, tip, colour, isPen } = active.options;
     const { random } = active;
     const ctx = this.buffer.getContext(
       "2d",
@@ -336,7 +339,7 @@ export default class StrokeEngine extends EventTarget {
       const { x, y, params } = preset.snapToPixelGrid
         ? snapStamp(point.x, point.y, varied)
         : { x: point.x, y: point.y, params: varied };
-      tip.stamp(ctx, x, y, params, mode === "erase" ? "#000000" : colour);
+      tip.stamp(ctx, x, y, params, colour);
       const reach = Math.hypot(params.width, params.height) / 2 + STAMP_MARGIN;
       changed = unionRect(changed, {
         x: x + params.offsetX - reach,
@@ -370,22 +373,19 @@ export default class StrokeEngine extends EventTarget {
       ctx.clearRect(x, y, width, height);
       ctx.drawImage(layer.canvas, x, y, width, height, x, y, width, height);
     }
-    const operation = compositeOperation(mode, layer.alphaLock);
-    if (operation) {
-      ctx.globalAlpha = Math.max(0, Math.min(1, preset.alpha ?? 1));
-      ctx.globalCompositeOperation = operation;
-      ctx.drawImage(
-        this.strokeImage(active, area),
-        x,
-        y,
-        width,
-        height,
-        x,
-        y,
-        width,
-        height,
-      );
-    }
+    ctx.globalAlpha = Math.max(0, Math.min(1, preset.alpha ?? 1));
+    ctx.globalCompositeOperation = compositeOperation(mode, layer.alphaLock);
+    ctx.drawImage(
+      this.strokeImage(active, area),
+      x,
+      y,
+      width,
+      height,
+      x,
+      y,
+      width,
+      height,
+    );
     ctx.restore();
   }
 
@@ -415,22 +415,20 @@ export default class StrokeEngine extends EventTarget {
   private commit(active: ActiveStroke): void {
     const { layer, mode, preset, size, colour, isPen } = active.options;
     if (active.dirty) {
-      if (compositeOperation(mode, layer.alphaLock)) {
-        const stroke: RecordedStroke = {
-          mode,
-          preset,
-          size,
-          colour,
-          isPen,
-          seed: active.seed,
-          points: active.points,
-        };
-        this.dispatchEvent(
-          new CustomEvent<StrokeCommitDetail>(BEFORE_COMMIT_EVENT, {
-            detail: { layer, area: active.dirty, stroke },
-          }),
-        );
-      }
+      const stroke: RecordedStroke = {
+        mode,
+        preset,
+        size,
+        colour,
+        isPen,
+        seed: active.seed,
+        points: active.points,
+      };
+      this.dispatchEvent(
+        new CustomEvent<StrokeCommitDetail>(BEFORE_COMMIT_EVENT, {
+          detail: { layer, area: active.dirty, stroke },
+        }),
+      );
       this.mergeInto(active.options.layer.canvas, active, active.dirty, false);
       this.clearBuffer(active.dirty);
       this.changedArea = unionRect(this.changedArea, active.dirty);

@@ -1,15 +1,3 @@
-:host {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-sizing: border-box;
-  /* The layout makes it fill its panel when narrow */
-  width: var(--pc-layers-menu-width, 290px);
-  padding: 8px;
-  /* Light grey, like the bars */
-  background: var(--pc-bar);
-  box-shadow: var(--pc-shadow);
-}
 /* "New Layer": a full-width purple pill */
 button.new {
   width: 100%;

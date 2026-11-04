@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { DEFAULT_PALETTE } from "../../../palette";
 import PaintCanvas, { MAX_CANVAS_SIZE, Panel, Tool } from "..";
 import {
   BEFORE_COMMIT_EVENT,
@@ -31,6 +32,8 @@ describe("PaintCanvas", () => {
       app: "PaintCanvas",
       filePrefix: "paintcanvas",
       presetFileFormat: "paintcanvas-brush-presets",
+      paletteFileFormat: "paintcanvas-palette",
+      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });
@@ -40,6 +43,8 @@ describe("PaintCanvas", () => {
       app: "My App",
       filePrefix: "paintcanvas",
       presetFileFormat: "paintcanvas-brush-presets",
+      paletteFileFormat: "paintcanvas-palette",
+      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });
@@ -112,6 +117,12 @@ describe("PaintCanvas", () => {
     expect(app.tool).toBe(Tool.Brush);
     expect(app.panel).toBeNull();
     expect(app.colour).toBe("#000000");
+    expect(app.colours).toEqual({
+      foreground: "#000000",
+      background: "#ffffff",
+    });
+    expect(app.selectedColour).toBe("foreground");
+    expect(app.palette.colours).toEqual(DEFAULT_PALETTE);
     expect(app.interfaceVisible).toBe(true);
     expect(app.brush.preset).not.toBe(app.eraser.preset);
   });
@@ -174,6 +185,33 @@ describe("PaintCanvas", () => {
     app.setColour("#FF00AA");
     expect(app.colour).toBe("#ff00aa");
     expect(() => app.setColour("red")).toThrow("Invalid colour red");
+    app.setColour("#00FF00", "background");
+    expect(app.colours).toEqual({
+      foreground: "#ff00aa",
+      background: "#00ff00",
+    });
+    expect(() => app.setColour("#fff", "background")).toThrow(
+      "Invalid colour #fff",
+    );
+  });
+
+  it("should select which colour is configured and swap the colours, dispatching a change", () => {
+    const app = createApp();
+    const listener = vi.fn();
+    app.addEventListener("change", listener);
+    app.selectColour("background");
+    expect(app.selectedColour).toBe("background");
+    app.selectColour("background");
+    expect(listener).toHaveBeenCalledTimes(1);
+    app.setColour("#123456");
+    app.swapColours();
+    expect(app.colours).toEqual({
+      foreground: "#ffffff",
+      background: "#123456",
+    });
+    expect(app.colour).toBe("#ffffff");
+    expect(app.selectedColour).toBe("background");
+    expect(listener).toHaveBeenCalledTimes(3);
   });
 
   it("should only select a tool from the toolbar, without opening or closing its panel", () => {

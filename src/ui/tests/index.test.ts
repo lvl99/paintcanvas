@@ -10,12 +10,14 @@ describe("@lvl99dotcom/paintcanvas/ui", () => {
       "pc-icon-toggle",
       "pc-toggle-checkbox",
       "pc-slider",
+      "pc-menu",
       "pc-context-menu",
       "pc-dialog",
       "pc-toast",
       "pc-info-tip",
       "pc-popover",
       "pc-panel",
+      "pc-pane",
     ])
       expect(customElements.get(tag), tag).toBeDefined();
     expect(ui.icons.get("brush")).toBeDefined();

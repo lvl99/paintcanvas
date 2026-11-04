@@ -8,6 +8,7 @@ import {
   installTokens,
   tokens,
 } from "..";
+import { DELETE_CURSOR } from "../../../lib/rendering/cursors";
 
 afterEach(() => document.getElementById(TOKENS_STYLE_ID)?.remove());
 
@@ -23,6 +24,11 @@ describe("design tokens", () => {
       '@media (prefers-color-scheme: dark) { [data-pc-theme="auto"]',
     );
     expect(TOKENS_CSS).toBe(PAGE_TOKENS_CSS);
+  });
+
+  it("should set the delete cursor (an X) on the page for every element", () => {
+    expect(LIGHT_TOKENS["delete-cursor"]).toBe(DELETE_CURSOR);
+    expect(PAGE_TOKENS_CSS).toContain(`--pc-delete-cursor: ${DELETE_CURSOR};`);
   });
 
   it("should only override light tokens in the dark theme", () => {

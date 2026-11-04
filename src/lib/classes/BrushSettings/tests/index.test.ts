@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import BrushSettings, { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE, clamp } from "..";
+import BrushSettings, {
+  MAX_BRUSH_SIZE,
+  MIN_BRUSH_SIZE,
+  clamp,
+  stepOpacity,
+} from "..";
 import { round } from "../../../brushes/presets/round";
 import type { BrushesConfig } from "../../../brushes/types";
 
@@ -8,6 +13,22 @@ describe("clamp", () => {
     expect(clamp(0, 1, 10)).toBe(1);
     expect(clamp(5, 1, 10)).toBe(5);
     expect(clamp(11, 1, 10)).toBe(10);
+  });
+});
+
+describe("stepOpacity", () => {
+  it.each([
+    [45, 1, 50],
+    [50, 1, 60],
+    [95, 1, 100],
+    [100, 1, 100],
+    [1, 1, 10],
+    [45, -1, 40],
+    [50, -1, 40],
+    [10, -1, 1],
+    [1, -1, 1],
+  ] as const)("should step %d%% by %d to %d%%", (percent, direction, next) => {
+    expect(stepOpacity(percent, direction)).toBe(next);
   });
 });
 
@@ -54,6 +75,18 @@ describe("BrushSettings", () => {
     brush.select("round1");
     brush.grow();
     expect(brush.width).toBe(2);
+  });
+
+  it("should make the current settings more or less opaque by a step", () => {
+    const brush = new BrushSettings(round);
+    const listener = vi.fn();
+    brush.addEventListener("change", listener);
+    brush.lessOpaque();
+    expect(brush.preset.alpha).toBe(0.9);
+    brush.update({ alpha: 0.33 });
+    brush.moreOpaque();
+    expect(brush.preset.alpha).toBe(0.4);
+    expect(listener).toHaveBeenCalledTimes(3);
   });
 
   it("should resize by a pixel delta", () => {

@@ -1,99 +1,106 @@
 import { html, nothing, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
-import { PcElement, defineElement } from "../../base";
+import { defineElement } from "../../base";
+import { PcPane } from "../PcPane";
 import ChangeController from "../../ChangeController";
 import {
   Panel,
   Tool,
+  type ColourSlot,
   type default as PaintCanvas,
 } from "../../../lib/classes/PaintCanvas";
-import { cmdSymbol } from "../../../lib/utils/shortcuts";
+import { cmdSymbol, shortcutLabel } from "../../../lib/utils/shortcuts";
+import "../PcColourPair";
 
-/** Toolbar buttons in display order: tool, icon name, translation key of its name, and its keyboard shortcut */
+/** Toolbar buttons in display order: tool, icon name, translation key of its name, and its keyboard shortcut action */
 export const TOOLBAR_TOOLS: readonly {
   tool: Tool;
   /** The button's icon, by name in the icon registry */
   icon: string;
   /** Translation key of the tool's name */
   name: string;
-  /** The tool's keyboard shortcut, shown with its name */
-  shortcut: string;
+  /** ID of the tool's keyboard shortcut action (see `SHORTCUT_DEFINITIONS`), whose key combination is shown with its name */
+  shortcutId: string;
 }[] = [
   {
     tool: Tool.Brush,
     icon: "brush",
     name: "paintCanvas.tool.brush",
-    shortcut: "B",
+    shortcutId: "tool-brush",
   },
   {
     tool: Tool.Eraser,
     icon: "eraser",
     name: "paintCanvas.tool.eraser",
-    shortcut: "E",
+    shortcutId: "tool-eraser",
   },
   {
     tool: Tool.Move,
     icon: "cursor",
     name: "paintCanvas.tool.move",
-    shortcut: "V",
+    shortcutId: "tool-move",
   },
   {
     tool: Tool.RectangleLasso,
     icon: "rectangleMask",
     name: "paintCanvas.tool.rectangleLasso",
-    shortcut: "M",
+    shortcutId: "tool-rectangle-mask",
   },
   {
     tool: Tool.CircleLasso,
     icon: "circleMask",
     name: "paintCanvas.tool.circleLasso",
-    shortcut: "Shift+M",
+    shortcutId: "tool-circle-mask",
   },
   {
     tool: Tool.PolygonLasso,
     icon: "polygonMask",
     name: "paintCanvas.tool.polygonLasso",
-    shortcut: "L",
+    shortcutId: "tool-polygon-mask",
   },
   {
     tool: Tool.FreeformLasso,
     icon: "freehandMask",
     name: "paintCanvas.tool.freeformLasso",
-    shortcut: "Shift+L",
+    shortcutId: "tool-freehand-mask",
   },
   {
     tool: Tool.Pan,
     icon: "pan",
     name: "paintCanvas.tool.pan",
-    shortcut: "Space",
+    shortcutId: "pan",
   },
   {
     tool: Tool.Zoom,
     icon: "zoom",
     name: "paintCanvas.tool.zoom",
-    shortcut: "Z",
+    shortcutId: "tool-zoom",
   },
   {
     tool: Tool.ColourSample,
     icon: "eyedropper",
     name: "paintCanvas.tool.colourSample",
-    shortcut: "I",
+    shortcutId: "tool-colour-sample",
   },
 ];
 
 /**
- * Vertical toolbar: current colour, tools, undo and redo (disabled when there is nothing to undo or redo), layers menu
- * toggle (unless `layers` is false) and app menu toggle. Tools, undo, redo and the layers toggle show their icons; undo
- * and redo have their shortcuts (⌘ on Apple devices, ^ elsewhere) in their tooltips. The app menu button shows
- * `menuText` and is named `menuLabel` for screen readers.
+ * Vertical toolbar: the foreground and background colours, tools, undo and redo (disabled when there is nothing to undo
+ * or redo), layers menu toggle (unless `layers` is false) and app menu toggle. Pressing a colour selects it and opens the
+ * colour palette (if it isn't open). Tools, undo, redo and the layers toggle show
+ * their icons; tools have the user's keyboard shortcuts in their tooltips, and undo and redo theirs (⌘ on Apple
+ * devices, ^ elsewhere). The app menu button shows `menuText` and is named `menuLabel` for screen readers.
+ *
+ * It's a `PcPane`: the colours and tools are at its start, and undo, redo, the layers toggle and the app menu toggle at
+ * its end, after anything slotted there.
  *
  * @example
  * html`<pc-toolbar .app=${app} menuText="App" menuLabel="App menu"></pc-toolbar>`
  */
-export class PcToolbar extends PcElement {
+export class PcToolbar extends PcPane {
   static override properties = {
-    ...PcElement.properties,
+    ...PcPane.properties,
     app: { attribute: false },
     menuText: { type: String },
     menuLabel: { type: String },
@@ -102,7 +109,7 @@ export class PcToolbar extends PcElement {
   };
 
   static override styles = [
-    PcElement.styles,
+    ...PcPane.styles,
     unsafeCSS(noTextSelection),
     unsafeCSS(styles),
   ];
@@ -131,6 +138,7 @@ export class PcToolbar extends PcElement {
   private changes = new ChangeController(this, () => [
     this.app,
     this.app?.history,
+    this.app?.shortcuts,
   ]);
 
   /**
@@ -141,45 +149,65 @@ export class PcToolbar extends PcElement {
   }
 
   /**
-   * Update the drawing colour from the colour input.
+   * Select the pressed colour, and open the colour palette if it isn't open.
    */
-  private onColourInput(event: Event): void {
-    this.app?.setColour((event.target as HTMLInputElement).value);
+  private onColourClick(event: CustomEvent<{ slot: ColourSlot }>): void {
+    const app = this.app as PaintCanvas;
+    app.selectColour(event.detail.slot);
+    if (app.panel !== Panel.Palette) app.togglePanel(Panel.Palette);
   }
 
-  override render() {
+  /** A tool's name, with its keyboard shortcut if it has one */
+  private toolLabel(
+    app: PaintCanvas,
+    name: string,
+    shortcutId: string,
+  ): string {
+    const combo = app.shortcuts.combo(shortcutId);
+    return combo
+      ? this.t("paintCanvas.tool.withShortcut", {
+          tool: this.t(name),
+          shortcut: shortcutLabel(combo),
+        })
+      : this.t(name);
+  }
+
+  /** The colours and tools */
+  protected override renderStart() {
     const app = this.app;
-    if (!app) return html``;
+    if (!app) return nothing;
+    return html`<pc-colour-pair
+        .app=${app}
+        @pc-colour-click=${this.onColourClick}
+      ></pc-colour-pair>
+      ${TOOLBAR_TOOLS.map(({ tool, icon, name, shortcutId }) => {
+        const label = this.toolLabel(app, name, shortcutId);
+        return html`<button
+          type="button"
+          data-tool=${tool}
+          title=${label}
+          aria-label=${label}
+          aria-pressed=${app.tool === tool}
+          @click=${() => this.onToolClick(tool)}
+        >
+          <img src=${this.iconUrl(icon)} alt="" />
+        </button>`;
+      })}`;
+  }
+
+  /** The space between the tools and the end */
+  protected override renderMiddle() {
+    return html`<div class="spacer"></div>`;
+  }
+
+  /** Undo, redo, and the layers and app menu toggles */
+  protected override renderEnd() {
+    const app = this.app;
+    if (!app) return nothing;
     const cmd = cmdSymbol();
     // The key's name for assistive technology
     const cmdKey = cmd === "⌘" ? "Meta" : "Control";
-    return html`
-      <input
-        type="color"
-        aria-label=${this.t("paintCanvas.toolbar.currentColour")}
-        .value=${app.colour}
-        @input=${this.onColourInput}
-      />
-      ${TOOLBAR_TOOLS.map(({ tool, icon, name, shortcut }) => {
-        const label = this.t("paintCanvas.tool.withShortcut", {
-          tool: this.t(name),
-          shortcut,
-        });
-        return html`
-          <button
-            type="button"
-            data-tool=${tool}
-            title=${label}
-            aria-label=${label}
-            aria-pressed=${app.tool === tool}
-            @click=${() => this.onToolClick(tool)}
-          >
-            <img src=${this.iconUrl(icon)} alt="" />
-          </button>
-        `;
-      })}
-      <div class="spacer"></div>
-      <button
+    return html`<button
         type="button"
         data-action="undo"
         title=${this.t("paintCanvas.toolbar.undoWithShortcut", { shortcut: `${cmd}Z` })}
@@ -227,8 +255,7 @@ export class PcToolbar extends PcElement {
               ${this.menuText}
             </button>`
           : nothing
-      }
-    `;
+      }`;
   }
 }
 

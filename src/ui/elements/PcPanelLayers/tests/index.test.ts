@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
-import { dropSlot, isInside, type PcLayersMenu } from "..";
+import { dropSlot, isInside, type PcPanelLayers } from "..";
 import type { PcLayerItem, LayerDragDetail } from "../../PcLayerItem";
 import { LAYER_DRAG_EVENT } from "../../PcLayerItem";
 import { DEFAULT_MAX_LAYERS as MAX_LAYERS } from "../../../../lib/classes/LayerStack";
@@ -9,15 +9,15 @@ import { createApp } from "../../../../testing/app";
 
 afterEach(() => document.body.replaceChildren());
 
-describe("pc-layers-menu", () => {
+describe("pc-panel-layers", () => {
   it("should render nothing without an app", async () => {
-    const element = await mount<PcLayersMenu>("pc-layers-menu");
+    const element = await mount<PcPanelLayers>("pc-panel-layers");
     expect(queryAll(element, "button")).toHaveLength(0);
   });
 
   it("should list layers and create new ones up to the limit", async () => {
     const app = createApp();
-    const element = await mount<PcLayersMenu>("pc-layers-menu", { app });
+    const element = await mount<PcPanelLayers>("pc-panel-layers", { app });
     expect(queryAll(element, "pc-layer-item")).toHaveLength(1);
     expect(query<PcLayerItem>(element, "pc-layer-item").background).toBe(
       app.background,
@@ -33,10 +33,10 @@ describe("pc-layers-menu", () => {
   it("should keep only one layer's context menu open at a time", async () => {
     const app = createApp();
     app.layers.create();
-    const element = await mount<PcLayersMenu>("pc-layers-menu", { app });
+    const element = await mount<PcPanelLayers>("pc-panel-layers", { app });
     const [first, second] = queryAll<PcLayerItem>(element, "pc-layer-item");
     const openMenu = async (item: PcLayerItem) => {
-      query(item, ".handle").dispatchEvent(
+      query(query(item, ".handle"), "button").dispatchEvent(
         new MouseEvent("contextmenu", { cancelable: true }),
       );
       await item.updateComplete;
@@ -53,7 +53,7 @@ describe("pc-layers-menu", () => {
     const fromAlpha = vi
       .spyOn(app.selection, "fromAlpha")
       .mockImplementation(() => undefined);
-    const element = await mount<PcLayersMenu>("pc-layers-menu", { app });
+    const element = await mount<PcPanelLayers>("pc-panel-layers", { app });
     const item = query<PcLayerItem>(element, "pc-layer-item");
     const name = query(item, ".name");
     name.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -73,7 +73,7 @@ describe("pc-layers-menu", () => {
     const fromAlpha = vi
       .spyOn(app.selection, "fromAlpha")
       .mockImplementation(() => undefined);
-    const element = await mount<PcLayersMenu>("pc-layers-menu", { app });
+    const element = await mount<PcPanelLayers>("pc-panel-layers", { app });
     const item = query<PcLayerItem>(element, "pc-layer-item");
     query(item, ".thumbnail").dispatchEvent(
       new MouseEvent("click", { bubbles: true, metaKey: true, shiftKey: true }),
@@ -128,14 +128,14 @@ describe("dropSlot and isInside", () => {
   });
 });
 
-describe("pc-layers-menu dragging", () => {
+describe("pc-panel-layers dragging", () => {
   /**
    * A menu of three layers laid out as in the app: 30px rows from the top, then New Layer (jsdom has no layout).
    */
   const setup = async (layerCount = 3) => {
     const app = createApp();
     for (let i = 1; i < layerCount; i++) app.layers.create();
-    const element = await mount<PcLayersMenu>("pc-layers-menu", { app });
+    const element = await mount<PcPanelLayers>("pc-panel-layers", { app });
     const items = () => queryAll<PcLayerItem>(element, "pc-layer-item");
     const lay = () => {
       element.getBoundingClientRect = () => new DOMRect(0, 0, 275, 200);

@@ -3,7 +3,8 @@ import styles from "./style.css?inline";
 import { PILLS_CSS as pill } from "../../styles";
 import { WINDOWS_CSS as theme } from "../../styles";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
-import { PcElement, defineElement } from "../../base";
+import { defineElement } from "../../base";
+import { PcPanel } from "../PcPanel";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import ChangeController from "../../ChangeController";
@@ -79,18 +80,18 @@ export const dropSlot = (
  * highlighted for touch). Escape cancels the drag. Moves and duplicates are announced to screen readers.
  *
  * @example
- * html`<pc-layers-menu .app=${app}></pc-layers-menu>`
+ * html`<pc-panel-layers .app=${app}></pc-panel-layers>`
  */
-export class PcLayersMenu extends PcElement {
+export class PcPanelLayers extends PcPanel {
   static override properties = {
-    ...PcElement.properties,
+    ...PcPanel.properties,
     app: { attribute: false },
     drag: { state: true },
     announcement: { state: true },
   };
 
   static override styles = [
-    PcElement.styles,
+    ...PcPanel.styles,
 
     unsafeCSS(noTextSelection),
     unsafeCSS(styles),
@@ -271,9 +272,17 @@ export class PcLayersMenu extends PcElement {
     );
   }
 
-  override render() {
+  protected override get defaultIcon(): string {
+    return "layers";
+  }
+
+  protected override get defaultLabel(): string {
+    return this.t("paintCanvas.toolbar.layers");
+  }
+
+  protected override renderBody() {
     const layers = this.app?.layers;
-    if (!layers) return html``;
+    if (!layers) return nothing;
     return html`
       ${this.renderRows(layers)}
       <button
@@ -291,4 +300,4 @@ export class PcLayersMenu extends PcElement {
   }
 }
 
-defineElement("pc-layers-menu", PcLayersMenu);
+defineElement("pc-panel-layers", PcPanelLayers);

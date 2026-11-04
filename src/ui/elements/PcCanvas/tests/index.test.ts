@@ -393,14 +393,16 @@ describe("pc-canvas", () => {
     await element.updateComplete;
   });
 
-  it("should erase with the eraser tool", async () => {
+  it("should erase with the eraser tool, with the background colour for alpha lock", async () => {
     const { app, canvas } = await mountStage();
     app.selectTool(Tool.Eraser);
+    app.setColour("#00ff00", "background");
     const begin = vi.spyOn(app.strokes, "begin");
     canvas.dispatchEvent(pointer("pointerdown", 10, 20));
     expect(begin.mock.calls[0]![0]).toMatchObject({
       mode: "erase",
       preset: app.eraser.preset,
+      colour: "#00ff00",
     });
   });
 
@@ -1452,6 +1454,15 @@ describe("pc-canvas colour sampling", () => {
     expect(app.colour).toBe("#123456");
     expect(element.style.cursor).toBe(EYEDROPPER_CURSOR);
     expect(samplerCalls.at(-1)?.[0]).toBe("clearRect");
+  });
+
+  it("should set the background colour when it is selected", async () => {
+    const { app, canvas } = await setup();
+    const foreground = app.colours.foreground;
+    app.selectColour("background");
+    canvas.dispatchEvent(pointer("pointerdown", 100, 200));
+    canvas.dispatchEvent(pointer("pointerup", 100, 200));
+    expect(app.colours).toEqual({ foreground, background: "#123456" });
   });
 
   it("should still sample without a sampling window to draw on", async () => {

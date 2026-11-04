@@ -46,15 +46,29 @@ find("#dialog-button").addEventListener("click", () => {
 });
 
 const menu = find<PcContextMenu>("#menu");
-menu.items = [
-  { value: "duplicate", label: "Duplicate" },
+let alphaLock = false;
+/** Menu items, with the alpha lock toggle showing its state */
+const menuItems = () => [
+  { value: "duplicate", label: "Duplicate", shortcut: { key: "j", cmd: true } },
   { value: "merge", label: "Merge down…", disabled: true },
+  { value: "alpha-lock", label: "Alpha lock", checked: alphaLock },
+  {
+    value: "brush",
+    label: "Select the brush tool",
+    icon: "brush",
+    shortcut: { key: "b" },
+  },
+  {
+    value: "fill",
+    label: "Fill the layer with the background colour",
+    shortcut: { key: "backspace", alt: true },
+  },
   { value: "delete", label: "Delete", danger: true },
 ];
-find("#menu-button").addEventListener("click", (event) => {
-  const { left, bottom } = (
-    event.currentTarget as HTMLElement
-  ).getBoundingClientRect();
-  Object.assign(menu, { x: left, y: bottom + 4, open: true });
+menu.items = menuItems();
+menu.addEventListener("pc-select", (event) => {
+  if ((event as CustomEvent<{ value: string }>).detail.value !== "alpha-lock")
+    return;
+  alphaLock = !alphaLock;
+  menu.items = menuItems();
 });
-menu.addEventListener("pc-close", () => (menu.open = false));

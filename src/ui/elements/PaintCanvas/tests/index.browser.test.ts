@@ -1,7 +1,27 @@
 import { describe, it, expect, vi } from "vitest";
 import "..";
 import type { PaintCanvasElement } from "..";
-import PaintCanvas from "../../../../lib/classes/PaintCanvas";
+import PaintCanvas, { Panel } from "../../../../lib/classes/PaintCanvas";
+
+describe("paint-canvas menu in a real browser", () => {
+  it("should float the app menu with the same shadow as the other panels", async () => {
+    const layout = document.createElement("paint-canvas") as PaintCanvasElement;
+    layout.app = new PaintCanvas({ width: 20, height: 10 });
+    layout.innerHTML = '<div slot="menu">Menu</div>';
+    document.body.append(layout);
+    await layout.updateComplete;
+    layout.app.togglePanel(Panel.Menu);
+    await layout.updateComplete;
+    const shadow = (selector: string) =>
+      getComputedStyle(layout.shadowRoot!.querySelector(selector)!).boxShadow;
+    expect(shadow(".menu-panel")).not.toBe("none");
+    layout.app.togglePanel(Panel.Layers);
+    await layout.updateComplete;
+    const layers = layout.shadowRoot!.querySelector("pc-panel-layers")!;
+    expect(shadow(".menu-panel")).toBe(getComputedStyle(layers).boxShadow);
+    layout.remove();
+  });
+});
 
 describe("paint-canvas screenshots", () => {
   it("should save the drawing as a PNG named with the app's file prefix", async () => {

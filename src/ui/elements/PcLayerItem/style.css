@@ -1,7 +1,7 @@
-/* A white row with space around its parts */
+/* A white row with space around its parts. The middle column can shrink, so the row never grows wider than its panel */
 :host {
   display: grid;
-  grid-template-columns: 30px 1fr 30px 30px;
+  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
   align-items: center;
   column-gap: 6px;
   position: relative;
@@ -16,15 +16,23 @@
   width: 30px;
   height: 30px;
 }
-/* Thumbnail on the left and name on the right; under them, opacity on the left and blend mode on the right */
+/* Thumbnail on the left and name on the right; under them, opacity on the left and blend mode on the right. The blend
+   mode gets a set share of the width rather than its own: browsers size dropdowns differently (Safari and Firefox as
+   wide as the longest option, Chrome as the chosen one), which would otherwise push the row wider than its panel */
 .details {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 2fr);
   align-items: center;
   gap: 4px 6px;
+  min-width: 0;
 }
 .details .name {
   grid-column: 2 / -1;
+}
+.details .name,
+.details select {
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
 }
 .details input[type="range"] {
@@ -32,45 +40,14 @@
   min-width: 0;
   margin: 0;
 }
-/* Like the chat's ⋮ menu: white and rounded, with plain items highlighted on hover. It floats beside the handle (placed
-   by `placeMenu`), so the layers panel's edges don't cut it off */
-menu {
-  position: fixed;
-  z-index: 20;
-  min-width: 160px;
-  margin: 0;
-  padding: 4px 0;
-  border-radius: 12px;
-  list-style: none;
-  background: var(--pc-surface);
-  color: var(--pc-text);
-  box-shadow: var(--pc-shadow);
-}
-menu button {
-  width: 100%;
-  min-height: 32px;
-  padding: 4px 16px;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-}
-menu button:hover:not(:disabled),
-menu button:focus-visible {
-  background: var(--pc-bar);
-}
-/* Actions the layer can't take (e.g. moving the top layer up) */
-menu button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
 /* The reorder handle drags with mouse, pen or touch (touch drags it rather than scrolling the panel) */
 .handle {
   /* As tall as the row */
   align-self: stretch;
+}
+.handle::part(button) {
+  min-width: 0;
+  padding: 0;
   cursor: grab;
   touch-action: none;
 }
@@ -83,13 +60,13 @@ menu button:disabled {
   background: Canvas;
   box-shadow: var(--pc-shadow);
 }
-:host([dragging]) .handle {
+:host([dragging]) .handle::part(button) {
   cursor: grabbing;
 }
-:host([drop-action="duplicate"]) .handle {
+:host([drop-action="duplicate"]) .handle::part(button) {
   cursor: copy;
 }
-:host([drop-action="none"]) .handle {
+:host([drop-action="none"]) .handle::part(button) {
   cursor: no-drop;
 }
 /* Alpha lock and visibility: boxed icon toggles like the settings bar's, darker while on */

@@ -1,20 +1,28 @@
-// Keeping the user's layers in the browser, so a drawing survives reloading the page (see `LayerAutosave`).
+// Keeping the user's layers in the browser, so a drawing survives reloading the page (see `LayerAutosave`), and the
+// user's app settings (see `SettingsAutosave`).
 import type { LayerConfig } from "../classes/Layer";
+import type { AppSettings } from "../settings/schema";
 
 /** Version of a saved drawing's shape, so drawings saved by other versions can be recognised */
 export const SAVED_DRAWING_VERSION = 1;
 
-/** Name of the IndexedDB database `IndexedDbLayerStore` keeps drawings in */
+/** Name of the IndexedDB database `IndexedDbLayerStore` keeps drawings in, and `IndexedDbSettingsStore` settings */
 export const DATABASE_NAME = "paintcanvas";
 
-/** Version of the database's object stores */
-const DATABASE_VERSION = 1;
+/** Version of the database's object stores (2 added settings) */
+export const DATABASE_VERSION = 2;
 
 /** Object store of saved drawings, by name */
 const DRAWINGS = "drawings";
 
 /** Object store of layer images (PNG blobs), by drawing name and layer ID */
 const IMAGES = "images";
+
+/** Object store of app settings, by name */
+const SETTINGS = "settings";
+
+/** Every object store, created when the database is first opened or upgraded */
+const OBJECT_STORES = [DRAWINGS, IMAGES, SETTINGS] as const;
 
 /** A saved layer's settings (its pixels are kept separately, as a PNG) */
 export type SavedLayer = Required<LayerConfig>;
@@ -71,6 +79,53 @@ const completed = (transaction: IDBTransaction): Promise<void> =>
   });
 
 /**
+ * Open PaintCanvas's database, creating the object stores it doesn't have yet. When another window upgrades the
+ * database, this connection closes and `onClose` is called, so the next use opens it again.
+ */
+const openDatabase = (
+  factory: IDBFactory,
+  onClose: () => void,
+): Promise<IDBDatabase> =>
+  new Promise<IDBDatabase>((resolve, reject) => {
+    const request = factory.open(DATABASE_NAME, DATABASE_VERSION);
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      for (const store of OBJECT_STORES)
+        if (!database.objectStoreNames.contains(store))
+          database.createObjectStore(store);
+    };
+    request.onsuccess = () => {
+      const database = request.result;
+      database.onversionchange = () => {
+        database.close();
+        onClose();
+      };
+      resolve(database);
+    };
+    request.onerror = () => reject(request.error);
+  });
+
+/**
+ * Opens PaintCanvas's database once and keeps the connection, opening it again if it closes or fails to open.
+ */
+class DatabaseConnection {
+  private database?: Promise<IDBDatabase>;
+
+  constructor(private readonly factory: IDBFactory) {}
+
+  /** The open database */
+  open(): Promise<IDBDatabase> {
+    this.database ??= openDatabase(this.factory, () => {
+      this.database = undefined;
+    }).catch((error: unknown) => {
+      this.database = undefined;
+      throw error;
+    });
+    return this.database;
+  }
+}
+
+/**
  * The layer ID in a layer image's key (`[name, layerId]`).
  */
 const layerIdOf = (key: IDBValidKey): string => (key as [string, string])[1];
@@ -85,9 +140,7 @@ const layerIdOf = (key: IDBValidKey): string => (key as [string, string])[1];
 export default class IndexedDbLayerStore implements LayerStoreLike {
   readonly name: string;
 
-  private readonly factory: IDBFactory;
-
-  private database?: Promise<IDBDatabase>;
+  private readonly connection: DatabaseConnection;
 
   /**
    * @param name - the drawing's name
@@ -95,7 +148,7 @@ export default class IndexedDbLayerStore implements LayerStoreLike {
    */
   constructor(name: string, factory: IDBFactory = indexedDB) {
     this.name = name;
-    this.factory = factory;
+    this.connection = new DatabaseConnection(factory);
   }
 
   async load(): Promise<SavedDrawingWithImages | undefined> {
@@ -154,35 +207,73 @@ export default class IndexedDbLayerStore implements LayerStoreLike {
   }
 
   /**
-   * Open the database (once), creating its object stores the first time. If it can't be opened, the next call tries
-   * again.
+   * Open the database (once). If it can't be opened, the next call tries again.
    */
   private open(): Promise<IDBDatabase> {
-    this.database ??= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = this.factory.open(DATABASE_NAME, DATABASE_VERSION);
-      request.onupgradeneeded = () => {
-        request.result.createObjectStore(DRAWINGS);
-        request.result.createObjectStore(IMAGES);
-      };
-      request.onsuccess = () => {
-        const database = request.result;
-        // Let another window upgrade the database (this one opens it again when next needed)
-        database.onversionchange = () => {
-          database.close();
-          this.database = undefined;
-        };
-        resolve(database);
-      };
-      request.onerror = () => {
-        this.database = undefined;
-        reject(request.error);
-      };
-    });
-    return this.database;
+    return this.connection.open();
   }
 
   /** The keys of this drawing's layer images: `[name, layerId]` (arrays sort after strings) */
   private imageKeys(): IDBKeyRange {
     return IDBKeyRange.bound([this.name], [this.name, []]);
+  }
+}
+
+/** Where the user's app settings are kept (see `IndexedDbSettingsStore`) */
+export interface SettingsStoreLike {
+  /** The settings' name, e.g. to keep settings for different apps apart */
+  readonly name: string;
+  /** The saved settings (untrusted: check them before using them), or undefined if none were saved */
+  load(): Promise<unknown>;
+  /** Save the settings */
+  save(settings: AppSettings): Promise<void>;
+}
+
+/** Name the app settings are kept under when none is given */
+export const DEFAULT_SETTINGS_NAME = "default";
+
+/**
+ * Keeps the user's app settings (see `AppSettings`) in the browser's IndexedDB database (`DATABASE_NAME`), under a
+ * name.
+ *
+ * @example
+ * const store = new IndexedDbSettingsStore();
+ * await store.save(collectSettings(canvas));
+ */
+export class IndexedDbSettingsStore implements SettingsStoreLike {
+  readonly name: string;
+
+  private readonly connection: DatabaseConnection;
+
+  /**
+   * @param name - the settings' name (`DEFAULT_SETTINGS_NAME` by default)
+   * @param factory - the IndexedDB to use (the browser's by default)
+   */
+  constructor(
+    name: string = DEFAULT_SETTINGS_NAME,
+    factory: IDBFactory = indexedDB,
+  ) {
+    this.name = name;
+    this.connection = new DatabaseConnection(factory);
+  }
+
+  async load(): Promise<unknown> {
+    const database = await this.connection.open();
+    return result(
+      database
+        .transaction(SETTINGS, "readonly")
+        .objectStore(SETTINGS)
+        .get(this.name),
+    );
+  }
+
+  async save(settings: AppSettings): Promise<void> {
+    const transaction = (await this.connection.open()).transaction(
+      SETTINGS,
+      "readwrite",
+    );
+    const done = completed(transaction);
+    transaction.objectStore(SETTINGS).put(settings, this.name);
+    await done;
   }
 }

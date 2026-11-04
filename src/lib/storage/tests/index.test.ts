@@ -4,6 +4,9 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import IndexedDbLayerStore, {
   DATABASE_NAME,
+  DATABASE_VERSION,
+  DEFAULT_SETTINGS_NAME,
+  IndexedDbSettingsStore,
   SAVED_DRAWING_VERSION,
   type SavedDrawing,
 } from "..";
@@ -180,7 +183,7 @@ describe("IndexedDbLayerStore", () => {
     await store.save(drawingOf("a"), new Map([["a", image("x")]]));
     // Another window opens a newer version: this one closes its connection so the upgrade can go ahead
     await new Promise<void>((resolve, reject) => {
-      const request = factory.open(DATABASE_NAME, 2);
+      const request = factory.open(DATABASE_NAME, DATABASE_VERSION + 1);
       request.onsuccess = () => {
         request.result.close();
         resolve();
@@ -189,6 +192,100 @@ describe("IndexedDbLayerStore", () => {
       request.onblocked = () => reject(new Error("Blocked"));
     });
     // Opening the old version again now fails, as the database is newer
+    await expect(store.load()).rejects.toBeDefined();
+  });
+});
+
+describe("database upgrades", () => {
+  it("should add the settings store to a database from version 1, keeping its drawings", async () => {
+    const factory = new IDBFactory();
+    // A version 1 database with a drawing in it
+    await new Promise<void>((resolve, reject) => {
+      const request = factory.open(DATABASE_NAME, 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore("drawings");
+        request.result.createObjectStore("images");
+      };
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction("drawings", "readwrite");
+        transaction.objectStore("drawings").put(drawingOf("a"), "drawing");
+        transaction.oncomplete = () => {
+          database.close();
+          resolve();
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    const settings = new IndexedDbSettingsStore("default", factory);
+    await settings.save({ palette: ["#ff0000"] });
+    expect(await settings.load()).toEqual({ palette: ["#ff0000"] });
+    const drawings = new IndexedDbLayerStore("drawing", factory);
+    expect((await drawings.load())?.drawing).toEqual(drawingOf("a"));
+  });
+});
+
+describe("IndexedDbSettingsStore", () => {
+  it("should save and load settings under a name", async () => {
+    const factory = new IDBFactory();
+    const store = new IndexedDbSettingsStore(undefined, factory);
+    expect(store.name).toBe(DEFAULT_SETTINGS_NAME);
+    expect(await store.load()).toBeUndefined();
+    await store.save({
+      colours: { foreground: "#000000", background: "#ffffff" },
+    });
+    expect(await store.load()).toEqual({
+      colours: { foreground: "#000000", background: "#ffffff" },
+    });
+    // Other names are kept apart
+    const other = new IndexedDbSettingsStore("other", factory);
+    expect(await other.load()).toBeUndefined();
+    await other.save({ palette: [] });
+    expect(await store.load()).toEqual({
+      colours: { foreground: "#000000", background: "#ffffff" },
+    });
+  });
+
+  it("should share the database with drawings", async () => {
+    const factory = new IDBFactory();
+    const settings = new IndexedDbSettingsStore("default", factory);
+    const drawings = new IndexedDbLayerStore("drawing", factory);
+    await drawings.save(drawingOf("a"), new Map([["a", image("x")]]));
+    await settings.save({ palette: ["#123456"] });
+    expect((await drawings.load())?.drawing).toEqual(drawingOf("a"));
+    expect(await settings.load()).toEqual({ palette: ["#123456"] });
+  });
+
+  it("should try to open the database again after it fails to open", async () => {
+    const factory = new IDBFactory();
+    const open = vi.spyOn(factory, "open");
+    open.mockImplementationOnce(() => {
+      const request = {} as IDBOpenDBRequest;
+      queueMicrotask(() => {
+        Object.defineProperty(request, "error", { value: new Error("No") });
+        request.onerror?.(new Event("error"));
+      });
+      return request;
+    });
+    const store = new IndexedDbSettingsStore("default", factory);
+    await expect(store.load()).rejects.toThrow("No");
+    expect(await store.load()).toBeUndefined();
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it("should open the database again after another window upgrades it", async () => {
+    const factory = new IDBFactory();
+    const store = new IndexedDbSettingsStore("default", factory);
+    await store.save({ palette: [] });
+    await new Promise<void>((resolve, reject) => {
+      const request = factory.open(DATABASE_NAME, DATABASE_VERSION + 1);
+      request.onsuccess = () => {
+        request.result.close();
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+      request.onblocked = () => reject(new Error("Blocked"));
+    });
     await expect(store.load()).rejects.toBeDefined();
   });
 });

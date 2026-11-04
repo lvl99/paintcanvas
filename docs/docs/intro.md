@@ -19,10 +19,12 @@ Open-source painting engine and renderer for the browser, with optional UI. Draw
 | Painting and drawing      | Brush, eraser                                                |
 | Masking                   | Rectangle, circle, polygon and freehand masks                |
 | Manipulation              | Move, scale, rotate                                          |
-| Constructive, destructive | Cut, copy, paste, delete, undo, redo                         |
+| Constructive, destructive | Cut, copy, paste, delete, fill, undo, redo                   |
+| Colours                   | Foreground and background colours, colour palette            |
 | Colour sampling           | Sample a point, sample an area                               |
 | Viewport                  | Zoom, pan                                                    |
 | Layers                    | Visibility, order, blending mode, opacity, alpha lock, merge |
+| Settings                  | Configurable keyboard shortcuts, settings import and export  |
 
 ## Installation
 
@@ -66,7 +68,7 @@ Each folder of the engine and UI has its own import path, matching the [API](/ap
 
 ## Guides
 
-- [Layout and slots](layout.md): the `<paint-canvas>` layout, its slots, side modes, state and keyboard shortcuts.
+- [Layout and slots](layout.md): the `<paint-canvas>` layout, its slots, side modes, state, keyboard shortcuts and keeping the user's settings.
 - [Using the engine](engine.md): build your own UI on the engine.
 - [Messages and events](messages.md): share a drawing over your own transport.
 - [Saving and opening drawings](documents.md): as files, and kept in the browser.
