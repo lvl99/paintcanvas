@@ -3,7 +3,7 @@
   position: relative;
   touch-action: none;
   /* A solid grey border, drawn outside so the map and its frame keep their size and position */
-  outline: 1px solid var(--pc-border);
+  outline: 1px solid var(--pc-map-border);
 }
 canvas {
   display: block;
@@ -13,6 +13,6 @@ canvas {
 /* The part of the canvas the user can see */
 .frame {
   position: absolute;
-  outline: 1px solid var(--pc-text);
+  outline: 1px solid var(--pc-map-frame);
   pointer-events: none;
 }

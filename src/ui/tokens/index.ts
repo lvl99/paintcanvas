@@ -24,6 +24,10 @@ export const LIGHT_TOKENS: TokenValues = {
   border: "#999999",
   text: "#000000",
   "text-muted": "#666666",
+  // The canvas map's border and the frame of the visible area. They stay the same in the dark theme, as the map shows
+  // the drawing, not the UI.
+  "map-border": "#999999",
+  "map-frame": "#000000",
   shadow: "0 4px 16px rgb(0 0 0 / 25%)",
   backdrop: "rgb(0 0 0 / 40%)",
   accent: "#8f3de8",

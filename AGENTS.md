@@ -152,5 +152,12 @@ Releases will be made via NPM, and only from the `main` branch, when human signa
 2. Bump the version, commit and tag in one step with `pnpm version <patch|minor|major> -m "PaintCanvas %s"`. This makes the commit "PaintCanvas <version>" and the annotated tag `v<version>`, so the tagged release includes its changelog.
 3. Push the commit and the tag: `git push --follow-tags`.
 4. Publish to NPM: `pnpm publish`.
+5. Synchronise the `gh-pages` branch with `main`: `pnpm pages:deploy`. This builds the docs and demo from `main` and pushes them to `gh-pages`, which GitHub Pages serves at https://lvl99.github.io/paintcanvas/. It doesn't need a PR.
+
+### GitHub Pages
+
+The `gh-pages` branch holds only the built site (docs at the root, demo in `app/`); never edit it by hand. `pnpm pages:deploy` refuses to run unless the current branch is a clean `main` that matches `origin/main`.
+
+When human signals to update GitHub Pages outside a release (e.g. after a collaboration project that only changes docs or the demo is merged into `main`), run `pnpm pages:deploy` from `main` without bumping the version. The API pages link to source code at the current version's tag (`v<version>`).
 
 Code will be provided only as ESM with TypeScript definitions in released NPM package.

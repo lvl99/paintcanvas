@@ -1,8 +1,82 @@
 /* The light theme's background is transparent by default, which shows whatever the browser draws behind the page */
 :root {
   --ifm-background-color: #fff;
+
+  /* PaintCanvas purple: 5.3:1 contrast on the white background */
+  --ifm-color-primary: #8f3de8;
+  --ifm-color-primary-dark: #8023e5;
+  --ifm-color-primary-darker: #791adf;
+  --ifm-color-primary-darkest: #6316b7;
+  --ifm-color-primary-light: #9e57eb;
+  --ifm-color-primary-lighter: #a664ed;
+  --ifm-color-primary-lightest: #bc8cf1;
+
+  /* PaintCanvas pink, used behind dark text (5.4:1 contrast) */
+  --ifm-color-secondary: #f40f95;
+  --ifm-color-secondary-dark: #df0a87;
+  --ifm-color-secondary-darker: #d30a7f;
+  --ifm-color-secondary-darkest: #ad0869;
+  --ifm-color-secondary-light: #f528a0;
+  --ifm-color-secondary-lighter: #f634a5;
+  --ifm-color-secondary-lightest: #f759b6;
+  --ifm-color-secondary-contrast-foreground: #000;
 }
 
 [data-theme="dark"] {
   --ifm-background-color: #1b1b1d;
+
+  /* The purple is lightened on the dark background, where #8f3de8 has only 3.3:1 contrast; this has 5.7:1 */
+  --ifm-color-primary: #b07bef;
+  --ifm-color-primary-dark: #9e5fec;
+  --ifm-color-primary-darker: #9551ea;
+  --ifm-color-primary-darkest: #7a26e2;
+  --ifm-color-primary-light: #c297f2;
+  --ifm-color-primary-lighter: #cba5f4;
+  --ifm-color-primary-lightest: #e5d3f9;
+}
+
+/* Header: purple with white text and icons */
+.navbar {
+  --ifm-navbar-background-color: #8f3de8;
+  --ifm-navbar-link-color: #fff;
+  --ifm-navbar-link-hover-color: #fff;
+  --ifm-navbar-link-active-color: #fff;
+  color: #fff;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* The phone menu that slides out of the header keeps the page's background, so its links stay readable */
+.navbar-sidebar {
+  background-color: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+}
+
+/* Sidebar: the current page is pink with white text. That has 3.9:1 contrast, below WCAG's 4.5:1 for text, chosen by
+   human for the look. */
+.menu__link--active:not(.menu__link--sublist),
+.menu__link--active:not(.menu__link--sublist):hover {
+  background-color: #f40f95;
+  color: #fff;
+}
+
+/* Breadcrumbs: the current page is purple with white text; the others keep the theme's grey */
+.breadcrumbs__item--active .breadcrumbs__link,
+.breadcrumbs__item--active .breadcrumbs__link:hover {
+  background-color: #8f3de8;
+  color: #fff;
+}
+
+/* Links within articles: blue (4.5:1 contrast on white) */
+.theme-doc-markdown a {
+  color: #2c6bff;
+}
+
+/* #2c6bff has only 3.8:1 contrast on the dark background; this lighter blue has 5.4:1 */
+[data-theme="dark"] .theme-doc-markdown a {
+  color: #5b8cff;
 }

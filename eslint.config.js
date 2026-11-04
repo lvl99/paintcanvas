@@ -16,6 +16,8 @@ export default tseslint.config(
       "docs/build/**",
       "docs/.docusaurus/**",
       "docs/docs/api/**",
+      // GitHub Pages site build output
+      ".pages/**",
     ],
   },
   eslint.configs.recommended,
