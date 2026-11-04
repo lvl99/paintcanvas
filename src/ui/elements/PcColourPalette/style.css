@@ -220,7 +220,8 @@
   display: flex;
   gap: var(--pc-space-2);
 }
+/* Same size as the brush menu's Import and Export */
 .actions button.pill {
   flex: 1;
-  min-height: 32px;
+  padding: 4px 8px;
 }
