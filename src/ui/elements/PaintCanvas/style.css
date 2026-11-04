@@ -90,6 +90,10 @@ pc-canvas-map {
   top: 0;
   bottom: auto;
 }
+/* The app menu's content is the implementer's; it floats with the same shadow as the other panels */
+.menu-panel {
+  box-shadow: var(--pc-shadow);
+}
 .menu-panel:not([open]) {
   display: none;
 }

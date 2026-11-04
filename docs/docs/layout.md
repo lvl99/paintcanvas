@@ -15,17 +15,17 @@ sidebar_label: Layout and slots
 └──────────────────── footer ────────────────────┘
 ```
 
-| Slot      | Default content                     |
-| --------- | ----------------------------------- |
-| `header`  | Nothing                             |
-| `left`    | `<pc-toolbar>`                      |
-| `top`     | `<pc-tool-settings>` for the tool   |
-| `center`  | `<pc-canvas>`                       |
-| `overlay` | `<pc-canvas-map>`, over the canvas  |
-| `bottom`  | Nothing                             |
-| `right`   | Nothing                             |
-| `footer`  | `<pc-stats>`                        |
-| `menu`    | Opened by the toolbar's menu button |
+| Slot      | Default content                                                                              |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `header`  | Nothing                                                                                      |
+| `left`    | `<pc-toolbar>`                                                                               |
+| `top`     | `<pc-tool-settings>` for the tool                                                            |
+| `center`  | `<pc-canvas>`                                                                                |
+| `overlay` | `<pc-canvas-map>`, over the canvas                                                           |
+| `bottom`  | Nothing                                                                                      |
+| `right`   | Nothing                                                                                      |
+| `footer`  | `<pc-stats>`                                                                                 |
+| `menu`    | Opened by the toolbar's menu button, floating with the panels' shadow (give it a background) |
 
 Put your own element in a slot to replace its default. Empty areas take no space. A `<pc-layers-menu>` in the `left` or `right` slot (e.g. in a `<pc-panel>`, as below) replaces the toolbar's layers button. On its own, `<pc-toolbar>` leaves the button out with `.layers=${false}`.
 
