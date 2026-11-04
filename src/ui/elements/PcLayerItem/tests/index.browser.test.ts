@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
-import "../../PcLayersMenu";
-import type { PcLayersMenu } from "../../PcLayersMenu";
+import "../../PcPanelLayers";
+import type { PcPanelLayers } from "../../PcPanelLayers";
 import PaintCanvas from "../../../../lib/classes/PaintCanvas";
 import { BlendMode } from "../../../../lib/classes/Layer";
 
 describe("layer rows in a real browser", () => {
   it("should stay inside the layers menu with a long name and a long blend mode", async () => {
     const app = new PaintCanvas({ width: 20, height: 10 });
-    const menu = document.createElement("pc-layers-menu") as PcLayersMenu;
+    const menu = document.createElement("pc-panel-layers") as PcPanelLayers;
     menu.app = app;
     document.body.append(menu);
     // A long blend mode name, chosen, so even Chrome (which sizes dropdowns by the chosen option) makes it wide

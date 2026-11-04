@@ -6,7 +6,8 @@ import {
   NO_TEXT_SELECTION_CSS as noTextSelection,
   PILLS_CSS as pills,
 } from "../../styles";
-import { PcElement, defineElement, emit } from "../../base";
+import { defineElement, emit } from "../../base";
+import { PcPanel } from "../PcPanel";
 import ChangeController from "../../ChangeController";
 import "../PcColourPair";
 import "../PcContextMenu";
@@ -138,11 +139,11 @@ const clampWhole = (value: number, max: number): number =>
  * Fires `pc-toast` after importing, or when importing or exporting fails.
  *
  * @example
- * html`<pc-colour-palette .app=${app}></pc-colour-palette>`
+ * html`<pc-panel-colours .app=${app}></pc-panel-colours>`
  */
-export class PcColourPalette extends PcElement {
+export class PcPanelColours extends PcPanel {
   static override properties = {
-    ...PcElement.properties,
+    ...PcPanel.properties,
     app: { attribute: false },
     model: { type: String },
     hexDraft: { state: true },
@@ -151,7 +152,7 @@ export class PcColourPalette extends PcElement {
   };
 
   static override styles = [
-    PcElement.styles,
+    ...PcPanel.styles,
     unsafeCSS(noTextSelection),
     unsafeCSS(iconControls),
     unsafeCSS(pills),
@@ -678,15 +679,18 @@ export class PcColourPalette extends PcElement {
     ></pc-dialog>`;
   }
 
-  override render() {
+  protected override get defaultIcon(): string {
+    return "";
+  }
+
+  protected override get defaultLabel(): string {
+    return this.t("paintCanvas.palette.label");
+  }
+
+  protected override renderBody() {
     const app = this.app;
-    if (!app) return html``;
-    return html`<div
-        class="palette"
-        role="dialog"
-        aria-label=${this.t("paintCanvas.palette.label")}
-        @keydown=${this.onKeyDown}
-      >
+    if (!app) return nothing;
+    return html`<div class="palette" @keydown=${this.onKeyDown}>
         <div class="top">
           <div class="current">
             <pc-colour-pair
@@ -750,4 +754,4 @@ export class PcColourPalette extends PcElement {
   }
 }
 
-defineElement("pc-colour-palette", PcColourPalette);
+defineElement("pc-panel-colours", PcPanelColours);

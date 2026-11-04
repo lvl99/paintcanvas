@@ -1,21 +1,7 @@
-:host {
-  display: block;
-  box-sizing: border-box;
-  width: var(--pc-colour-palette-width, 290px);
-  max-width: 100%;
-  color: var(--pc-text);
-  font-family: var(--pc-font);
-  font-size: var(--pc-font-size);
-}
 .palette {
   display: flex;
   flex-direction: column;
   gap: var(--pc-space-2);
-  box-sizing: border-box;
-  padding: var(--pc-space-2);
-  border: 1px solid var(--pc-border);
-  background: var(--pc-surface-raised);
-  box-shadow: var(--pc-shadow);
 }
 
 /* The colours and their hex value beside the colour model's sliders */

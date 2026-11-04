@@ -4,7 +4,8 @@ import { PILLS_CSS as pill } from "../../styles";
 import { WINDOWS_CSS as theme } from "../../styles";
 import { styleMap } from "lit/directives/style-map.js";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
-import { PcElement, defineElement } from "../../base";
+import { defineElement } from "../../base";
+import { PcPanel } from "../PcPanel";
 import ChangeController from "../../ChangeController";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import type BrushSettings from "../../../lib/classes/BrushSettings";
@@ -101,17 +102,17 @@ export const previewSizes = (
  * importing, exporting or deleting presets, or when that fails.
  *
  * @example
- * html`<pc-brush-menu kind="eraser" .app=${app}></pc-brush-menu>`
+ * html`<pc-panel-brushes kind="eraser" .app=${app}></pc-panel-brushes>`
  */
-export class PcBrushMenu extends PcElement {
+export class PcPanelBrushes extends PcPanel {
   static override properties = {
-    ...PcElement.properties,
+    ...PcPanel.properties,
     app: { attribute: false },
     kind: { type: String },
   };
 
   static override styles = [
-    PcElement.styles,
+    ...PcPanel.styles,
 
     unsafeCSS(noTextSelection),
     unsafeCSS(styles),
@@ -360,9 +361,21 @@ export class PcBrushMenu extends PcElement {
     </li>`;
   }
 
-  override render() {
+  protected override get defaultIcon(): string {
+    return this.kind === "eraser" ? "eraser" : "brush";
+  }
+
+  protected override get defaultLabel(): string {
+    return this.t(
+      this.kind === "eraser"
+        ? "paintCanvas.tool.eraser"
+        : "paintCanvas.tool.brush",
+    );
+  }
+
+  protected override renderBody() {
     const settings = this.settings;
-    if (!settings) return html``;
+    if (!settings) return nothing;
     const title = this.t(
       this.kind === "eraser"
         ? "paintCanvas.tool.eraser"
@@ -468,4 +481,4 @@ export class PcBrushMenu extends PcElement {
   }
 }
 
-defineElement("pc-brush-menu", PcBrushMenu);
+defineElement("pc-panel-brushes", PcPanelBrushes);

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
-import { LONG_PRESS_MS, channelGradient, type PcColourPalette } from "..";
+import { LONG_PRESS_MS, channelGradient, type PcPanelColours } from "..";
 import type { PcColourPair } from "../../PcColourPair";
 import type { PcDialog } from "../../PcDialog";
 import type { PcContextMenu } from "../../PcContextMenu";
@@ -22,20 +22,20 @@ const setup = async (colours = ["#ff0000", "#00ff00", "#0000ff"]) => {
   const app = createApp();
   app.palette.set(colours);
   app.togglePanel(Panel.Palette);
-  const element = await mount<PcColourPalette>("pc-colour-palette", { app });
+  const element = await mount<PcPanelColours>("pc-panel-colours", { app });
   const toasts = events<{ message: string; kind: string }>(element, "pc-toast");
   return { app, element, toasts };
 };
 
 /** The element's input, slider or button matching a selector */
 const get = <T extends HTMLElement = HTMLElement>(
-  element: PcColourPalette,
+  element: PcPanelColours,
   selector: string,
 ) => query<T>(element, selector);
 
 /** Set an input's value and fire an event, then wait for the element to update */
 const enter = async (
-  element: PcColourPalette,
+  element: PcPanelColours,
   input: HTMLInputElement,
   value: string,
   type = "input",
@@ -46,7 +46,7 @@ const enter = async (
 };
 
 /** The saved colours' buttons */
-const swatches = (element: PcColourPalette) =>
+const swatches = (element: PcPanelColours) =>
   queryAll<HTMLButtonElement>(element, ".swatch");
 
 /** Press a key on an element inside the palette */
@@ -101,9 +101,9 @@ describe("channelGradient", () => {
   });
 });
 
-describe("pc-colour-palette", () => {
+describe("pc-panel-colours", () => {
   it("should render nothing without an app", async () => {
-    const element = await mount<PcColourPalette>("pc-colour-palette");
+    const element = await mount<PcPanelColours>("pc-panel-colours");
     expect(element.shadowRoot!.querySelector(".palette")).toBeNull();
     await element.importFile(new File(["{}"], "x.json"));
     await element.exportFile();

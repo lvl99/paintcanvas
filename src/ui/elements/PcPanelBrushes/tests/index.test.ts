@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeAll, vi } from "vitest";
 import "..";
 import { PresetFileError } from "../../../../lib/brushes/presetFile";
-import { previewSizes, type PcBrushMenu } from "..";
+import { previewSizes, type PcPanelBrushes } from "..";
 import { PRESET_FILE_ERRORS } from "../../../../lib/brushes/presetFile";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import {
@@ -23,9 +23,9 @@ afterEach(() => document.body.replaceChildren());
 const pointer = (type: string, clientX: number, clientY: number) =>
   new MouseEvent(type, { clientX, clientY, bubbles: true });
 
-describe("pc-brush-menu", () => {
+describe("pc-panel-brushes", () => {
   it("should render nothing without an app", async () => {
-    const element = await mount<PcBrushMenu>("pc-brush-menu");
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes");
     element.selectPreset("round1");
     expect(element.settings).toBeUndefined();
     expect(queryAll(element, "button")).toHaveLength(0);
@@ -33,8 +33,8 @@ describe("pc-brush-menu", () => {
 
   it("should control the brush by default and the eraser when kind is eraser", async () => {
     const app = createApp();
-    const brush = await mount<PcBrushMenu>("pc-brush-menu", { app });
-    const eraser = await mount<PcBrushMenu>("pc-brush-menu", {
+    const brush = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
+    const eraser = await mount<PcPanelBrushes>("pc-panel-brushes", {
       app,
       kind: "eraser",
     });
@@ -45,7 +45,7 @@ describe("pc-brush-menu", () => {
 
   it("should list presets and select one on click", async () => {
     const app = createApp();
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     expect(queryAll(element, "[data-preset]")).toHaveLength(
       Object.keys(app.brush.presets).length,
     );
@@ -68,7 +68,7 @@ describe("pc-brush-menu", () => {
   it("should show the current preset's shape image, or a round shape without one", async () => {
     const app = createApp();
     app.brush.apply({ ...app.brush.preset, image: undefined });
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const shape = query(element, ".current-shape");
     expect(shape.classList.contains("image")).toBe(false);
     app.brush.apply({
@@ -89,7 +89,7 @@ describe("pc-brush-menu", () => {
   it("should resize when dragging the size control", async () => {
     const app = createApp();
     app.brush.select("round20");
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const size = query(element, ".size");
 
     // Moving without pressing does nothing
@@ -109,7 +109,7 @@ describe("pc-brush-menu", () => {
 
   it("should capture the pointer while dragging when supported", async () => {
     const app = createApp();
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const size = query(element, ".size");
     const capture = vi.fn();
     Object.assign(size, { setPointerCapture: capture });
@@ -122,7 +122,7 @@ describe("pc-brush-menu", () => {
   it("should name presets by their ID when they have no name", async () => {
     const app = createApp();
     Object.assign(app.brush.presets, { unnamed: { id: "unnamed" } });
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const tile = query(element, '[data-preset="unnamed"]');
     expect(tile.getAttribute("aria-label")).toBe("unnamed");
     expect(tile.getAttribute("title")).toBe("unnamed");
@@ -143,7 +143,7 @@ describe("pc-brush-menu", () => {
   it("should group presets by author, with actions below", async () => {
     const app = createApp();
     const { mine, theirs } = await customPresets(app);
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     expect(queryAll(element, "h3").map((h) => h.textContent)).toEqual([
       "My presets",
       "PaintCanvas",
@@ -167,7 +167,7 @@ describe("pc-brush-menu", () => {
   });
 
   it("should show the delete cursor while Alt/Option is held", async () => {
-    const element = await mount<PcBrushMenu>("pc-brush-menu", {
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", {
       app: createApp(),
     });
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Alt" }));
@@ -186,7 +186,7 @@ describe("pc-brush-menu", () => {
   it("should delete a custom preset on Alt/Option-click after confirming, but not PaintCanvas presets", async () => {
     const app = createApp();
     const { mine } = await customPresets(app);
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const toasts: unknown[] = [];
     element.addEventListener("pc-toast", (e) =>
       toasts.push(toastText((e as CustomEvent).detail)),
@@ -221,7 +221,7 @@ describe("pc-brush-menu", () => {
 
   it("should export the custom presets, or say why it can't", async () => {
     const app = createApp();
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const toasts: unknown[] = [];
     element.addEventListener("pc-toast", (e) =>
       toasts.push(toastText((e as CustomEvent).detail)),
@@ -247,7 +247,7 @@ describe("pc-brush-menu", () => {
 
   it("should import presets from a file, or say why it can't", async () => {
     const app = createApp();
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const toasts: unknown[] = [];
     element.addEventListener("pc-toast", (e) =>
       toasts.push(toastText((e as CustomEvent).detail)),
@@ -303,7 +303,7 @@ describe("pc-brush-menu", () => {
   });
 
   it("should confirm with the browser and save to a JSON file by default", async () => {
-    const element = await mount<PcBrushMenu>("pc-brush-menu", {
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", {
       app: createApp(),
     });
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
@@ -325,7 +325,7 @@ describe("pc-brush-menu", () => {
   });
 
   it("should do nothing with presets without an app", async () => {
-    const element = await mount<PcBrushMenu>("pc-brush-menu");
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes");
     await element.deletePreset({ id: "a" });
     await element.importFile(new File(["{}"], "a.json"));
     await element.exportFile();
@@ -354,7 +354,7 @@ describe("previewSizes", () => {
   it("should show other preset file errors as they are", async () => {
     const app = createApp();
     await app.customPresets.save(app.newPreset(app.brush.preset, "Mine"));
-    const element = await mount<PcBrushMenu>("pc-brush-menu", { app });
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
     const toasts: unknown[] = [];
     element.addEventListener("pc-toast", (e) =>
       toasts.push((e as CustomEvent).detail),

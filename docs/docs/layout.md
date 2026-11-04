@@ -27,12 +27,12 @@ sidebar_label: Layout and slots
 | `footer`  | `<pc-stats>`                                                                                 |
 | `menu`    | Opened by the toolbar's menu button, floating with the panels' shadow (give it a background) |
 
-Put your own element in a slot to replace its default. Empty areas take no space. A `<pc-layers-menu>` in the `left` or `right` slot (e.g. in a `<pc-panel>`, as below) replaces the toolbar's layers button. On its own, `<pc-toolbar>` leaves the button out with `.layers=${false}`.
+Put your own element in a slot to replace its default. Empty areas take no space. A `<pc-panel-layers>` in the `left` or `right` slot (e.g. in a `<pc-panel>`, as below) replaces the toolbar's layers button. On its own, `<pc-toolbar>` leaves the button out with `.layers=${false}`.
 
 ```html
 <paint-canvas menu-text="App" menu-label="App menu">
   <pc-panel slot="right" icon="layers" label="Layers">
-    <pc-layers-menu></pc-layers-menu>
+    <pc-panel-layers></pc-panel-layers>
   </pc-panel>
   <nav slot="menu">…</nav>
 </paint-canvas>

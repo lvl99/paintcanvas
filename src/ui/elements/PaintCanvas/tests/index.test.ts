@@ -106,21 +106,21 @@ describe("paint-canvas", () => {
 
   it("should leave out the toolbar's layers menu when a side has a layers menu", async () => {
     const layersPanel = (side: string) =>
-      `<pc-panel slot="${side}" icon="layers" label="Layers"><pc-layers-menu></pc-layers-menu></pc-panel>`;
+      `<pc-panel slot="${side}" icon="layers" label="Layers"><pc-panel-layers></pc-panel-layers></pc-panel>`;
     const { layout, app } = await setup(layersPanel("right"));
     expect(query<PcToolbar>(layout, "pc-toolbar").layers).toBe(false);
     app.togglePanel(Panel.Layers);
     await layout.updateComplete;
-    expect(queryAll(layout, ".center pc-layers-menu")).toHaveLength(0);
+    expect(queryAll(layout, ".center pc-panel-layers")).toHaveLength(0);
     layout.remove();
     // In the left side too (which then has no toolbar), or given straight in a side
     const left = await setup(layersPanel("left"));
     left.app.togglePanel(Panel.Layers);
     await left.layout.updateComplete;
-    expect(queryAll(left.layout, ".center pc-layers-menu")).toHaveLength(0);
+    expect(queryAll(left.layout, ".center pc-panel-layers")).toHaveLength(0);
     left.layout.remove();
     const direct = await setup(
-      '<pc-layers-menu slot="right"></pc-layers-menu>',
+      '<pc-panel-layers slot="right"></pc-panel-layers>',
     );
     expect(query<PcToolbar>(direct.layout, "pc-toolbar").layers).toBe(false);
     direct.layout.remove();
@@ -138,10 +138,10 @@ describe("paint-canvas", () => {
     await layout.updateComplete;
     expect(menu.hasAttribute("open")).toBe(true);
     for (const [panel, tag] of [
-      [Panel.Brush, "pc-brush-menu"],
-      [Panel.Eraser, "pc-brush-menu"],
-      [Panel.Layers, "pc-layers-menu"],
-      [Panel.Palette, "pc-colour-palette"],
+      [Panel.Brush, "pc-panel-brushes"],
+      [Panel.Eraser, "pc-panel-brushes"],
+      [Panel.Layers, "pc-panel-layers"],
+      [Panel.Palette, "pc-panel-colours"],
     ] as const) {
       app.togglePanel(panel);
       await layout.updateComplete;
@@ -150,7 +150,7 @@ describe("paint-canvas", () => {
     app.toggleInterface();
     await layout.updateComplete;
     expect(layout.hasAttribute("ui-hidden")).toBe(true);
-    expect(queryAll(layout, ".center pc-layers-menu")).toHaveLength(0);
+    expect(queryAll(layout, ".center pc-panel-layers")).toHaveLength(0);
   });
 
   it("should close the colour palette on a press outside it and the colours that open it", async () => {
@@ -163,7 +163,7 @@ describe("paint-canvas", () => {
     pressOn(document.body);
     app.togglePanel(Panel.Palette);
     await layout.updateComplete;
-    const palette = query(layout, ".center pc-colour-palette");
+    const palette = query(layout, ".center pc-panel-colours");
     await (palette as unknown as { updateComplete: Promise<unknown> })
       .updateComplete;
     pressOn(palette.shadowRoot!.querySelector(".swatch")!);
@@ -410,7 +410,7 @@ describe("paint-canvas", () => {
     layout.configuring = undefined;
     app.togglePanel(Panel.Eraser);
     await layout.updateComplete;
-    query(layout, "pc-brush-menu").dispatchEvent(
+    query(layout, "pc-panel-brushes").dispatchEvent(
       new CustomEvent("pc-new-preset"),
     );
     await layout.updateComplete;

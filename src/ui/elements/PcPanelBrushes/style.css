@@ -1,14 +1,6 @@
+/* Narrower than other panels by default (set --pc-panel-width to change it) */
 :host {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-sizing: border-box;
-  width: 240px;
-  max-height: 100%;
-  padding: 8px;
-  /* Light grey, like the bars */
-  background: var(--pc-bar);
-  box-shadow: var(--pc-shadow);
+  --pc-panel-default-width: 240px;
 }
 /* The current preset on one row: its shape, name and size */
 .current {

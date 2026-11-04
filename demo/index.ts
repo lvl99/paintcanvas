@@ -5,13 +5,12 @@
 import "../src/ui";
 import { translations } from "../src/lib/i18n";
 import type { PaintCanvasElement } from "../src/ui/elements/PaintCanvas";
-import type { PcLayersMenu } from "../src/ui/elements/PcLayersMenu";
+import type { PcPanelLayers } from "../src/ui/elements/PcPanelLayers";
 import type { PcInputSettings } from "../src/ui/elements/PcInputSettings";
 import type { PcAppSettings } from "../src/ui/elements/PcAppSettings";
 import type { PcCanvasMap } from "../src/ui/elements/PcCanvasMap";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
 import type { PcToast } from "../src/ui/elements/PcToast";
-import type { PcPanel } from "../src/ui/elements/PcPanel";
 
 /** An element on the page (the page always has it) */
 const find = <T extends Element = HTMLElement>(selector: string): T =>
@@ -30,9 +29,6 @@ await translations.useDeviceLocale();
 
 /** Show the page's own text in the chosen language */
 const showText = () => {
-  find<PcPanel>("#layers-panel").label = translations.t(
-    "paintCanvas.toolbar.layers",
-  );
   find("#new-drawing").textContent = translations.t("demo.newDrawing");
   // The note shown on narrow layouts, and the template it's created from
   const narrowTemplate = find<HTMLTemplateElement>("pc-match > template");
@@ -46,7 +42,7 @@ translations.addEventListener("change", showText);
 const layout = find<PaintCanvasElement>("paint-canvas");
 await layout.updateComplete;
 const app = layout.app as NonNullable<PaintCanvasElement["app"]>;
-find<PcLayersMenu>("#layers").app = app;
+find<PcPanelLayers>("#layers").app = app;
 find<PcCanvasMap>("#map").app = app;
 find<PcInputSettings>("#settings").settings = app.input;
 find<PcAppSettings>("#app-settings").app = app;

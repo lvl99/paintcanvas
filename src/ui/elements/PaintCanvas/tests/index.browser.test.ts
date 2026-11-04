@@ -17,7 +17,7 @@ describe("paint-canvas menu in a real browser", () => {
     expect(shadow(".menu-panel")).not.toBe("none");
     layout.app.togglePanel(Panel.Layers);
     await layout.updateComplete;
-    const layers = layout.shadowRoot!.querySelector("pc-layers-menu")!;
+    const layers = layout.shadowRoot!.querySelector("pc-panel-layers")!;
     expect(shadow(".menu-panel")).toBe(getComputedStyle(layers).boxShadow);
     layout.remove();
   });

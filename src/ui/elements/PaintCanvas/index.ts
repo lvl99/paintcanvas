@@ -38,17 +38,16 @@ import {
   type SideMode,
 } from "../../layout";
 import { hasToolSettings } from "../PcToolSettings";
-import type { PcPanel } from "../PcPanel";
-import "../PcPanel";
+import { PcPanel } from "../PcPanel";
 import "../PcToolbar";
 import "../PcToolSettings";
 import "../PcCanvas";
 import "../PcCanvasMap";
-import "../PcBrushMenu";
-import "../PcLayersMenu";
+import "../PcPanelBrushes";
+import "../PcPanelLayers";
 import "../PcBrushConfig";
 import "../PcStats";
-import "../PcColourPalette";
+import "../PcPanelColours";
 import "../PcDialog";
 import type { DialogChoice } from "../PcDialog";
 
@@ -80,7 +79,7 @@ const FOCUSABLE =
  * - `menu`: the app menu the toolbar's menu button opens (the button shows only with a menu)
  *
  * Content given for a slot replaces its default; an empty element clears it. Empty slots take no space. Hiding the
- * interface (Tab key) leaves only the canvas and overlay. A `<pc-layers-menu>` given in a side (e.g. in a `<pc-panel>`)
+ * interface (Tab key) leaves only the canvas and overlay. A `<pc-panel-layers>` given in a side (e.g. in a `<pc-panel>`)
  * replaces the toolbar's layers menu button.
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
@@ -101,7 +100,7 @@ const FOCUSABLE =
  * @example
  * html`<paint-canvas style="height: 600px"></paint-canvas>`
  * html`<paint-canvas .app=${canvas} right-modes="docked, rail@800">
- *   <pc-panel slot="right" icon="layers" label="Layers"><pc-layers-menu .app=${canvas}></pc-layers-menu></pc-panel>
+ *   <pc-panel slot="right" icon="layers" label="Layers"><pc-panel-layers .app=${canvas}></pc-panel-layers></pc-panel>
  * </paint-canvas>`
  */
 export class PaintCanvasElement extends PcElement {
@@ -582,13 +581,16 @@ export class PaintCanvasElement extends PcElement {
     this.panels = {
       ...this.panels,
       [side]: assigned.filter(
-        (element): element is PcPanel => element.localName === "pc-panel",
+        (element): element is PcPanel => element instanceof PcPanel,
       ),
     };
+    // Marks them for the rail's styles (any panel, e.g. <pc-panel-layers>, not only <pc-panel>)
+    for (const panel of this.panels[side])
+      panel.toggleAttribute("data-pc-panel", true);
     this.sideLayers = {
       ...this.sideLayers,
       [side]: assigned.some((element) =>
-        element.matches("pc-layers-menu, :has(pc-layers-menu)"),
+        element.matches("pc-panel-layers, :has(pc-panel-layers)"),
       ),
     };
     this.onSlotChange(event);
@@ -632,17 +634,17 @@ export class PaintCanvasElement extends PcElement {
         (panel) =>
           html`<button
             type="button"
-            title=${panel.label}
+            title=${panel.panelLabel}
             aria-label=${
               panel.badge
-                ? this.t("paintCanvas.layout.new", { name: panel.label })
-                : panel.label
+                ? this.t("paintCanvas.layout.new", { name: panel.panelLabel })
+                : panel.panelLabel
             }
             aria-expanded=${String(this.openPanel === panel)}
             @click=${(event: Event) =>
               this.togglePanel(panel, event.currentTarget as HTMLElement)}
           >
-            <img src=${this.iconUrl(panel.icon)} alt="" />
+            <img src=${this.iconUrl(panel.panelIcon)} alt="" />
             ${panel.badge ? html`<span class="badge"></span>` : nothing}
           </button>`,
       )}
@@ -709,7 +711,7 @@ export class PaintCanvasElement extends PcElement {
     const inside = path.some(
       (target) =>
         target instanceof Element &&
-        (target.localName === "pc-colour-palette" ||
+        (target.localName === "pc-panel-colours" ||
           target.localName === "pc-colour-pair"),
     );
     if (!inside) app.closePanel();
@@ -718,25 +720,25 @@ export class PaintCanvasElement extends PcElement {
   /** The menus the toolbar opens, floating over the canvas beside it */
   private renderPanels(app: PaintCanvas) {
     const brushMenu = (kind: "brush" | "eraser") =>
-      html`<pc-brush-menu
+      html`<pc-panel-brushes
         class="panel top-panel"
         kind=${kind}
         .app=${app}
         @pc-new-preset=${() => this.newPreset(kind)}
-      ></pc-brush-menu>`;
+      ></pc-panel-brushes>`;
     return html`${app.panel === Panel.Brush ? brushMenu("brush") : nothing}
       ${app.panel === Panel.Eraser ? brushMenu("eraser") : nothing}
       ${
         app.panel === Panel.Layers && !this.layersInSide
-          ? html`<pc-layers-menu class="panel" .app=${app}></pc-layers-menu>`
+          ? html`<pc-panel-layers class="panel" .app=${app}></pc-panel-layers>`
           : nothing
       }
       ${
         app.panel === Panel.Palette
-          ? html`<pc-colour-palette
+          ? html`<pc-panel-colours
               class="panel top-panel"
               .app=${app}
-            ></pc-colour-palette>`
+            ></pc-panel-colours>`
           : nothing
       }
       <div class="panel menu-panel" ?open=${app.panel === Panel.Menu}>

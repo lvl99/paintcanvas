@@ -21,4 +21,4 @@ To let the user choose, add `<pc-theme-picker>`: three radios, light (sun), dark
 <pc-theme-picker></pc-theme-picker>
 ```
 
-`--pc-panel-max-width` sets how wide a `<pc-panel>` can be (290px by default). `--pc-layers-menu-width` sets the width of `<pc-layers-menu>` (290px by default). In a narrow `<paint-canvas>`, a layers menu in a panel opened from the rail fills the panel.
+`--pc-panel-width` sets how wide panels are (`<pc-panel>` and the panels made from it, e.g. `<pc-panel-layers>`): 290px by default, and 240px for `<pc-panel-brushes>`. Panels are never wider than the space they have.

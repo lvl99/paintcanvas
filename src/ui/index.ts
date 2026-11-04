@@ -37,10 +37,10 @@ export {
 } from "./elements/PcShortcutSettings";
 export { PcAppSettings } from "./elements/PcAppSettings";
 export {
-  PcColourPalette,
+  PcPanelColours,
   LONG_PRESS_MS,
   type ColourModel,
-} from "./elements/PcColourPalette";
+} from "./elements/PcPanelColours";
 export { PcStats, formatBytes } from "./elements/PcStats";
 export {
   PcThemePicker,

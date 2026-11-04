@@ -141,27 +141,29 @@ pc-canvas-map {
   border-radius: 50%;
   background: var(--pc-red);
 }
-.side[data-mode="rail"] ::slotted(pc-panel) {
+.side[data-mode="rail"] ::slotted([data-pc-panel]) {
   display: none;
 }
-.side[data-mode="rail"] ::slotted(pc-panel[data-pc-open]) {
+.side[data-mode="rail"] ::slotted([data-pc-panel][data-pc-open]) {
   position: absolute;
   z-index: 5;
   top: 0;
   bottom: 0;
   display: flex;
   width: var(--pc-floating-panel-width, min(360px, 85vw));
+  /* Panels are no wider than their space, which here is the rail's */
+  max-width: none;
   background: var(--pc-surface-raised);
   box-shadow: var(--pc-shadow);
 }
 /* When narrow, a layers menu fills the panel opened from the rail (a floating side sizes itself to its content) */
-:host([narrow]) .side[data-mode="rail"] ::slotted(pc-panel) {
-  --pc-layers-menu-width: 100%;
+:host([narrow]) .side[data-mode="rail"] ::slotted([data-pc-panel]) {
+  --pc-panel-width: 100%;
 }
-.side.left[data-mode="rail"] ::slotted(pc-panel[data-pc-open]) {
+.side.left[data-mode="rail"] ::slotted([data-pc-panel][data-pc-open]) {
   left: 100%;
 }
-.side.right[data-mode="rail"] ::slotted(pc-panel[data-pc-open]) {
+.side.right[data-mode="rail"] ::slotted([data-pc-panel][data-pc-open]) {
   right: 100%;
 }
 
