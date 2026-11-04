@@ -13,7 +13,7 @@ The look comes from CSS custom properties named `--pc-*` (colours, spacing, font
 }
 ```
 
-For the dark theme, set `data-pc-theme="dark"` on an ancestor (or `"auto"` to follow the device), or `theme="dark"` on a single element. `LIGHT_TOKENS` and `DARK_TOKENS` list every token.
+For the dark theme, set `data-pc-theme="dark"` on an ancestor (or `"auto"` to follow the device), or `theme="dark"` on a single element. `LIGHT_TOKENS` and `DARK_TOKENS` list every token. Besides colours, sizes and fonts, `--pc-delete-cursor` is the cursor over something a click deletes (an "X" over brush presets and saved colours while Alt/Option is held).
 
 To let the user choose, add `<pc-theme-picker>`: three radios, light (sun), dark (moon) and auto (star). It sets `data-pc-theme` on the page's root element (or on its `target`) and fires `change` with the theme, e.g. to remember it:
 

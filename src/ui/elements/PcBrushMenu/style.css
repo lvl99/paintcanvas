@@ -71,7 +71,7 @@ ul {
   background: var(--pc-bar);
 }
 :host([deleting]) li button.custom {
-  cursor: var(--delete-cursor);
+  cursor: var(--pc-delete-cursor);
 }
 /* Create, Import and Export side by side */
 .actions {

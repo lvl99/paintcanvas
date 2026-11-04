@@ -35,7 +35,6 @@ import {
   paletteFileName,
   parsePaletteFile,
 } from "../../../lib/palette";
-import { svgCursor } from "../../../lib/rendering/cursors";
 import {
   JSON_FILE_TYPE,
   saveFile,
@@ -109,13 +108,6 @@ export const LONG_PRESS_MS = 500;
 
 /** How far a touch can move and still count as held still (CSS pixels) */
 const LONG_PRESS_SLOP = 10;
-
-/** Cursor over a saved colour that a click deletes (Alt/Option held) */
-export const DELETE_COLOUR_CURSOR = svgCursor(
-  "M6 6 L18 18 M18 6 L6 18",
-  [12, 12],
-  "not-allowed",
-);
 
 /** Translation keys of the palette file error messages */
 const PALETTE_FILE_ERROR_KEYS: Record<string, string> = {
@@ -225,7 +217,6 @@ export class PcColourPalette extends PcElement {
     window.addEventListener("keydown", this.onKey);
     window.addEventListener("keyup", this.onKey);
     window.addEventListener("blur", this.onBlur);
-    this.style.setProperty("--pc-delete-cursor", DELETE_COLOUR_CURSOR);
   }
 
   override disconnectedCallback(): void {

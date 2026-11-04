@@ -488,9 +488,6 @@ describe("pc-colour-palette", () => {
 
   it("should show the delete cursor while Alt is held", async () => {
     const { element } = await setup();
-    expect(element.style.getPropertyValue("--pc-delete-cursor")).toContain(
-      "not-allowed",
-    );
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Alt" }));
     expect(element.hasAttribute("deleting")).toBe(true);
     window.dispatchEvent(new KeyboardEvent("keyup", { key: "Alt" }));

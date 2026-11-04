@@ -22,7 +22,7 @@ import {
   parsePresetFile,
   presetFileName,
 } from "../../../lib/brushes/presetFile";
-import { svgCursor } from "../../../lib/rendering/cursors";
+import { DELETE_CURSOR } from "../../../lib/rendering/cursors";
 import {
   JSON_FILE_TYPE,
   saveFile,
@@ -37,12 +37,8 @@ const PRESET_FILE_ERROR_KEYS: Record<string, string> = {
   [PRESET_FILE_ERRORS.empty]: "paintCanvas.presets.nothingToExport",
 };
 
-/** Cursor over a preset that a click deletes (Alt/Option held) */
-export const DELETE_CURSOR = svgCursor(
-  "M6 6 L18 18 M18 6 L6 18",
-  [12, 12],
-  "not-allowed",
-);
+/** Cursor over a preset that a click deletes (Alt/Option held): the `--pc-delete-cursor` token's default */
+export { DELETE_CURSOR };
 
 /** Size the previews of presets without a family are measured against, so a 50px preset fills its tile */
 const UNGROUPED_FULL_SIZE = 50;
@@ -156,8 +152,6 @@ export class PcBrushMenu extends PcElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Set here, not in the constructor: a new element must not have attributes
-    this.style.setProperty("--delete-cursor", DELETE_CURSOR);
     window.addEventListener("keydown", this.onKey);
     window.addEventListener("keyup", this.onKey);
     window.addEventListener("blur", this.onBlur);

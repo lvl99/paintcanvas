@@ -170,7 +170,6 @@ describe("pc-brush-menu", () => {
     const element = await mount<PcBrushMenu>("pc-brush-menu", {
       app: createApp(),
     });
-    expect(element.style.getPropertyValue("--delete-cursor")).toContain("url(");
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Alt" }));
     expect(element.hasAttribute("deleting")).toBe(true);
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" }));

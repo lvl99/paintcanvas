@@ -20,6 +20,13 @@ export const svgCursor = (
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hotspot[0]} ${hotspot[1]}, ${fallback}`;
 };
 
+/** Deleting: an "X", e.g. over a brush preset or saved colour that a click deletes (Alt/Option held); the point is its middle */
+export const DELETE_CURSOR = svgCursor(
+  "M6 6 L18 18 M18 6 L6 18",
+  [12, 12],
+  "not-allowed",
+);
+
 /** Colour sample (eyedropper): a pipette pointing down to the left; the point is at its tip */
 export const EYEDROPPER_CURSOR = svgCursor(
   "M2 22 L3 18 L12 9 L15 12 L6 21 Z M10 7 L17 14 M14 10 L18 6 C19 5 20 4 21 5 C22 6 21 7 20 8 L16 12",
