@@ -1,4 +1,4 @@
-// Writes pre-compiled ajv validators for the brush preset and drawing message schemas. Run with: node scripts/build-validators.ts
+// Writes pre-compiled ajv validators for the brush preset, drawing message, document and colour palette schemas. Run with: node scripts/build-validators.ts
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { generateValidatorsCode } from "../src/lib/validation/standalone.ts";

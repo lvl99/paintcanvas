@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { DEFAULT_PALETTE } from "../../../palette";
 import PaintCanvas, { MAX_CANVAS_SIZE, Panel, Tool } from "..";
 import {
   BEFORE_COMMIT_EVENT,
@@ -31,6 +32,7 @@ describe("PaintCanvas", () => {
       app: "PaintCanvas",
       filePrefix: "paintcanvas",
       presetFileFormat: "paintcanvas-brush-presets",
+      paletteFileFormat: "paintcanvas-palette",
       unknownAuthor: "Unknown",
     });
   });
@@ -40,6 +42,7 @@ describe("PaintCanvas", () => {
       app: "My App",
       filePrefix: "paintcanvas",
       presetFileFormat: "paintcanvas-brush-presets",
+      paletteFileFormat: "paintcanvas-palette",
       unknownAuthor: "Unknown",
     });
   });
@@ -117,6 +120,7 @@ describe("PaintCanvas", () => {
       background: "#ffffff",
     });
     expect(app.selectedColour).toBe("foreground");
+    expect(app.palette.colours).toEqual(DEFAULT_PALETTE);
     expect(app.interfaceVisible).toBe(true);
     expect(app.brush.preset).not.toBe(app.eraser.preset);
   });

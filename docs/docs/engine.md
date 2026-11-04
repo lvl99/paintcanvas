@@ -32,6 +32,25 @@ The engine has two colours, read with `canvas.colours` (`canvas.colour` is the f
 
 One of them is selected for configuration (`canvas.selectedColour`, the foreground by default): the colour sample tool sets it, and colour pickers can use it. Change it with `canvas.selectColour("background")`, and swap the colours with `canvas.swapColours()`.
 
+## Colour palette
+
+`canvas.palette` holds the user's saved colours (`DEFAULT_PALETTE` to start with), each once as lowercase `#rrggbb`. Change them with `add`, `merge`, `remove` and `set`; it dispatches `change` when they change. Like the input settings, it is kept in memory: save and restore it yourself, or with the app settings store.
+
+Palettes are exported and imported as JSON files matching `paletteFileSchema` from `@lvl99dotcom/paintcanvas/lib/palette`:
+
+```ts
+import {
+  exportPaletteFile,
+  parsePaletteFile,
+  paletteFileName,
+} from "@lvl99dotcom/paintcanvas/lib/palette";
+
+const text = exportPaletteFile(canvas.palette.colours); // { "format": "paintcanvas-palette", "version": 1, "colours": [...] }
+canvas.palette.merge(parsePaletteFile(text)); // throws a PaletteFileError for files that aren't compatible
+```
+
+Set your own file format name with the `names.paletteFileFormat` option, like `names.presetFileFormat` for brush presets.
+
 ## Events
 
 The engine dispatches `change` when its own state changes (tool, colours, panels). Its parts dispatch their own `change`: `canvas.layers`, `canvas.brush`, `canvas.selection`, `canvas.history` and `canvas.viewport`.

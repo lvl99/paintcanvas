@@ -1,6 +1,7 @@
 // Types for the generated validators (see validators.generated.js).
 import type { BrushPresetFile } from "../presets/schema";
 import type { PaintCanvasDocument } from "../document/schema";
+import type { PaletteFile } from "../palette/schema";
 import type {
   HistoryMessage,
   PatchMessage,
@@ -25,3 +26,4 @@ export declare const validatePatchMessage: Validator<PatchMessage>;
 export declare const validateStrokeMessage: Validator<StrokeMessage>;
 export declare const validateHistoryMessage: Validator<HistoryMessage>;
 export declare const validateDocument: Validator<PaintCanvasDocument>;
+export declare const validatePaletteFile: Validator<PaletteFile>;

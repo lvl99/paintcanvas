@@ -40,6 +40,8 @@ import {
 import { BRUSH_PRESET_FILE_FORMAT } from "../../presets";
 import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
 import InputSettings from "../InputSettings";
+import Palette from "../Palette";
+import { PALETTE_FILE_FORMAT } from "../../palette";
 import ExternalSheets from "../ExternalSheets";
 import PatchSender from "../../messages/PatchSender";
 import {
@@ -143,6 +145,8 @@ export interface PaintCanvasNames {
   filePrefix: string;
   /** The `format` written in exported brush preset files */
   presetFileFormat: string;
+  /** The `format` written in exported colour palette files */
+  paletteFileFormat: string;
   /** Author name of presets made by a user without a handle, e.g. from `presetAuthor` */
   unknownAuthor: string;
 }
@@ -152,6 +156,7 @@ export const DEFAULT_NAMES: Readonly<PaintCanvasNames> = {
   app: BUILT_IN_AUTHOR,
   filePrefix: "paintcanvas",
   presetFileFormat: BRUSH_PRESET_FILE_FORMAT,
+  paletteFileFormat: PALETTE_FILE_FORMAT,
   unknownAuthor: UNKNOWN_AUTHOR,
 };
 
@@ -296,6 +301,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** How the user's input devices control the canvas (scrolling, pinching, touch gestures, focus pen mode) */
   readonly input = new InputSettings();
+
+  /** The user's saved colours, shown as swatches */
+  readonly palette = new Palette();
   /** The user's pointer position over the canvas, in canvas pixels (undefined when off the canvas) */
   pointer?: Point;
 
