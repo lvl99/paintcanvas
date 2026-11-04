@@ -1,7 +1,7 @@
 :host {
   display: block;
   box-sizing: border-box;
-  width: var(--pc-colour-palette-width, 440px);
+  width: var(--pc-colour-palette-width, 290px);
   max-width: 100%;
   color: var(--pc-text);
   font-family: var(--pc-font);
@@ -10,9 +10,9 @@
 .palette {
   display: flex;
   flex-direction: column;
-  gap: var(--pc-space-3);
+  gap: var(--pc-space-2);
   box-sizing: border-box;
-  padding: var(--pc-space-3);
+  padding: var(--pc-space-2);
   border: 1px solid var(--pc-border);
   background: var(--pc-surface-raised);
   box-shadow: var(--pc-shadow);
@@ -21,17 +21,17 @@
 /* The colours and their hex value beside the colour model's sliders */
 .top {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--pc-space-3);
+  gap: var(--pc-space-2);
 }
 .current {
   display: flex;
+  flex: none;
   flex-direction: column;
-  width: 100px;
+  width: 76px;
   border: 1px solid var(--pc-border);
 }
 .current pc-colour-pair {
-  --pc-colour-pair-size: 100px;
+  --pc-colour-pair-size: 76px;
 }
 .hex {
   box-sizing: border-box;
@@ -43,6 +43,7 @@
   background: var(--pc-surface);
   color: var(--pc-text);
   font: inherit;
+  font-size: var(--pc-font-size-small);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -59,7 +60,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-width: 220px;
+  min-width: 0;
   border: 1px solid var(--pc-border);
 }
 [role="tablist"] {
@@ -67,7 +68,7 @@
 }
 [role="tab"] {
   flex: 1;
-  min-height: var(--pc-control-size);
+  min-height: 28px;
   border: 0;
   border-bottom: 1px solid var(--pc-border);
   background: var(--pc-surface-active);
@@ -90,10 +91,10 @@
 .sliders {
   display: grid;
   flex: 1;
-  grid-template-columns: auto 1fr 4.5em;
-  gap: var(--pc-space-1) var(--pc-space-2);
+  grid-template-columns: auto minmax(0, 1fr) 3.6em;
+  gap: var(--pc-space-1);
   align-items: center;
-  padding: var(--pc-space-2) var(--pc-space-3);
+  padding: var(--pc-space-1) var(--pc-space-2);
   background: var(--pc-surface);
 }
 .letter {
@@ -112,20 +113,20 @@
   cursor: pointer;
 }
 .sliders input[type="range"]::-webkit-slider-runnable-track {
-  height: 12px;
+  height: 10px;
   border: 1px solid var(--pc-border);
   border-radius: var(--pc-radius-pill);
   background: var(--track);
 }
 .sliders input[type="range"]::-moz-range-track {
-  height: 12px;
+  height: 10px;
   border: 1px solid var(--pc-border);
   border-radius: var(--pc-radius-pill);
   background: var(--track);
 }
 .sliders input[type="range"]::-webkit-slider-thumb {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   margin-top: -4px;
   border: 2px solid #000000;
   border-radius: 50%;
@@ -135,8 +136,8 @@
 }
 .sliders input[type="range"]::-moz-range-thumb {
   box-sizing: border-box;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: 2px solid #000000;
   border-radius: 50%;
   background: #ffffff;
@@ -145,11 +146,12 @@
 .sliders input[type="number"] {
   box-sizing: border-box;
   width: 100%;
-  padding: var(--pc-space-1);
+  padding: 2px var(--pc-space-1);
   border: 1px solid var(--pc-border);
   background: var(--pc-surface);
   color: var(--pc-text);
   font: inherit;
+  font-size: var(--pc-font-size-small);
   font-variant-numeric: tabular-nums;
 }
 .sliders input:focus-visible {
@@ -160,10 +162,10 @@
 /* Saved colours: square swatches in a grid that scrolls */
 .swatches {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
   align-content: start;
-  min-height: 80px;
-  max-height: 180px;
+  min-height: 64px;
+  max-height: 132px;
   overflow-y: auto;
   border: 1px solid var(--pc-border);
   background: var(--pc-bar);
@@ -171,7 +173,7 @@
 .swatch,
 .add {
   aspect-ratio: 1;
-  min-width: 40px;
+  min-width: 32px;
   padding: 0;
   border: 0;
   border-right: 1px solid var(--pc-border);
@@ -216,9 +218,9 @@
 
 .actions {
   display: flex;
-  gap: var(--pc-space-3);
+  gap: var(--pc-space-2);
 }
 .actions button.pill {
   flex: 1;
-  min-height: 40px;
+  min-height: 32px;
 }
