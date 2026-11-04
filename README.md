@@ -2,6 +2,8 @@
 
 Open-source painting engine and renderer for the browser, with optional UI.
 
+[Read the docs](https://lvl99.github.io/paintcanvas/), [try PaintCanvas in your browser](https://lvl99.github.io/paintcanvas/app/) or [see the UI elements](https://lvl99.github.io/paintcanvas/app/elements.html).
+
 - **Engine** (`@lvl99dotcom/paintcanvas/lib/*`): layers, brushes and erasers, custom brush presets, selection, transforms, clipboard, undo/redo, viewport, pen/touch/mouse input and rendering. No UI, and nothing is stored unless you ask (e.g. keeping the drawing in the browser).
 - **Messages**: the engine sends and receives small drawing messages (patches of pixels, strokes, undo and redo), so you can share a drawing over any transport you choose.
 - **UI** (`@lvl99dotcom/paintcanvas/ui`), optional: Lit web components, from buttons and sliders up to a full `<paint-canvas>` layout with slots for your own parts.
@@ -69,7 +71,7 @@ Importing `@lvl99dotcom/paintcanvas/ui` registers every element. To load less, i
 
 ## Documentation
 
-Guides and API pages are in [docs/](docs/), a [Docusaurus](https://docusaurus.io) site (`pnpm docs`). The guides:
+The documentation is published at https://lvl99.github.io/paintcanvas/. Its guides and API pages are in [docs/](docs/), a [Docusaurus](https://docusaurus.io) site (`pnpm docs`). The guides:
 
 - [The layout and its slots](docs/docs/layout.md)
 - [Building your own UI on the engine](docs/docs/engine.md)
@@ -80,6 +82,8 @@ Guides and API pages are in [docs/](docs/), a [Docusaurus](https://docusaurus.io
 - [Theming](docs/docs/theming.md)
 
 ## Demo
+
+The demo is published at https://lvl99.github.io/paintcanvas/app/. To run it locally:
 
 ```sh
 pnpm dev
@@ -128,5 +132,13 @@ Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in j
 | `pnpm build:validators` | Regenerates the validators after changing the preset, message or document schemas |
 | `pnpm dev`              | Starts the demo, reloading it when files change (`pnpm demo` does the same)       |
 | `pnpm docs`             | Starts the documentation site (`pnpm docs:build` builds it into `docs/build/`)    |
+| `pnpm demo:build`       | Builds the demo pages as a static site into `.pages/app/`                         |
+| `pnpm pages:build`      | Builds the GitHub Pages site (docs and demo) into `.pages/`                       |
+| `pnpm pages:preview`    | Serves the built site at http://localhost:5191/paintcanvas/                       |
+| `pnpm pages:deploy`     | Builds the site from `main` and publishes it to the `gh-pages` branch             |
 
 Each folder in `src/lib` and `src/ui` is published as its own import path (e.g. `src/lib/classes/PaintCanvas` as `@lvl99dotcom/paintcanvas/lib/classes/PaintCanvas`). `sideEffects` in `package.json` lists the UI modules that register elements when loaded (`src/ui/index.ts` and each `src/ui/elements/*/index.ts`), so bundlers keep them; add any other module that registers elements there.
+
+### GitHub Pages
+
+The docs and demo are published on GitHub Pages from the `gh-pages` branch, which holds only the built site. `pnpm pages:deploy` updates it: on a clean `main` that matches `origin/main`, it builds the site and commits and pushes it to `gh-pages`. Run it after each release, or whenever `main` has changes to the docs or demo. GitHub Pages is set to serve the root of the `gh-pages` branch (Settings → Pages).
