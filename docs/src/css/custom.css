@@ -63,11 +63,12 @@
   color: #fff;
 }
 
-/* Breadcrumbs: pink, with the current page in purple. Pink takes black text: white on it has only 3.9:1 contrast. */
+/* Breadcrumbs: pink, with the current page in purple. White on pink has 3.9:1 contrast, below WCAG's 4.5:1 for
+   text, chosen by human for the look. */
 .breadcrumbs__link,
 .breadcrumbs__link:hover {
   background-color: #f40f95;
-  color: #000;
+  color: #fff;
 }
 
 .breadcrumbs__item--active .breadcrumbs__link,
