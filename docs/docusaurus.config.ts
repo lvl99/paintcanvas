@@ -58,11 +58,6 @@ const config: Config = {
         // The demos are built beside the docs (see scripts/build-pages.ts), outside Docusaurus's routes
         { to: "pathname:///app/", label: "Try it", position: "left" },
         {
-          to: "pathname:///app/elements.html",
-          label: "UI demo",
-          position: "left",
-        },
-        {
           href: "https://github.com/lvl99/paintcanvas",
           label: "GitHub",
           position: "right",
