@@ -167,6 +167,7 @@
   "paintCanvas.autosave.elsewhereMessage": "この絵は別のウィンドウまたはタブで開かれていて、一度に描画できるのは1つだけです。「ここで描画する」を選ぶと、このウィンドウで続けられます（もう一方は停止します）。",
   "paintCanvas.autosave.takeOver": "ここで描画する",
   "paintCanvas.autosave.failed": "このブラウザに絵を保存できませんでした",
+  "paintCanvas.settings.saveFailed": "このブラウザに設定を保存できませんでした",
   "paintCanvas.stats.label": "キャンバスの詳細",
   "paintCanvas.stats.size": "キャンバス: {width} × {height} px",
   "paintCanvas.stats.zoom": "ズーム: {zoom}",

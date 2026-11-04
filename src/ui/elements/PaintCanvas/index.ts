@@ -9,7 +9,12 @@ import KeyboardShortcuts, {
 import { isTouchDevice } from "../../../lib/classes/InputSettings";
 import type { Insets } from "../../../lib/classes/Viewport";
 import type { ShortcutAction } from "../../../lib/utils/shortcuts";
-import IndexedDbLayerStore from "../../../lib/storage";
+import IndexedDbLayerStore, {
+  IndexedDbSettingsStore,
+} from "../../../lib/storage";
+import SettingsAutosave, {
+  SETTINGS_AUTOSAVE_ERROR_EVENT,
+} from "../../../lib/classes/SettingsAutosave";
 import LayerAutosave, {
   AUTOSAVE_ERROR_EVENT,
   AutosaveState,
@@ -89,6 +94,9 @@ const FOCUSABLE =
  * reloading the page (see `LayerAutosave`). While another window is drawing on it, the layout is blocked by a message
  * that offers to draw here instead. Fires `pc-toast` when the drawing can't be loaded or saved.
  *
+ * With a `settings-store` name, the user's app settings (input settings, keyboard shortcuts, colour palette and
+ * colours) are kept in the browser under that name (see `SettingsAutosave`). Fires `pc-toast` when they can't be.
+ *
  * @example
  * html`<paint-canvas style="height: 600px"></paint-canvas>`
  * html`<paint-canvas .app=${canvas} right-modes="docked, rail@800">
@@ -106,6 +114,7 @@ export class PaintCanvasElement extends PcElement {
     menuLabel: { type: String, attribute: "menu-label" },
     shortcuts: { type: Boolean },
     store: { type: String },
+    settingsStore: { type: String, attribute: "settings-store" },
     width: { state: true },
     input: { state: true },
     configuring: { state: true },
@@ -138,6 +147,9 @@ export class PaintCanvasElement extends PcElement {
 
   /** Name to keep the user's layers under in the browser, so the drawing survives reloading the page (none by default) */
   declare store?: string;
+
+  /** Name to keep the user's app settings under in the browser (none by default) */
+  declare settingsStore?: string;
 
   /** The layout's width in CSS pixels */
   declare width: number;
@@ -172,6 +184,9 @@ export class PaintCanvasElement extends PcElement {
 
   /** The autosave whose errors are shown */
   private watchedAutosave?: LayerAutosave;
+
+  /** Keeps the app settings under the `settings-store` name, if any */
+  private ownSettingsAutosave?: SettingsAutosave;
 
   /** Whether drawing was blocked when shortcuts were last watched */
   private blockedShortcuts = false;
@@ -222,6 +237,12 @@ export class PaintCanvasElement extends PcElement {
   private readonly onAutosaveError = () =>
     emit(this, "pc-toast", {
       message: this.t("paintCanvas.autosave.failed"),
+      kind: "error",
+    });
+
+  private readonly onSettingsAutosaveError = () =>
+    emit(this, "pc-toast", {
+      message: this.t("paintCanvas.settings.saveFailed"),
       kind: "error",
     });
 
@@ -318,6 +339,8 @@ export class PaintCanvasElement extends PcElement {
     super.willUpdate(changed);
     if (changed.has("app") || changed.has("store"))
       this.useStore(changed.get("app") as PaintCanvas | undefined);
+    if (changed.has("app") || changed.has("settingsStore"))
+      this.useSettingsStore();
     this.watchAutosaveErrors();
     if (
       this.isConnected &&
@@ -380,6 +403,31 @@ export class PaintCanvasElement extends PcElement {
     }
     if (app.autosave?.store.name !== name)
       this.ownAutosave = app.useLayerStore(new IndexedDbLayerStore(name));
+  }
+
+  /** Keeps the app settings under the `settings-store` name, if any (e.g. to wait until they are restored with `ready`) */
+  get settingsAutosave(): SettingsAutosave | undefined {
+    return this.ownSettingsAutosave;
+  }
+
+  /**
+   * Keep the canvas's app settings under the `settings-store` name, stopping the previous settings autosave (which
+   * saves any change waiting to be saved).
+   */
+  private useSettingsStore(): void {
+    this.ownSettingsAutosave?.stop();
+    const name = this.settingsStore || undefined;
+    this.ownSettingsAutosave =
+      name === undefined
+        ? undefined
+        : new SettingsAutosave(
+            this.app as PaintCanvas,
+            new IndexedDbSettingsStore(name),
+          );
+    this.ownSettingsAutosave?.addEventListener(
+      SETTINGS_AUTOSAVE_ERROR_EVENT,
+      this.onSettingsAutosaveError,
+    );
   }
 
   /** Show errors from the canvas's current autosave */

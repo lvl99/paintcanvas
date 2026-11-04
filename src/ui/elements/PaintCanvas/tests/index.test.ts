@@ -10,7 +10,9 @@ import type { PcToolbar } from "../../PcToolbar";
 import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { createFakeLocks } from "../../../../testing/locks";
-import IndexedDbLayerStore from "../../../../lib/storage";
+import IndexedDbLayerStore, {
+  IndexedDbSettingsStore,
+} from "../../../../lib/storage";
 import {
   AUTOSAVE_ERROR_EVENT,
   AutosaveState,
@@ -432,6 +434,50 @@ describe("paint-canvas", () => {
     layout.store = undefined;
     await layout.updateComplete;
     expect(app.autosave).toBeUndefined();
+  });
+
+  it("should keep the app settings in the browser under its settings store name", async () => {
+    const name = `settings-${crypto.randomUUID()}`;
+    const first = await setup();
+    first.layout.settingsStore = name;
+    await first.layout.updateComplete;
+    await first.layout.settingsAutosave?.ready;
+    first.app.palette.set(["#123456"]);
+    first.app.shortcuts.set("tool-brush", { key: "p" });
+    // Removing the name stops saving, saving the waiting change
+    first.layout.settingsStore = undefined;
+    await first.layout.updateComplete;
+    const store = new IndexedDbSettingsStore(name);
+    await vi.waitFor(async () =>
+      expect(await store.load()).toMatchObject({ palette: ["#123456"] }),
+    );
+    first.app.palette.set([]);
+    // Another layout with the same name restores them
+    const second = await setup();
+    second.layout.settingsStore = name;
+    await second.layout.updateComplete;
+    await second.layout.settingsAutosave?.ready;
+    expect(second.app.palette.colours).toEqual(["#123456"]);
+    expect(second.app.shortcuts.combo("tool-brush")).toEqual({ key: "p" });
+  });
+
+  it("should show a toast when the app settings can't be kept", async () => {
+    vi.spyOn(IndexedDbSettingsStore.prototype, "load").mockRejectedValue(
+      new Error("No"),
+    );
+    const { layout } = await setup();
+    const toasts: unknown[] = [];
+    layout.addEventListener("pc-toast", (event) =>
+      toasts.push((event as CustomEvent).detail),
+    );
+    layout.settingsStore = "broken";
+    await layout.updateComplete;
+    await vi.waitFor(() =>
+      expect(toasts).toContainEqual({
+        message: "Couldn't keep your settings in this browser",
+        kind: "error",
+      }),
+    );
   });
 
   it("should leave the canvas's own autosave alone, and stop its own when given another canvas", async () => {

@@ -2,6 +2,7 @@
 import type { BrushPresetFile } from "../presets/schema";
 import type { PaintCanvasDocument } from "../document/schema";
 import type { PaletteFile } from "../palette/schema";
+import type { AppSettings, SettingsFile } from "../settings/schema";
 import type {
   HistoryMessage,
   PatchMessage,
@@ -27,3 +28,5 @@ export declare const validateStrokeMessage: Validator<StrokeMessage>;
 export declare const validateHistoryMessage: Validator<HistoryMessage>;
 export declare const validateDocument: Validator<PaintCanvasDocument>;
 export declare const validatePaletteFile: Validator<PaletteFile>;
+export declare const validateSettings: Validator<AppSettings>;
+export declare const validateSettingsFile: Validator<SettingsFile>;

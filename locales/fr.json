@@ -167,6 +167,7 @@
   "paintCanvas.autosave.elsewhereMessage": "Ce dessin est ouvert dans une autre fenêtre ou un autre onglet, et un seul peut dessiner dessus à la fois. Choisissez « Dessiner ici » pour continuer dans cette fenêtre ; l’autre s’arrête.",
   "paintCanvas.autosave.takeOver": "Dessiner ici",
   "paintCanvas.autosave.failed": "Impossible de conserver le dessin dans ce navigateur",
+  "paintCanvas.settings.saveFailed": "Impossible de conserver vos réglages dans ce navigateur",
   "paintCanvas.stats.label": "Détails de la toile",
   "paintCanvas.stats.size": "Toile : {width} × {height} px",
   "paintCanvas.stats.zoom": "Zoom : {zoom}",

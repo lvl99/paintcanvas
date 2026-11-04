@@ -44,6 +44,7 @@ import InputSettings from "../InputSettings";
 import Palette from "../Palette";
 import ShortcutSettings from "../ShortcutSettings";
 import { PALETTE_FILE_FORMAT } from "../../palette";
+import { SETTINGS_FILE_FORMAT } from "../../settings/schema";
 import ExternalSheets from "../ExternalSheets";
 import PatchSender from "../../messages/PatchSender";
 import {
@@ -135,6 +136,8 @@ export interface PaintCanvasNames {
   presetFileFormat: string;
   /** The `format` written in exported colour palette files */
   paletteFileFormat: string;
+  /** The `format` written in exported settings files */
+  settingsFileFormat: string;
   /** Author name of presets made by a user without a handle, e.g. from `presetAuthor` */
   unknownAuthor: string;
 }
@@ -145,6 +148,7 @@ export const DEFAULT_NAMES: Readonly<PaintCanvasNames> = {
   filePrefix: "paintcanvas",
   presetFileFormat: BRUSH_PRESET_FILE_FORMAT,
   paletteFileFormat: PALETTE_FILE_FORMAT,
+  settingsFileFormat: SETTINGS_FILE_FORMAT,
   unknownAuthor: UNKNOWN_AUTHOR,
 };
 

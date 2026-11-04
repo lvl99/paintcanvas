@@ -33,6 +33,7 @@ describe("PaintCanvas", () => {
       filePrefix: "paintcanvas",
       presetFileFormat: "paintcanvas-brush-presets",
       paletteFileFormat: "paintcanvas-palette",
+      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });
@@ -43,6 +44,7 @@ describe("PaintCanvas", () => {
       filePrefix: "paintcanvas",
       presetFileFormat: "paintcanvas-brush-presets",
       paletteFileFormat: "paintcanvas-palette",
+      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });

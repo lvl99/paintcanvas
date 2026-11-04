@@ -167,6 +167,7 @@
   "paintCanvas.autosave.elsewhereMessage": "此画作已在另一个窗口或标签页中打开，一次只能在一个窗口中绘画。选择“在此绘画”即可在此窗口继续（另一个窗口将停止）。",
   "paintCanvas.autosave.takeOver": "在此绘画",
   "paintCanvas.autosave.failed": "无法在此浏览器中保存画作",
+  "paintCanvas.settings.saveFailed": "无法在此浏览器中保存你的设置",
   "paintCanvas.stats.label": "画布详情",
   "paintCanvas.stats.size": "画布：{width} × {height} 像素",
   "paintCanvas.stats.zoom": "缩放：{zoom}",

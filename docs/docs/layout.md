@@ -97,6 +97,28 @@ Key presses are matched on keyboards with any layout:
 - `=` counts as `+`, so `cmd +` works with or without Shift.
 - Key presses while composing text (e.g. with a Japanese input method) are ignored.
 
+## Keeping the user's settings
+
+With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette and the foreground and background colours. Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
+
+```html
+<paint-canvas settings-store="default"></paint-canvas>
+```
+
+Without the layout, use `SettingsAutosave` (`@lvl99dotcom/paintcanvas/lib/classes/SettingsAutosave`) with `IndexedDbSettingsStore` (`@lvl99dotcom/paintcanvas/lib/storage`), or your own store with `load` and `save`. Settings are exported and imported as JSON files matching `settingsFileSchema` from `@lvl99dotcom/paintcanvas/lib/settings`:
+
+```ts
+import {
+  applySettings,
+  collectSettings,
+  exportSettingsFile,
+  parseSettingsFile,
+} from "@lvl99dotcom/paintcanvas/lib/settings";
+
+const text = exportSettingsFile(collectSettings(canvas)); // { "format": "paintcanvas-settings", "version": 1, "settings": {...} }
+applySettings(canvas, parseSettingsFile(text)); // throws a SettingsFileError for files that aren't compatible
+```
+
 ## Keeping the drawing
 
 With a `store` name, the layout keeps the user's layers in the browser, so the drawing survives reloading the page. While another window is drawing on the same name, the layout is blocked by a message offering to draw here instead. See [Saving and opening drawings](documents.md#keeping-the-drawing-in-the-browser).

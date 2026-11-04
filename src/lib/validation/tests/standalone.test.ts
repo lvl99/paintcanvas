@@ -14,6 +14,8 @@ describe("generateValidatorsCode", () => {
     expect(code).toContain("export const validateHistoryMessage");
     expect(code).toContain("export const validateDocument");
     expect(code).toContain("export const validatePaletteFile");
+    expect(code).toContain("export const validateSettings");
+    expect(code).toContain("export const validateSettingsFile");
     expect(code).not.toMatch(/require\(|new Function|eval\(/);
   });
 
