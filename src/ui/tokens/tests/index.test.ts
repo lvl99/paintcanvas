@@ -36,6 +36,15 @@ describe("design tokens", () => {
       expect(LIGHT_TOKENS).toHaveProperty(name);
   });
 
+  it("should keep the canvas map's border and frame colours the same in the dark theme", () => {
+    expect(LIGHT_TOKENS).toMatchObject({
+      "map-border": "#999999",
+      "map-frame": "#000000",
+    });
+    expect(DARK_TOKENS).not.toHaveProperty("map-border");
+    expect(DARK_TOKENS).not.toHaveProperty("map-frame");
+  });
+
   it("should let one element choose its theme", () => {
     expect(tokens.cssText).toContain(':host([theme="dark"]) {');
     expect(tokens.cssText).toContain(':host([theme="auto"])');
