@@ -57,7 +57,7 @@ The engine dispatches `change` when its own state changes (tool, colours, panels
 
 Useful building blocks:
 
-- Drawing elements: `<pc-canvas>`, `<pc-canvas-map>`, `<pc-toolbar>`, `<pc-tool-settings>`, `<pc-brush-menu>`, `<pc-brush-config>`, `<pc-layers-menu>`, `<pc-layer-item>`, `<pc-input-settings>`, `<pc-stats>` (the canvas size, how much the drawing takes in the browser, zoom and the colour under the pointer), `<pc-theme-picker>`.
+- Drawing elements: `<pc-canvas>`, `<pc-canvas-map>`, `<pc-toolbar>`, `<pc-colour-pair>` (the foreground and background colours), `<pc-colour-palette>` (the colour palette menu), `<pc-tool-settings>`, `<pc-brush-menu>`, `<pc-brush-config>`, `<pc-layers-menu>`, `<pc-layer-item>`, `<pc-input-settings>`, `<pc-stats>` (the canvas size, how much the drawing takes in the browser, zoom and the colour under the pointer), `<pc-theme-picker>`.
 - Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>`, `<pc-slider>`, `<pc-context-menu>`, `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>`, `<pc-panel>`.
 - `PcElement`, the base class for your own elements: gives them `t()` for translated text, `iconUrl()` and the design tokens.
 

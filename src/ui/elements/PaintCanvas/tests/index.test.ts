@@ -141,6 +141,7 @@ describe("paint-canvas", () => {
       [Panel.Brush, "pc-brush-menu"],
       [Panel.Eraser, "pc-brush-menu"],
       [Panel.Layers, "pc-layers-menu"],
+      [Panel.Palette, "pc-colour-palette"],
     ] as const) {
       app.togglePanel(panel);
       await layout.updateComplete;
@@ -150,6 +151,27 @@ describe("paint-canvas", () => {
     await layout.updateComplete;
     expect(layout.hasAttribute("ui-hidden")).toBe(true);
     expect(queryAll(layout, ".center pc-layers-menu")).toHaveLength(0);
+  });
+
+  it("should close the colour palette on a press outside it and the colours that open it", async () => {
+    const { layout, app } = await setup();
+    const pressOn = (target: EventTarget) =>
+      target.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, composed: true }),
+      );
+    // Nothing to close
+    pressOn(document.body);
+    app.togglePanel(Panel.Palette);
+    await layout.updateComplete;
+    const palette = query(layout, ".center pc-colour-palette");
+    await (palette as unknown as { updateComplete: Promise<unknown> })
+      .updateComplete;
+    pressOn(palette.shadowRoot!.querySelector(".swatch")!);
+    const toolbar = query(layout, "pc-toolbar");
+    pressOn(toolbar.shadowRoot!.querySelector("pc-colour-pair")!);
+    expect(app.panel).toBe(Panel.Palette);
+    pressOn(document.body);
+    expect(app.panel).toBeNull();
   });
 
   it("should report its state as attributes and events", async () => {

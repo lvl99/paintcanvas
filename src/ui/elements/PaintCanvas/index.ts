@@ -48,6 +48,7 @@ import "../PcBrushMenu";
 import "../PcLayersMenu";
 import "../PcBrushConfig";
 import "../PcStats";
+import "../PcColourPalette";
 import "../PcDialog";
 import type { DialogChoice } from "../PcDialog";
 
@@ -254,9 +255,10 @@ export class PaintCanvasElement extends PcElement {
 
   // A press outside the open panel and its rail button closes it
   private readonly onDocumentPointerDown = (event: PointerEvent) => {
+    const path = event.composedPath();
+    this.closePaletteOutside(path);
     const panel = this.openPanel;
     if (!panel) return;
-    const path = event.composedPath();
     if (!path.includes(panel) && !(this.opener && path.includes(this.opener)))
       this.closePanel(false);
   };
@@ -698,6 +700,21 @@ export class PaintCanvasElement extends PcElement {
     </div>`;
   }
 
+  /**
+   * Close the colour palette on a press outside it and the colours that open it.
+   */
+  private closePaletteOutside(path: EventTarget[]): void {
+    const app = this.app;
+    if (app?.panel !== Panel.Palette) return;
+    const inside = path.some(
+      (target) =>
+        target instanceof Element &&
+        (target.localName === "pc-colour-palette" ||
+          target.localName === "pc-colour-pair"),
+    );
+    if (!inside) app.closePanel();
+  }
+
   /** The menus the toolbar opens, floating over the canvas beside it */
   private renderPanels(app: PaintCanvas) {
     const brushMenu = (kind: "brush" | "eraser") =>
@@ -712,6 +729,14 @@ export class PaintCanvasElement extends PcElement {
       ${
         app.panel === Panel.Layers && !this.layersInSide
           ? html`<pc-layers-menu class="panel" .app=${app}></pc-layers-menu>`
+          : nothing
+      }
+      ${
+        app.panel === Panel.Palette
+          ? html`<pc-colour-palette
+              class="panel top-panel"
+              .app=${app}
+            ></pc-colour-palette>`
           : nothing
       }
       <div class="panel menu-panel" ?open=${app.panel === Panel.Menu}>

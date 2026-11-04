@@ -1,0 +1,187 @@
+:host {
+  display: block;
+  box-sizing: border-box;
+  width: var(--pc-colour-palette-width, 440px);
+  max-width: 100%;
+  color: var(--pc-text);
+  font-family: var(--pc-font);
+  font-size: var(--pc-font-size);
+}
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pc-space-3);
+  box-sizing: border-box;
+  padding: var(--pc-space-3);
+  border: 1px solid var(--pc-border);
+  background: var(--pc-surface-raised);
+  box-shadow: var(--pc-shadow);
+}
+
+/* The colours and their hex value beside the colour model's sliders */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pc-space-3);
+}
+.current {
+  display: flex;
+  flex-direction: column;
+  width: 100px;
+  border: 1px solid var(--pc-border);
+}
+.current pc-colour-pair {
+  --pc-colour-pair-size: 100px;
+}
+.hex {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--pc-control-size);
+  padding: var(--pc-space-1);
+  border: 0;
+  border-top: 1px solid var(--pc-border);
+  background: var(--pc-surface);
+  color: var(--pc-text);
+  font: inherit;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.hex[aria-invalid="true"] {
+  outline: 2px solid var(--pc-dismiss-text);
+  outline-offset: -2px;
+}
+.hex:focus-visible {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+  outline-offset: -3px;
+}
+
+.channels {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 220px;
+  border: 1px solid var(--pc-border);
+}
+[role="tablist"] {
+  display: flex;
+}
+[role="tab"] {
+  flex: 1;
+  min-height: var(--pc-control-size);
+  border: 0;
+  border-bottom: 1px solid var(--pc-border);
+  background: var(--pc-surface-active);
+  color: var(--pc-text);
+  font: inherit;
+  cursor: pointer;
+}
+[role="tab"] + [role="tab"] {
+  border-left: 1px solid var(--pc-border);
+}
+[role="tab"][aria-selected="true"] {
+  border-bottom-color: transparent;
+  background: var(--pc-surface);
+  font-weight: bold;
+}
+[role="tab"]:focus-visible {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+  outline-offset: -3px;
+}
+.sliders {
+  display: grid;
+  flex: 1;
+  grid-template-columns: auto 1fr 4.5em;
+  gap: var(--pc-space-1) var(--pc-space-2);
+  align-items: center;
+  padding: var(--pc-space-2) var(--pc-space-3);
+  background: var(--pc-surface);
+}
+.letter {
+  font-weight: bold;
+}
+.sliders input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  accent-color: var(--pc-accent);
+}
+.sliders input[type="number"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--pc-space-1);
+  border: 1px solid var(--pc-border);
+  background: var(--pc-surface);
+  color: var(--pc-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.sliders input:focus-visible {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+  outline-offset: 1px;
+}
+
+/* Saved colours: square swatches in a grid that scrolls */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  align-content: start;
+  min-height: 80px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--pc-border);
+  background: var(--pc-bar);
+}
+.swatch,
+.add {
+  aspect-ratio: 1;
+  min-width: 40px;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--pc-border);
+  border-bottom: 1px solid var(--pc-border);
+  cursor: pointer;
+}
+.swatch {
+  background: var(--colour);
+  /* Long presses open the colour's menu instead of the browser's */
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+.swatch[aria-pressed="true"] {
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 3px #000000;
+}
+:host([deleting]) .swatch {
+  cursor: var(--pc-delete-cursor);
+}
+.add {
+  background: var(--pc-surface);
+  color: var(--pc-text);
+  font: inherit;
+  font-size: 20px;
+  font-weight: bold;
+}
+.add:hover:not(:disabled) {
+  background: var(--pc-surface-hover);
+}
+.add:disabled {
+  color: var(--pc-disabled);
+  cursor: default;
+}
+.swatch:focus-visible,
+.add:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+  outline-offset: -3px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--pc-space-3);
+}
+.actions button.pill {
+  flex: 1;
+  min-height: 40px;
+}

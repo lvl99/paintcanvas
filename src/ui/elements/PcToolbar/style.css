@@ -6,10 +6,12 @@
   background: var(--pc-bar);
   border-right: 1px solid var(--pc-border);
 }
-button,
-input {
+button {
   width: 50px;
   height: 50px;
+}
+pc-colour-pair {
+  border-bottom: 1px solid var(--pc-border);
 }
 /* Buttons separated by thin lines, as designed */
 button {

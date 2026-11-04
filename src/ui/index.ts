@@ -30,6 +30,12 @@ export {
   type InputSettingsLike,
 } from "./elements/PcInputSettings";
 export { PcMatch } from "./elements/PcMatch";
+export { PcColourPair, COLOUR_CLICK_EVENT } from "./elements/PcColourPair";
+export {
+  PcColourPalette,
+  LONG_PRESS_MS,
+  type ColourModel,
+} from "./elements/PcColourPalette";
 export { PcStats, formatBytes } from "./elements/PcStats";
 export {
   PcThemePicker,

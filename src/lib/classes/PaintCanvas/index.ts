@@ -94,6 +94,8 @@ export enum Panel {
   Layers = "layers",
   /** The implementer's own app menu */
   Menu = "menu",
+  /** The colour palette: the foreground and background colours, their values and the saved colours */
+  Palette = "palette",
 }
 
 /** Panels opened by tools */
