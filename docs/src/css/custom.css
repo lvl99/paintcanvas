@@ -34,3 +34,54 @@
   --ifm-color-primary-lighter: #cba5f4;
   --ifm-color-primary-lightest: #e5d3f9;
 }
+
+/* Header: purple with white text and icons */
+.navbar {
+  --ifm-navbar-background-color: #8f3de8;
+  --ifm-navbar-link-color: #fff;
+  --ifm-navbar-link-hover-color: #fff;
+  --ifm-navbar-link-active-color: #fff;
+  color: #fff;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* The phone menu that slides out of the header keeps the page's background, so its links stay readable */
+.navbar-sidebar {
+  background-color: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+}
+
+/* Sidebar: the current page is purple with white text (5.3:1 contrast) */
+.menu__link--active:not(.menu__link--sublist),
+.menu__link--active:not(.menu__link--sublist):hover {
+  background-color: #8f3de8;
+  color: #fff;
+}
+
+/* Breadcrumbs: pink, with the current page in purple. Pink takes black text: white on it has only 3.9:1 contrast. */
+.breadcrumbs__link,
+.breadcrumbs__link:hover {
+  background-color: #f40f95;
+  color: #000;
+}
+
+.breadcrumbs__item--active .breadcrumbs__link,
+.breadcrumbs__item--active .breadcrumbs__link:hover {
+  background-color: #8f3de8;
+  color: #fff;
+}
+
+/* Links within articles: blue (4.5:1 contrast on white) */
+.theme-doc-markdown a {
+  color: #2c6bff;
+}
+
+/* #2c6bff has only 3.8:1 contrast on the dark background; this lighter blue has 5.4:1 */
+[data-theme="dark"] .theme-doc-markdown a {
+  color: #5b8cff;
+}
