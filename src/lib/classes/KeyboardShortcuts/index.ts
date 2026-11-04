@@ -13,7 +13,7 @@ export const SHORTCUT_EVENT = "pc-shortcut";
  * Listens for key presses and runs the matching shortcut on the app. Shortcuts are ignored while typing in text fields.
  *
  * Tool selection, brush/eraser size, interface visibility, select all/deselect, undo/redo, cut/copy/paste, deleting the
- * masked image data (Delete or Backspace) and finishing or cancelling a
+ * masked image data (Delete or Backspace), fills, swapping colours and finishing or cancelling a
  * lasso shape are handled here; other actions (and Escape/Enter for later features) dispatch an `pc-shortcut` event with the action as `detail`.
  * Holding Space pans temporarily; releasing it returns to the selected tool.
  *
@@ -135,6 +135,15 @@ export default class KeyboardShortcuts {
         break;
       case "delete":
         app.deleteMasked();
+        break;
+      case "fill-foreground":
+        app.fill("foreground");
+        break;
+      case "fill-background":
+        app.fill("background");
+        break;
+      case "swap-colours":
+        app.swapColours();
         break;
       case "copy":
         app.copy();

@@ -28,6 +28,7 @@ The engine has two colours, read with `canvas.colours` (`canvas.colour` is the f
 
 - The brush paints the foreground colour.
 - The eraser removes paint. When the layer's alpha lock is on, it paints the background colour onto existing pixels instead, keeping their transparency. Delete and cut (`deleteMasked()`, `cut()`) do the same inside the mask.
+- `canvas.fill("foreground")` and `canvas.fill("background")` fill the selected layer with a colour, as one undoable action: only inside the mask when there is one, and only onto existing pixels when alpha lock is on. The keyboard shortcuts are `cmd backspace` and `alt backspace`; `x` swaps the colours.
 
 One of them is selected for configuration (`canvas.selectedColour`, the foreground by default): the colour sample tool sets it, and colour pickers can use it. Change it with `canvas.selectColour("background")`, and swap the colours with `canvas.swapColours()`.
 

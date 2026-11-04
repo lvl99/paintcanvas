@@ -16,7 +16,10 @@ export type ShortcutAction =
   | { type: "copy" }
   | { type: "paste" }
   | { type: "cancel" }
-  | { type: "commit" };
+  | { type: "commit" }
+  | { type: "fill-foreground" }
+  | { type: "fill-background" }
+  | { type: "swap-colours" };
 
 /** A key combination. `cmd` matches the Command key on macOS and Ctrl on Windows/Linux. */
 export interface KeyCombo {
@@ -54,6 +57,9 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { key: "x", cmd: true, action: { type: "cut" } },
   { key: "delete", action: { type: "delete" } },
   { key: "backspace", action: { type: "delete" } },
+  { key: "backspace", cmd: true, action: { type: "fill-foreground" } },
+  { key: "backspace", alt: true, action: { type: "fill-background" } },
+  { key: "x", action: { type: "swap-colours" } },
   { key: "c", cmd: true, action: { type: "copy" } },
   { key: "v", cmd: true, action: { type: "paste" } },
   { key: "escape", action: { type: "cancel" } },

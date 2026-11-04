@@ -116,6 +116,78 @@ describe("PaintCanvas clipboard", () => {
     expect(app.history.canUndo).toBe(true);
   });
 
+  it("should fill the whole layer without a mask, and the mask's bounds with one, as undoable actions", () => {
+    const { app, created } = createApp();
+    const changeImage = vi.spyOn(app.layers, "changeImage");
+    const calls = () =>
+      created.find(({ canvas }) => canvas === app.layers.active.canvas)!.calls;
+    app.setColour("#ff0000");
+    app.fill("foreground");
+    expect(changeImage).toHaveBeenLastCalledWith(
+      app.layers.active.id,
+      { x: 0, y: 0, width: 10, height: 10 },
+      expect.any(Function),
+    );
+    expect(calls()).toContainEqual([
+      "set:globalCompositeOperation",
+      "source-over",
+    ]);
+    expect(app.history.canUndo).toBe(true);
+    // A mask covering one pixel
+    app.selection.selectAll();
+    app.selection.active = true;
+    const maskData = new Uint8ClampedArray(10 * 10 * 4);
+    maskData[(4 * 10 + 5) * 4 + 3] = 128;
+    (
+      app.selection.mask!.getContext("2d") as unknown as Record<string, unknown>
+    ).getImageData = () => ({ data: maskData });
+    app.fill("background");
+    expect(changeImage).toHaveBeenLastCalledWith(
+      app.layers.active.id,
+      { x: 5, y: 4, width: 1, height: 1 },
+      expect.any(Function),
+    );
+  });
+
+  it("should only fill the layer's image data when its alpha lock is on", () => {
+    const { app, created } = createApp();
+    app.layers.update(app.layers.active.id, { alphaLock: true });
+    const changeImage = vi.spyOn(app.layers, "changeImage");
+    app.fill("foreground");
+    expect(changeImage).toHaveBeenCalledWith(
+      app.layers.active.id,
+      { x: 2, y: 2, width: 1, height: 1 },
+      expect.any(Function),
+    );
+    expect(
+      created.find(({ canvas }) => canvas === app.layers.active.canvas)!.calls,
+    ).toContainEqual(["set:globalCompositeOperation", "source-atop"]);
+    // Nothing to fill inside the mask
+    fullMask(app);
+    const empty = app.layers.create();
+    app.layers.update(empty.id, { alphaLock: true });
+    (empty.context as unknown as Record<string, unknown>).getImageData =
+      () => ({
+        data: new Uint8ClampedArray(10 * 10 * 4),
+      });
+    changeImage.mockClear();
+    app.fill("foreground");
+    expect(changeImage).not.toHaveBeenCalled();
+  });
+
+  it("should not fill during a stroke or while a transform is pending", () => {
+    const { app } = createApp();
+    const changeImage = vi.spyOn(app.layers, "changeImage");
+    const drawing = vi.spyOn(app.strokes, "drawing", "get");
+    drawing.mockReturnValue(true);
+    app.fill("foreground");
+    drawing.mockRestore();
+    app.selectTool(Tool.Move);
+    app.transform.setBox({ ...app.transform.box!, cx: 6 });
+    app.fill("foreground");
+    expect(changeImage).not.toHaveBeenCalled();
+  });
+
   it("should paste over the selected layer with the Move tool, keeping it until another tool is selected", () => {
     const { app } = createApp();
     app.paste();

@@ -44,6 +44,9 @@ describe("matchShortcut", () => {
     ["Z", { metaKey: true, shiftKey: true }, { type: "redo" }],
     ["Delete", {}, { type: "delete" }],
     ["Backspace", {}, { type: "delete" }],
+    ["Backspace", { metaKey: true }, { type: "fill-foreground" }],
+    ["Backspace", { altKey: true }, { type: "fill-background" }],
+    ["x", {}, { type: "swap-colours" }],
     ["Escape", {}, { type: "cancel" }],
     ["Enter", {}, { type: "commit" }],
   ])("should match %j with %j", (value, modifiers, action) => {

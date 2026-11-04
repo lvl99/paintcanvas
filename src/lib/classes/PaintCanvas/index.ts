@@ -1122,6 +1122,46 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
+   * Fill the selected layer with the foreground or background colour as one undoable action: only the masked area when
+   * there is a mask (partly where it is partly), and only existing pixels when the layer's alpha lock is on. Does
+   * nothing during a stroke or while a transform is pending.
+   *
+   * @example
+   * canvas.fill("foreground");
+   */
+  fill(slot: ColourSlot): void {
+    if (this.strokeEngine.drawing || this.transformer.pending) return;
+    const area = this.fillArea();
+    if (area) this.paintArea(area, this.currentColours[slot]);
+  }
+
+  /**
+   * The area a fill changes: the mask's bounds (or the whole canvas without a mask), cut to the selected layer's image
+   * data when its alpha lock is on. None if that is empty.
+   */
+  private fillArea(): Rect | undefined {
+    const { width, height } = this;
+    const layer = this.layerStack.active;
+    const mask = this.currentSelection.mask;
+    const maskData = mask
+      ? (
+          mask.getContext("2d") as OffscreenCanvasRenderingContext2D
+        ).getImageData(0, 0, width, height).data
+      : undefined;
+    if (layer.alphaLock) {
+      return contentBounds(
+        layer.context.getImageData(0, 0, width, height).data,
+        width,
+        height,
+        maskData,
+      );
+    }
+    return maskData
+      ? contentBounds(maskData, width, height)
+      : { x: 0, y: 0, width, height };
+  }
+
+  /**
    * The bounds of the selected layer's image data inside the mask, if there is a mask with image data inside it. None
    * during a stroke or while a transform is pending.
    */

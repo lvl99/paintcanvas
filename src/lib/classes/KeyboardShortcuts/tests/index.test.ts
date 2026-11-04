@@ -128,6 +128,23 @@ describe("KeyboardShortcuts", () => {
     expect(deleteMasked).toHaveBeenCalledTimes(2);
   });
 
+  it("should fill with cmd+Backspace and alt+Backspace, and swap colours with x", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    const fill = vi.spyOn(app, "fill");
+    const deleteMasked = vi.spyOn(app, "deleteMasked");
+    press(window, "Backspace", { metaKey: true });
+    press(window, "Backspace", { altKey: true });
+    expect(fill.mock.calls).toEqual([["foreground"], ["background"]]);
+    expect(deleteMasked).not.toHaveBeenCalled();
+    press(window, "x");
+    expect(app.colours).toEqual({
+      foreground: "#ffffff",
+      background: "#000000",
+    });
+  });
+
   it("should ignore key presses while typing and unknown keys", () => {
     const app = createApp();
     shortcuts = new KeyboardShortcuts(app);
