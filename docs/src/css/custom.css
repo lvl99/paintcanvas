@@ -56,21 +56,15 @@
   color: var(--ifm-font-color-base);
 }
 
-/* Sidebar: the current page is purple with white text (5.3:1 contrast) */
+/* Sidebar: the current page is pink with white text. That has 3.9:1 contrast, below WCAG's 4.5:1 for text, chosen by
+   human for the look. */
 .menu__link--active:not(.menu__link--sublist),
 .menu__link--active:not(.menu__link--sublist):hover {
-  background-color: #8f3de8;
-  color: #fff;
-}
-
-/* Breadcrumbs: pink, with the current page in purple. White on pink has 3.9:1 contrast, below WCAG's 4.5:1 for
-   text, chosen by human for the look. */
-.breadcrumbs__link,
-.breadcrumbs__link:hover {
   background-color: #f40f95;
   color: #fff;
 }
 
+/* Breadcrumbs: the current page is purple with white text; the others keep the theme's grey */
 .breadcrumbs__item--active .breadcrumbs__link,
 .breadcrumbs__item--active .breadcrumbs__link:hover {
   background-color: #8f3de8;
