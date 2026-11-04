@@ -36,7 +36,7 @@ describe("pc-panel-layers", () => {
     const element = await mount<PcPanelLayers>("pc-panel-layers", { app });
     const [first, second] = queryAll<PcLayerItem>(element, "pc-layer-item");
     const openMenu = async (item: PcLayerItem) => {
-      query(item, ".handle").dispatchEvent(
+      query(query(item, ".handle"), "button").dispatchEvent(
         new MouseEvent("contextmenu", { cancelable: true }),
       );
       await item.updateComplete;

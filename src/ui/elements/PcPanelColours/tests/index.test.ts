@@ -3,7 +3,7 @@ import "..";
 import { LONG_PRESS_MS, channelGradient, type PcPanelColours } from "..";
 import type { PcColourPair } from "../../PcColourPair";
 import type { PcDialog } from "../../PcDialog";
-import type { PcContextMenu } from "../../PcContextMenu";
+import type { PcMenu } from "../../PcMenu";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import { events, mount, query, queryAll } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
@@ -340,14 +340,14 @@ describe("pc-panel-colours", () => {
     swatches(element)[1]!.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
     await element.updateComplete;
-    const menu = get<PcContextMenu>(element, "pc-context-menu");
+    const menu = get<PcMenu>(element, "pc-menu");
     expect([menu.x, menu.y, menu.label]).toEqual([30, 40, "#00ff00 actions"]);
     expect(menu.items).toEqual([
       { value: "delete", label: "Delete color", danger: true },
     ]);
     query<HTMLButtonElement>(menu, '[data-value="delete"]').click();
     await element.updateComplete;
-    expect(element.shadowRoot!.querySelector("pc-context-menu")).toBeNull();
+    expect(element.shadowRoot!.querySelector("pc-menu")).toBeNull();
     get<PcDialog>(element, "pc-dialog").choose("delete");
     await element.updateComplete;
     expect(app.palette.colours).toEqual(["#ff0000", "#0000ff"]);
@@ -359,7 +359,7 @@ describe("pc-panel-colours", () => {
       new MouseEvent("contextmenu", { bubbles: true }),
     );
     await element.updateComplete;
-    get<PcContextMenu>(element, "pc-context-menu").close();
+    get<PcMenu>(element, "pc-menu").close();
     await element.updateComplete;
     await element.updateComplete;
     expect(element.shadowRoot!.activeElement).toBe(swatches(element)[2]);
@@ -388,13 +388,13 @@ describe("pc-panel-colours", () => {
     pointer("pointerup", 5);
     vi.advanceTimersByTime(LONG_PRESS_MS);
     await element.updateComplete;
-    expect(element.shadowRoot!.querySelector("pc-context-menu")).toBeNull();
+    expect(element.shadowRoot!.querySelector("pc-menu")).toBeNull();
     pointer("pointerdown", 5);
     // Pressing again restarts the wait
     pointer("pointerdown", 6);
     vi.advanceTimersByTime(LONG_PRESS_MS);
     await element.updateComplete;
-    expect(get<PcContextMenu>(element, "pc-context-menu").x).toBe(6);
+    expect(get<PcMenu>(element, "pc-menu").x).toBe(6);
     swatch.click();
     expect(app.colour).toBe("#000000");
     // The next click works again
@@ -458,12 +458,12 @@ describe("pc-panel-colours", () => {
     window.addEventListener("keydown", shortcut);
     press(swatches(element)[0]!, "ContextMenu");
     await element.updateComplete;
-    expect(get<PcContextMenu>(element, "pc-context-menu").open).toBe(true);
-    get<PcContextMenu>(element, "pc-context-menu").close();
+    expect(get<PcMenu>(element, "pc-menu").open).toBe(true);
+    get<PcMenu>(element, "pc-menu").close();
     await element.updateComplete;
     press(swatches(element)[0]!, "F10", { shiftKey: true });
     await element.updateComplete;
-    get<PcContextMenu>(element, "pc-context-menu").close();
+    get<PcMenu>(element, "pc-menu").close();
     press(swatches(element)[1]!, "Backspace");
     await element.updateComplete;
     expect(element.shadowRoot!.querySelector("pc-dialog")).not.toBeNull();
@@ -516,7 +516,7 @@ describe("pc-panel-colours", () => {
     await element.updateComplete;
     press(palette, "Escape");
     expect(app.panel).toBe(Panel.Palette);
-    get<PcContextMenu>(element, "pc-context-menu").close();
+    get<PcMenu>(element, "pc-menu").close();
     await element.updateComplete;
     press(palette, "Enter");
     expect(app.panel).toBe(Panel.Palette);

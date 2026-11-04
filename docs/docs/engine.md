@@ -58,7 +58,7 @@ The engine dispatches `change` when its own state changes (tool, colours, panels
 Useful building blocks:
 
 - Drawing elements: `<pc-canvas>`, `<pc-canvas-map>`, `<pc-toolbar>`, `<pc-colour-pair>` (the foreground and background colours), `<pc-panel-colours>` (the colour palette menu), `<pc-shortcut-settings>` (changing keyboard shortcuts), `<pc-app-settings>` (keyboard shortcuts window and settings import/export), `<pc-tool-settings>`, `<pc-panel-brushes>`, `<pc-brush-config>`, `<pc-panel-layers>`, `<pc-layer-item>`, `<pc-input-settings>`, `<pc-stats>` (the canvas size, how much the drawing takes in the browser, zoom and the colour under the pointer), `<pc-theme-picker>`.
-- Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>`, `<pc-slider>`, `<pc-context-menu>`, `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>`, `<pc-panel>`.
+- Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>`, `<pc-slider>`, `<pc-menu>`, `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>`, `<pc-panel>`.
 - `PcElement`, the base class for your own elements: gives them `t()` for translated text, `iconUrl()` and the design tokens.
 
 Custom brush presets are kept in memory unless you pass a `presetStore` (e.g. backed by IndexedDB) in the options.

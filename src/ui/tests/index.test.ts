@@ -10,6 +10,7 @@ describe("@lvl99dotcom/paintcanvas/ui", () => {
       "pc-icon-toggle",
       "pc-toggle-checkbox",
       "pc-slider",
+      "pc-menu",
       "pc-context-menu",
       "pc-dialog",
       "pc-toast",

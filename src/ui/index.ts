@@ -15,7 +15,15 @@ export { PcButtonGroup } from "./elements/PcButtonGroup";
 export { PcIconToggle } from "./elements/PcIconToggle";
 export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
-export { PcContextMenu, type MenuItem } from "./elements/PcContextMenu";
+export { PcMenu, type MenuItem } from "./elements/PcMenu";
+export {
+  PcContextMenu,
+  CONTEXT_MENU_TOGGLE_EVENT,
+  MENU_MARGIN,
+  menuLeft,
+  menuTop,
+  type MenuPlacement,
+} from "./elements/PcContextMenu";
 export {
   PcDialog,
   CANCEL_CHOICE,

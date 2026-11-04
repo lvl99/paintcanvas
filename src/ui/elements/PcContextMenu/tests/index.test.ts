@@ -1,185 +1,186 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import "..";
-import type { PcContextMenu } from "..";
-import { events, mount } from "../../../../testing/elements";
 import {
-  ariaKeyShortcut,
-  shortcutLabel,
-} from "../../../../lib/utils/shortcuts";
+  CONTEXT_MENU_TOGGLE_EVENT,
+  MENU_MARGIN,
+  menuLeft,
+  menuTop,
+  type PcContextMenu,
+} from "..";
+import type { PcMenu } from "../../PcMenu";
+import { events, mount, query } from "../../../../testing/elements";
 
-afterEach(() => document.body.replaceChildren());
+afterEach(() => {
+  vi.restoreAllMocks();
+  document.body.replaceChildren();
+});
 
 const items = [
   { value: "duplicate", label: "Duplicate" },
-  { value: "merge", label: "Merge down…", disabled: true },
-  { value: "clear", label: "Clear" },
   { value: "delete", label: "Delete", danger: true },
 ];
 
-/** The menu's item buttons */
-const buttons = (menu: PcContextMenu) => [
-  ...menu.shadowRoot!.querySelectorAll<HTMLButtonElement>("[role=menuitem]"),
-];
-
-/** The focused element inside the menu */
-const focused = (menu: PcContextMenu) => menu.shadowRoot!.activeElement;
-
-/** Press a key in the menu */
-const press = (menu: PcContextMenu, key: string) =>
-  menu
-    .shadowRoot!.querySelector("[role=menu]")!
-    .dispatchEvent(
-      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
-    );
-
-describe("pc-context-menu", () => {
-  it("should show its items where asked, focusing the first when it opens", async () => {
-    const menu = await mount<PcContextMenu>("pc-context-menu", {
-      items,
-      label: "Layer actions",
-      x: 10,
-      y: 20,
-    });
-    expect([menu.style.left, menu.style.top]).toEqual(["10px", "20px"]);
-    expect(
-      menu.shadowRoot!.querySelector("[role=menu]")!.getAttribute("aria-label"),
-    ).toBe("Layer actions");
-    expect(
-      buttons(menu).map((b) => [
-        b.textContent?.trim(),
-        b.disabled,
-        b.className,
-      ]),
-    ).toEqual([
-      ["Duplicate", false, ""],
-      ["Merge down…", true, ""],
-      ["Clear", false, ""],
-      ["Delete", false, "danger"],
-    ]);
-    menu.open = true;
-    await menu.updateComplete;
-    expect(focused(menu)).toBe(buttons(menu)[0]);
+/** A context menu with its own menu of items, and its button placed at (10, 20), 30px square */
+const setup = async (properties: Partial<PcContextMenu> = {}) => {
+  const element = await mount<PcContextMenu>("pc-context-menu", {
+    items,
+    label: "Layer actions",
+    ...properties,
   });
+  const button = query<HTMLButtonElement>(element, "button");
+  vi.spyOn(button, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(10, 20, 30, 30),
+  );
+  const toggles = events<{ open: boolean }>(element, CONTEXT_MENU_TOGGLE_EVENT);
+  /** Press the button and wait for the menu to be placed */
+  const press = async () => {
+    button.click();
+    await element.updateComplete;
+    await element.menu?.updateComplete;
+  };
+  return { element, button, toggles, press };
+};
 
-  it("should move focus with the arrow keys, Home and End, skipping disabled items", async () => {
-    const menu = await mount<PcContextMenu>("pc-context-menu", {
-      items,
-      open: true,
-    });
-    const [duplicate, , clear, remove] = buttons(menu);
-    press(menu, "ArrowDown");
-    expect(focused(menu)).toBe(clear);
-    press(menu, "End");
-    expect(focused(menu)).toBe(remove);
-    press(menu, "ArrowDown");
-    expect(focused(menu)).toBe(duplicate);
-    press(menu, "ArrowUp");
-    expect(focused(menu)).toBe(remove);
-    press(menu, "Home");
-    press(menu, "ArrowUp");
-    expect(focused(menu)).toBe(remove);
-    press(menu, "a");
-    expect(focused(menu)).toBe(remove);
-  });
-
-  it("should choose an item and close, or close on Escape, Tab or a press outside", async () => {
-    const menu = await mount<PcContextMenu>("pc-context-menu", {
-      items,
-      open: true,
-    });
-    const chosen = events(menu, "pc-select");
-    const closes = events(menu, "pc-close");
-    buttons(menu)[2]!.click();
-    expect(chosen).toEqual([{ value: "clear" }]);
-    press(menu, "Escape");
-    press(menu, "Tab");
-    menu
-      .shadowRoot!.querySelector("button")!
-      .dispatchEvent(
-        new Event("pointerdown", { bubbles: true, composed: true }),
-      );
-    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
-    expect(closes).toHaveLength(4);
-    menu.open = false;
-    await menu.updateComplete;
-    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
-    menu.remove();
-    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
-    expect(closes).toHaveLength(4);
+describe("menuTop and menuLeft", () => {
+  it("should keep a menu within the window, but not past its top or left margin", () => {
+    expect(menuTop(100, 300, 800)).toBe(100);
+    expect(menuTop(700, 300, 800)).toBe(800 - MENU_MARGIN - 300);
+    expect(menuTop(700, 900, 800)).toBe(MENU_MARGIN);
+    expect(menuLeft(100, 200, 1000)).toBe(100);
+    expect(menuLeft(900, 200, 1000)).toBe(1000 - MENU_MARGIN - 200);
+    expect(menuLeft(900, 2000, 1000)).toBe(MENU_MARGIN);
   });
 });
 
-describe("pc-context-menu item extras", () => {
-  const extras = [
-    { value: "save", label: "Save", shortcut: { key: "s", cmd: true } },
-    { value: "grid", label: "Show grid", checked: true },
-    { value: "rulers", label: "Show rulers", checked: false },
-    { value: "brush", label: "Brush", icon: "brush" },
-    {
-      value: "fill",
-      label: "Fill with background colour",
-      shortcut: { key: "backspace", alt: true },
-    },
-    {
-      value: "long",
-      label: "Long shortcut",
-      shortcut: { key: "z", ctrl: true, alt: true, shift: true, cmd: true },
-    },
-  ];
-
-  /** Each button's left text, label and right text */
-  const parts = (menu: PcContextMenu) =>
-    [...menu.shadowRoot!.querySelectorAll("button")].map((button) => [
-      button.querySelector(".start")?.textContent?.trim() ??
-        button.querySelector(".start pc-icon")?.getAttribute("name"),
-      button.querySelector(".label")!.textContent,
-      button.querySelector(".end")?.textContent ?? null,
-    ]);
-
-  it("should show checkmarks and icons on the left, and short shortcuts on the right", async () => {
-    const menu = await mount<PcContextMenu>("pc-context-menu", {
-      items: extras,
-    });
-    const cmd = shortcutLabel({ key: "s", cmd: true });
-    expect(parts(menu)).toEqual([
-      ["", "Save", cmd],
-      ["✔", "Show grid", null],
-      ["", "Show rulers", null],
-      ["", "Brush", null],
-      ["", "Fill with background colour", "⌥⌫"],
-      // ^⌥⇧⌘Z is longer than 3 characters
-      ["", "Long shortcut", null],
-    ]);
-    const brush = menu.shadowRoot!.querySelector('[data-value="brush"]')!;
-    expect(brush.querySelector(".start pc-icon")!.getAttribute("name")).toBe(
-      "brush",
-    );
+describe("pc-context-menu", () => {
+  it("should show a ⋮ button for its menu, named for screen readers", async () => {
+    const { element, button } = await setup();
+    expect(button.textContent?.trim()).toBe("⋮");
+    expect(button.getAttribute("aria-haspopup")).toBe("menu");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.getAttribute("aria-label")).toBe("Layer actions");
+    expect(element.menu?.label).toBe("Layer actions");
+    // Its own menu is named like the button unless given a menu label
+    element.menuLabel = "Actions";
+    await element.updateComplete;
+    expect(element.menu?.label).toBe("Actions");
+    expect(element.open).toBe(false);
+    const unnamed = await mount<PcContextMenu>("pc-context-menu");
+    expect(query(unnamed, "button").hasAttribute("aria-label")).toBe(false);
+    expect(unnamed.menu).toBeUndefined();
   });
 
-  it("should mark toggles and shortcuts for screen readers", async () => {
-    const menu = await mount<PcContextMenu>("pc-context-menu", {
-      items: extras,
+  it("should open its menu under the button, telling listeners, and close it on a second press", async () => {
+    const { element, button, toggles, press } = await setup({
+      menuLabel: "Actions",
     });
-    const button = (value: string) =>
-      menu.shadowRoot!.querySelector(`[data-value="${value}"]`)!;
-    expect(button("grid").getAttribute("role")).toBe("menuitemcheckbox");
-    expect(button("grid").getAttribute("aria-checked")).toBe("true");
-    expect(button("rulers").getAttribute("aria-checked")).toBe("false");
-    expect(button("save").getAttribute("role")).toBe("menuitem");
-    expect(button("save").hasAttribute("aria-checked")).toBe(false);
-    expect(button("save").getAttribute("aria-keyshortcuts")).toBe(
-      ariaKeyShortcut({ key: "s", cmd: true }),
-    );
-    expect(button("grid").hasAttribute("aria-keyshortcuts")).toBe(false);
-    expect(
-      button("save").querySelector(".end")!.getAttribute("aria-hidden"),
-    ).toBe("true");
+    await press();
+    const menu = element.menu as PcMenu;
+    expect([element.open, menu.open]).toEqual([true, true]);
+    expect([menu.x, menu.y]).toEqual([10, 50]);
+    expect(menu.label).toBe("Actions");
+    expect(menu.anchor).toBe(element);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    await press();
+    expect([element.open, menu.open]).toEqual([false, false]);
+    expect(toggles).toEqual([{ open: true }, { open: false }]);
   });
 
-  it("should leave out the left space when no item uses it", async () => {
-    const menu = await mount<PcContextMenu>("pc-context-menu", {
-      items: extras.slice(0, 1),
-    });
-    expect(menu.shadowRoot!.querySelector(".start")).toBeNull();
+  it("should open beside the button, moved to stay within the window", async () => {
+    const { element, press } = await setup({ placement: "beside" });
+    const menu = element.menu as PcMenu;
+    Object.defineProperty(menu, "offsetWidth", { value: 5000 });
+    Object.defineProperty(menu, "offsetHeight", { value: 100 });
+    await press();
+    await menu.updateComplete;
+    expect([menu.x, menu.y]).toEqual([MENU_MARGIN, 20]);
+  });
+
+  it("should open and close on a right-click instead of the browser's menu", async () => {
+    const { element, button } = await setup();
+    const event = new MouseEvent("contextmenu", { cancelable: true });
+    button.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(element.open).toBe(true);
+    button.dispatchEvent(new MouseEvent("contextmenu", { cancelable: true }));
+    expect(element.open).toBe(false);
+  });
+
+  it("should pass on the chosen item and close, returning focus to the button", async () => {
+    const { element, button, press } = await setup();
+    const chosen = events<{ value: string }>(element, "pc-select");
+    await press();
+    const menu = element.menu as PcMenu;
+    query<HTMLButtonElement>(menu, '[data-value="duplicate"]').click();
+    await element.updateComplete;
+    expect(chosen).toEqual([{ value: "duplicate" }]);
+    expect(element.open).toBe(false);
+    expect(element.shadowRoot!.activeElement).toBe(button);
+  });
+
+  it("should close on a press outside, but not on its own button, leaving focus where it went", async () => {
+    const { element, button, press } = await setup();
+    await press();
+    button.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, composed: true }),
+    );
+    expect(element.open).toBe(true);
+    const outside = document.createElement("input");
+    document.body.append(outside);
+    outside.focus();
+    outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    await element.updateComplete;
+    expect(element.open).toBe(false);
+    expect(document.activeElement).toBe(outside);
+  });
+
+  it("should close on scroll, and stop listening once closed or removed", async () => {
+    const { element, press } = await setup();
+    await press();
+    window.dispatchEvent(new Event("scroll"));
+    await element.updateComplete;
+    expect(element.open).toBe(false);
+    const remove = vi.spyOn(window, "removeEventListener");
+    await press();
+    element.remove();
+    expect(remove).toHaveBeenCalledWith("scroll", expect.any(Function), true);
+  });
+
+  it("should open a slotted menu and icon instead of its own", async () => {
+    const element = await mount<PcContextMenu>(
+      "pc-context-menu",
+      { label: "More" },
+      '<span slot="icon">☰</span><pc-menu slot="menu" label="Mine"></pc-menu>',
+    );
+    const slotted = element.querySelector<PcMenu>("pc-menu")!;
+    slotted.items = items;
+    await element.updateComplete;
+    expect(element.menu).toBe(slotted);
+    expect(slotted.label).toBe("Mine");
+    query<HTMLButtonElement>(element, "button").click();
+    await element.updateComplete;
+    expect(slotted.open).toBe(true);
+    // A menu slotted later is set up like the current one
+    const later = document.createElement("pc-menu") as PcMenu;
+    later.slot = "menu";
+    slotted.remove();
+    element.append(later);
+    await new Promise((resolve) => setTimeout(resolve));
+    await element.updateComplete;
+    expect(element.menu).toBe(later);
+    expect([later.open, later.label, later.anchor]).toEqual([
+      true,
+      "More",
+      element,
+    ]);
+  });
+
+  it("should not open while disabled, or tell listeners when nothing changes", async () => {
+    const { element, button, toggles } = await setup({ disabled: true });
+    expect(button.disabled).toBe(true);
+    element.setOpen(true);
+    element.setOpen(false);
+    expect(element.open).toBe(false);
+    expect(toggles).toEqual([]);
   });
 });

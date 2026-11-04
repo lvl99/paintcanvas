@@ -72,10 +72,3 @@ menu.addEventListener("pc-select", (event) => {
   alphaLock = !alphaLock;
   menu.items = menuItems();
 });
-find("#menu-button").addEventListener("click", (event) => {
-  const { left, bottom } = (
-    event.currentTarget as HTMLElement
-  ).getBoundingClientRect();
-  Object.assign(menu, { x: left, y: bottom + 4, open: true });
-});
-menu.addEventListener("pc-close", () => (menu.open = false));

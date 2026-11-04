@@ -8,6 +8,9 @@ import { BlendMode, type default as Layer } from "../../../lib/classes/Layer";
 import type LayerStack from "../../../lib/classes/LayerStack";
 import { drawCheckerboard, fitSize } from "../../../lib/rendering/checkerboard";
 import "../PcDialog";
+import "../PcContextMenu";
+import { MENU_MARGIN, menuTop } from "../PcContextMenu";
+import type { MenuItem } from "../PcMenu";
 import { CANCEL_CHOICE, type DialogChoice } from "../PcDialog";
 import type BackgroundWork from "../../../lib/classes/BackgroundWork";
 
@@ -139,24 +142,8 @@ export interface LayerDragDetail {
   y: number;
 }
 
-/** Space kept between the layer actions menu and the window's edges */
-export const MENU_MARGIN = 8;
-
-/**
- * Where the layer actions menu's top goes: level with the handle, moved up as far as needed to stay in the window
- * (but never above its top margin).
- *
- * @example
- * menuTop(700, 300, 800); // 492 (moved up to fit)
- * menuTop(100, 300, 800); // 100
- */
-export const menuTop = (
-  anchorTop: number,
-  menuHeight: number,
-  viewportHeight: number,
-  margin = MENU_MARGIN,
-): number =>
-  Math.max(margin, Math.min(anchorTop, viewportHeight - margin - menuHeight));
+/** Where the layer actions menu goes and how close to the window's edges (see `pc-context-menu`) */
+export { MENU_MARGIN, menuTop };
 
 /**
  * One row in the layers menu: reorder handle, thumbnail and name (then opacity and blend mode under them), alpha lock (padlock) and visibility (eye) icons.
@@ -266,11 +253,12 @@ export class PcLayerItem extends PcElement {
 
   /**
    * Whether a context menu action can be done to the layer now: not merging down the bottom layer (or with a hidden
-   * layer), deleting the only layer, or moving a layer further up or down than it can go.
+   * layer), deleting the only layer, moving a layer further up or down than it can go, or anything to a layer no longer
+   * in the stack (e.g. just deleted).
    */
   canRun(action: LayerAction): boolean {
     const { stack, layer } = this;
-    if (!stack || !layer) return false;
+    if (!stack || !layer || !stack.layers.includes(layer)) return false;
     const index = stack.indexOf(layer.id);
     const last = stack.layers.length - 1;
     switch (action) {
@@ -301,53 +289,31 @@ export class PcLayerItem extends PcElement {
     else stack.remove(layer.id);
   }
 
-  // Close the context menu when clicking anywhere outside it, or pressing Escape
-  private readonly onOutsidePointer = (event: Event) => {
-    if (!event.composedPath().includes(this)) this.menuOpen = false;
-  };
-
-  private readonly onKeyDown = (event: Event) => {
-    if ((event as KeyboardEvent).key === "Escape") this.menuOpen = false;
-  };
-
   /**
-   * Open the context menu on right-click, or close it if open.
+   * Follow the context menu opening or closing, telling other rows when it opens (so they close theirs).
    */
-  private onContextMenu(event: MouseEvent): void {
-    event.preventDefault();
-    this.toggleMenu();
+  private onMenuToggle(event: CustomEvent<{ open: boolean }>): void {
+    this.menuOpen = event.detail.open;
+    if (!this.menuOpen) return;
+    this.dispatchEvent(
+      new CustomEvent(LAYER_MENU_OPEN_EVENT, { bubbles: true, composed: true }),
+    );
   }
 
   /**
-   * Open the context menu on a click or tap on the handle (or Enter or Space), or close it if open; a click that ends a
-   * drag does nothing.
+   * A click on the handle opens the menu, unless it ends a drag (then it's stopped before reaching the menu's button).
    */
-  private onHandleClick(): void {
-    if (this.suppressClick) {
+  private readonly onHandleClick = {
+    handleEvent: (event: Event) => {
+      if (!this.suppressClick) return;
       this.suppressClick = false;
-      return;
-    }
-    this.toggleMenu();
-  }
-
-  /**
-   * Open the context menu (closing other rows' menus), or close it if open.
-   */
-  private toggleMenu(): void {
-    this.menuOpen = !this.menuOpen;
-    if (this.menuOpen) {
-      this.dispatchEvent(
-        new CustomEvent(LAYER_MENU_OPEN_EVENT, {
-          bubbles: true,
-          composed: true,
-        }),
-      );
-    }
-  }
+      event.stopPropagation();
+    },
+    capture: true,
+  };
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.listenOutside(false);
     this.endPress();
   }
 
@@ -375,7 +341,8 @@ export class PcLayerItem extends PcElement {
       y: event.clientY,
       dragging: false,
     };
-    (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    // Captured by the element pressed (the handle's button), so the click that follows still reaches it
+    (event.composedPath()[0] as Element).setPointerCapture(event.pointerId);
     window.addEventListener("pointermove", this.onHandlePointerMove);
     window.addEventListener("pointerup", this.onHandlePointerUp);
     window.addEventListener("pointercancel", this.onHandlePointerCancel);
@@ -441,35 +408,6 @@ export class PcLayerItem extends PcElement {
   }
 
   /**
-   * Start or stop listening for clicks outside and Escape while the menu is open.
-   */
-  private listenOutside(listen: boolean): void {
-    const method = listen ? "addEventListener" : "removeEventListener";
-    window[method]("pointerdown", this.onOutsidePointer, true);
-    window[method]("keydown", this.onKeyDown);
-    // The menu floats where it opened, so scrolling (e.g. the layers panel) closes it
-    window[method]("scroll", this.onScroll, true);
-  }
-
-  private readonly onScroll = () => {
-    this.menuOpen = false;
-  };
-
-  /**
-   * Place the open layer actions menu beside the reorder handle, floating over the layers panel (so the panel's edges
-   * don't cut it off) and kept within the window.
-   */
-  private placeMenu(): void {
-    const menu = this.renderRoot.querySelector<HTMLElement>("menu");
-    // Nothing is shown without a layer
-    if (!menu) return;
-    const handle = this.renderRoot.querySelector(".handle") as HTMLElement;
-    const anchor = handle.getBoundingClientRect();
-    menu.style.left = `${anchor.right}px`;
-    menu.style.top = `${menuTop(anchor.top, menu.offsetHeight, window.innerHeight)}px`;
-  }
-
-  /**
    * Ask for a mask following the layer's alpha (Shift adds, Alt subtracts; otherwise it replaces the mask).
    */
   private requestMask(
@@ -510,11 +448,7 @@ export class PcLayerItem extends PcElement {
     }
   }
 
-  override updated(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("menuOpen")) {
-      this.listenOutside(this.menuOpen);
-      if (this.menuOpen) this.placeMenu();
-    }
+  override updated(): void {
     const id = this.layer?.id;
     if (this.background && id)
       this.background.run(`thumbnail ${id}`, () => this.drawThumbnail());
@@ -567,23 +501,34 @@ export class PcLayerItem extends PcElement {
     ></pc-dialog>`;
   }
 
+  /** The layer's actions, for its context menu (those it can't do now are disabled) */
+  private menuItems(): MenuItem[] {
+    return LAYER_ACTIONS.map(({ action, label }) => ({
+      value: action,
+      label: this.t(label),
+      disabled: !this.canRun(action),
+    }));
+  }
+
   override render() {
     const { stack, layer } = this;
     if (!stack || !layer) return html``;
     const active = stack.active.id === layer.id;
     return html`
-      <button
-        type="button"
+      <pc-context-menu
         class="handle"
-        aria-label=${this.t("paintCanvas.layers.reorder", { name: layer.name })}
-        aria-haspopup="menu"
-        aria-expanded=${this.menuOpen ? "true" : "false"}
-        @contextmenu=${this.onContextMenu}
+        placement="beside"
+        label=${this.t("paintCanvas.layers.reorder", { name: layer.name })}
+        menu-label=${this.t("paintCanvas.layers.actions")}
+        .open=${this.menuOpen}
+        .items=${this.menuItems()}
+        @pc-toggle=${this.onMenuToggle}
+        @pc-select=${(e: CustomEvent<{ value: LayerAction }>) =>
+          this.runAction(e.detail.value)}
         @click=${this.onHandleClick}
         @pointerdown=${this.onHandlePointerDown}
+        ><span slot="icon" aria-hidden="true">⠿</span></pc-context-menu
       >
-        ⠿
-      </button>
       <div
         class="details"
         @click=${(e: MouseEvent) => this.onRowClick(e, stack, layer)}
@@ -645,25 +590,6 @@ export class PcLayerItem extends PcElement {
       >
         <img src=${this.iconUrl(layer.visible ? "visible" : "hidden")} alt="" />
       </button>
-      ${
-        this.menuOpen
-          ? html`<menu aria-label=${this.t("paintCanvas.layers.actions")}>
-              ${LAYER_ACTIONS.map(
-                ({ action, label }) =>
-                  html`<li>
-                    <button
-                      type="button"
-                      data-action=${action}
-                      ?disabled=${!this.canRun(action)}
-                      @click=${() => this.runAction(action)}
-                    >
-                      ${this.t(label)}
-                    </button>
-                  </li>`,
-              )}
-            </menu>`
-          : nothing
-      }
       ${this.renderConfirmation(layer)}
     `;
   }

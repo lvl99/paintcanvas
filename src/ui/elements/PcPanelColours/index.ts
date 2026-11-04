@@ -10,9 +10,9 @@ import { defineElement, emit } from "../../base";
 import { PcPanel } from "../PcPanel";
 import ChangeController from "../../ChangeController";
 import "../PcColourPair";
-import "../PcContextMenu";
+import "../PcMenu";
 import "../PcDialog";
-import type { MenuItem } from "../PcContextMenu";
+import type { MenuItem } from "../PcMenu";
 import { CANCEL_CHOICE, type DialogChoice } from "../PcDialog";
 import type {
   ColourSlot,
@@ -639,7 +639,7 @@ export class PcPanelColours extends PcPanel {
         danger: true,
       },
     ];
-    return html`<pc-context-menu
+    return html`<pc-menu
       open
       .x=${menu.x}
       .y=${menu.y}
@@ -653,7 +653,7 @@ export class PcPanelColours extends PcPanel {
         // Back to the colour, unless the dialog asking to delete it takes focus
         if (this.confirming === undefined) void this.focusSwatch(menu.index);
       }}
-    ></pc-context-menu>`;
+    ></pc-menu>`;
   }
 
   /** The dialog asking before deleting a saved colour, while asking */

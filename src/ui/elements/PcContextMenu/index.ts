@@ -1,51 +1,61 @@
 import { css, html, nothing, type PropertyValues } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
-import {
-  ariaKeyShortcut,
-  shortcutLabel,
-  type KeyCombo,
-} from "../../../lib/utils/shortcuts";
-import "../PcIcon";
+import { PcMenu, type MenuItem } from "../PcMenu";
+import "../PcMenu";
 
-/** Longest shortcut label shown on a menu item (characters); longer ones are left out */
-export const MAX_SHORTCUT_LABEL_LENGTH = 3;
+/** Space kept between a context menu's menu and the window's edges */
+export const MENU_MARGIN = 8;
 
-/** An item in a context menu */
-export interface MenuItem {
-  /** What `pc-select` gives when it's chosen */
-  value: string;
-  label: string;
-  disabled?: boolean;
-  /** Shown in the cancelling colour, e.g. for deleting */
-  danger?: boolean;
-  /** Makes the item a toggle, showing a checkmark on its left while on */
-  checked?: boolean;
-  /** Name of an icon to show on its left (see `icons`), when it isn't a toggle */
-  icon?: string;
-  /** The action's keyboard shortcut, shown on its right as symbols (e.g. ⌘S) when 3 characters or fewer */
-  shortcut?: KeyCombo;
-}
+/** Event fired when a context menu opens or closes (detail: `{ open }`) */
+export const CONTEXT_MENU_TOGGLE_EVENT = "pc-toggle";
+
+/** Where a context menu's menu opens: under its button, or beside it */
+export type MenuPlacement = "below" | "beside";
 
 /**
- * Whether a menu item has something to show on its left: a checkmark or an icon.
+ * Where a menu's top goes: level with its anchor, moved up as far as needed to stay in the window (but never above its
+ * top margin).
  *
  * @example
- * hasStart({ value: "grid", label: "Grid", checked: false }); // true
+ * menuTop(700, 300, 800); // 492 (moved up to fit)
+ * menuTop(100, 300, 800); // 100
  */
-const hasStart = (item: MenuItem): boolean =>
-  item.checked !== undefined || item.icon !== undefined;
+export const menuTop = (
+  anchorTop: number,
+  menuHeight: number,
+  viewportHeight: number,
+  margin = MENU_MARGIN,
+): number =>
+  Math.max(margin, Math.min(anchorTop, viewportHeight - margin - menuHeight));
 
 /**
- * A menu of actions, e.g. for a layer. While `open`, it shows its items at `x`, `y` (in the page's viewport) and takes
- * keyboard focus: arrow keys, Home and End move between items, Enter or Space chooses one, and Escape or Tab closes it.
- * Items can show a checkmark (toggles) or an icon on their left, and their keyboard shortcut on their right; long
- * labels wrap.
- * Fires `pc-select` with the chosen item's value, and `pc-close` when it should close (after choosing, Escape, Tab, or a
- * press outside it). The implementer sets `open` to false in response.
+ * Where a menu's left edge goes: at `left`, moved left as far as needed to stay in the window (but never past its left
+ * margin).
  *
  * @example
- * html`<pc-context-menu open .x=${10} .y=${20} label="Layer actions" .items=${items}
- *   @pc-select=${(e) => act(e.detail.value)} @pc-close=${close}></pc-context-menu>`
+ * menuLeft(900, 200, 1000); // 792 (moved left to fit)
+ */
+export const menuLeft = (
+  left: number,
+  menuWidth: number,
+  viewportWidth: number,
+  margin = MENU_MARGIN,
+): number =>
+  Math.max(margin, Math.min(left, viewportWidth - margin - menuWidth));
+
+/**
+ * A button that opens a menu (`pc-menu`): its `icon` slot is what the button shows (⋮ by default), and its `menu` slot
+ * takes the `pc-menu` to open. Without one, it opens its own menu of `items`. Pressing the button (or right-clicking
+ * it) opens the menu under it (or beside it, with `placement="beside"`), kept within the window; choosing an item,
+ * pressing outside, Escape, Tab, scrolling or pressing the button again closes it, and focus returns to the button.
+ *
+ * Fires `pc-toggle` (detail: `{ open }`) when it opens or closes. The menu's `pc-select` (detail: `{ value }`) reaches
+ * the context menu's listeners.
+ *
+ * @example
+ * html`<pc-context-menu label="Layer actions" .items=${items} @pc-select=${(e) => act(e.detail.value)}>
+ *   <pc-icon slot="icon" name="menu"></pc-icon>
+ * </pc-context-menu>`
  */
 export class PcContextMenu extends PcElement {
   static override properties = {
@@ -53,218 +63,179 @@ export class PcContextMenu extends PcElement {
     open: { type: Boolean, reflect: true },
     items: { attribute: false },
     label: { type: String },
-    x: { type: Number },
-    y: { type: Number },
+    menuLabel: { type: String, attribute: "menu-label" },
+    placement: { type: String },
+    disabled: { type: Boolean, reflect: true },
   };
 
   static override styles = [
     PcElement.styles,
     css`
       :host {
-        position: fixed;
-        z-index: 10;
-        display: none;
-      }
-      :host([open]) {
-        display: block;
-      }
-      [role="menu"] {
-        display: flex;
-        min-width: 160px;
-        max-width: min(320px, calc(100vw - 2 * var(--pc-space-3)));
-        flex-direction: column;
-        padding: var(--pc-space-1) 0;
-        border-radius: var(--pc-radius);
-        background: var(--pc-surface-raised);
-        box-shadow: var(--pc-shadow);
+        display: inline-flex;
       }
       button {
-        display: flex;
-        align-items: baseline;
-        gap: var(--pc-space-2);
-        padding: var(--pc-space-2) var(--pc-space-3);
-        border: 0;
-        background: transparent;
+        display: inline-flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        min-width: var(--pc-control-size);
+        min-height: var(--pc-control-size);
+        padding: 0 var(--pc-space-1);
+        border: 1px solid var(--pc-border);
+        border-radius: var(--pc-radius-small);
+        background: var(--pc-surface);
         color: var(--pc-text);
-        font-family: var(--pc-font);
-        font-size: var(--pc-font-size);
-        text-align: start;
+        font: inherit;
         cursor: pointer;
       }
       button:hover:not(:disabled),
-      button:focus-visible {
+      :host([open]) button {
         background: var(--pc-surface-hover);
-        outline: none;
       }
       button:focus-visible {
-        box-shadow: inset 0 0 0 var(--pc-focus-width) var(--pc-focus);
-      }
-      button.danger {
-        color: var(--pc-dismiss-text);
-      }
-      .start {
-        /* Icons as tall as the text, so items with icons are no taller */
-        --pc-icon-size: 1.2em;
-        display: inline-flex;
-        width: var(--pc-icon-size);
-        flex: none;
-        align-self: center;
-        justify-content: center;
-      }
-      .label {
-        flex: 1;
-        overflow-wrap: anywhere;
-      }
-      .end {
-        flex: none;
-        color: var(--pc-text-muted);
-        white-space: nowrap;
+        outline: var(--pc-focus-width) solid var(--pc-focus);
       }
       button:disabled {
-        color: var(--pc-text-muted);
+        opacity: 0.4;
         cursor: default;
       }
     `,
   ];
 
+  /** Whether the menu is open */
   declare open: boolean;
 
+  /** The items of its own menu, when no `pc-menu` is slotted */
   declare items: readonly MenuItem[];
 
-  /** Names the menu for screen readers */
+  /** Names the button for screen readers */
   declare label: string;
 
-  declare x: number;
+  /** Names the menu for screen readers (the button's `label` by default) */
+  declare menuLabel: string;
 
-  declare y: number;
+  /** Where the menu opens: under the button (default) or beside it */
+  declare placement: MenuPlacement;
 
-  // Close when pressing outside the menu
-  private readonly onPointerDown = (event: PointerEvent) => {
-    if (this.open && !event.composedPath().includes(this)) this.close();
-  };
+  declare disabled: boolean;
+
+  // The menu floats where it opened, so scrolling (e.g. a panel) closes it
+  private readonly onScroll = () => this.setOpen(false);
 
   constructor() {
     super();
     this.open = false;
     this.items = [];
     this.label = "";
-    this.x = 0;
-    this.y = 0;
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    document.addEventListener("pointerdown", this.onPointerDown, true);
+    this.menuLabel = "";
+    this.placement = "below";
+    this.disabled = false;
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    document.removeEventListener("pointerdown", this.onPointerDown, true);
+    window.removeEventListener("scroll", this.onScroll, true);
   }
 
-  override updated(changed: PropertyValues<this>): void {
-    this.style.left = `${this.x}px`;
-    this.style.top = `${this.y}px`;
-    if (changed.has("open") && this.open) this.buttons()[0]?.focus();
-  }
-
-  /** The enabled items' buttons */
-  private buttons(): HTMLButtonElement[] {
-    return [
-      ...this.renderRoot.querySelectorAll<HTMLButtonElement>("button"),
-    ].filter((button) => !button.disabled);
-  }
-
-  /** Tell listeners the menu should close */
-  close(): void {
-    emit(this, "pc-close");
-  }
-
-  /** Choose an item, then close */
-  private choose(item: MenuItem): void {
-    emit(this, "pc-select", { value: item.value });
-    this.close();
-  }
-
-  /** Move focus between items, or close */
-  private onKeyDown(event: KeyboardEvent): void {
-    const buttons = this.buttons();
-    const index = buttons.indexOf(
-      (this.renderRoot as ShadowRoot).activeElement as HTMLButtonElement,
+  /** The menu it opens: the slotted `pc-menu`, or its own */
+  get menu(): PcMenu | undefined {
+    const slot =
+      this.renderRoot.querySelector<HTMLSlotElement>('slot[name="menu"]');
+    return (
+      slot
+        ?.assignedElements({ flatten: true })
+        .find((element): element is PcMenu => element instanceof PcMenu) ??
+      undefined
     );
-    const last = buttons.length - 1;
-    const target = {
-      ArrowDown: index >= last ? 0 : index + 1,
-      ArrowUp: index <= 0 ? last : index - 1,
-      Home: 0,
-      End: last,
-    }[event.key];
-    if (target !== undefined) {
-      event.preventDefault();
-      buttons[target]?.focus();
-    } else if (event.key === "Escape" || event.key === "Tab") {
-      event.preventDefault();
-      this.close();
-    }
   }
 
-  /** An item's left side: a checkmark while a toggle is on, its icon, or empty space */
-  private renderStart(item: MenuItem) {
-    const content =
-      item.checked !== undefined
-        ? item.checked
-          ? "✔"
-          : nothing
-        : item.icon
-          ? html`<pc-icon name=${item.icon}></pc-icon>`
-          : nothing;
-    return html`<span part="item-start" class="start" aria-hidden="true"
-      >${content}</span
-    >`;
+  /** The button that opens the menu */
+  private get button(): HTMLButtonElement {
+    return this.renderRoot.querySelector("button") as HTMLButtonElement;
   }
 
-  /** An item's right side: its shortcut's label, if short enough */
-  private renderEnd(item: MenuItem) {
-    const label = item.shortcut && shortcutLabel(item.shortcut);
-    return label && [...label].length <= MAX_SHORTCUT_LABEL_LENGTH
-      ? html`<span part="item-end" class="end" aria-hidden="true"
-          >${label}</span
-        >`
-      : nothing;
+  /**
+   * Open or close the menu, telling listeners.
+   */
+  setOpen(open: boolean): void {
+    if (open === this.open || (open && this.disabled)) return;
+    this.open = open;
+    emit(this, CONTEXT_MENU_TOGGLE_EVENT, { open });
+  }
+
+  /** Open the menu on a right-click (instead of the browser's), or close it */
+  private onContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    this.setOpen(!this.open);
+  }
+
+  /** Close the menu when it asks to, and return focus to the button */
+  private onClose(): void {
+    // Only a menu asks to close, so there is one
+    const focusWasInside = (this.menu as PcMenu).matches(":focus-within");
+    this.setOpen(false);
+    if (focusWasInside) this.button.focus();
+  }
+
+  /** Set up a newly slotted menu like the current one (open or closed) */
+  private onMenuSlotChange(): void {
+    this.requestUpdate("open", !this.open);
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    const menu = this.menu;
+    if (!menu) return;
+    menu.anchor = this;
+    // A slotted menu without its own name is named like the button
+    menu.label ||= this.menuLabel || this.label;
+    if (!changed.has("open")) return;
+    window[this.open ? "addEventListener" : "removeEventListener"](
+      "scroll",
+      this.onScroll,
+      true,
+    );
+    menu.open = this.open;
+    if (this.open) void this.place(menu);
+  }
+
+  /** Put the open menu under or beside the button, within the window */
+  private async place(menu: PcMenu): Promise<void> {
+    const anchor = this.button.getBoundingClientRect();
+    const beside = this.placement === "beside";
+    menu.x = beside ? anchor.right : anchor.left;
+    menu.y = beside ? anchor.top : anchor.bottom;
+    // Measured once shown
+    await menu.updateComplete;
+    menu.x = menuLeft(menu.x, menu.offsetWidth, window.innerWidth);
+    menu.y = menuTop(menu.y, menu.offsetHeight, window.innerHeight);
   }
 
   override render() {
-    // Every item keeps the left space when any has something there, so labels line up
-    const showStart = this.items.some(hasStart);
-    return html`<div
-      part="menu"
-      role="menu"
-      aria-label=${this.label}
-      @keydown=${this.onKeyDown}
-    >
-      ${this.items.map(
-        (item) =>
-          html`<button
-            part="item"
-            type="button"
-            role=${item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
-            aria-checked=${
-              item.checked === undefined ? nothing : String(item.checked)
-            }
-            aria-keyshortcuts=${
-              item.shortcut ? ariaKeyShortcut(item.shortcut) : nothing
-            }
-            class=${item.danger ? "danger" : nothing}
-            ?disabled=${item.disabled}
-            data-value=${item.value}
-            @click=${() => this.choose(item)}
-          >
-            ${showStart ? this.renderStart(item) : nothing}<span class="label"
-              >${item.label}</span
-            >${this.renderEnd(item)}
-          </button>`,
-      )}
-    </div>`;
+    return html`<button
+        type="button"
+        part="button"
+        aria-haspopup="menu"
+        aria-expanded=${String(this.open)}
+        aria-label=${this.label || nothing}
+        ?disabled=${this.disabled}
+        @click=${() => this.setOpen(!this.open)}
+        @contextmenu=${this.onContextMenu}
+      >
+        <slot name="icon">⋮</slot></button
+      ><slot
+        name="menu"
+        @slotchange=${this.onMenuSlotChange}
+        @pc-close=${this.onClose}
+        >${
+          this.items.length
+            ? html`<pc-menu
+                .items=${this.items}
+                label=${this.menuLabel || this.label}
+              ></pc-menu>`
+            : nothing
+        }</slot
+      >`;
   }
 }
 
