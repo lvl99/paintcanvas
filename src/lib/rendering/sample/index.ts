@@ -1,3 +1,4 @@
+import { rgbToHex } from "../../utils/colour";
 import type { CanvasFactory } from "../../classes/Layer";
 import {
   CANVAS_BACKGROUND,
@@ -29,7 +30,7 @@ export interface PixelRect {
  * toHex(255, 0, 128); // "#ff0080"
  */
 export const toHex = (r: number, g: number, b: number): string =>
-  `#${[r, g, b].map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`;
+  rgbToHex({ r, g, b });
 
 /**
  * The average colour of RGBA pixels, counting every pixel that isn't fully transparent (transparent pixels are outside

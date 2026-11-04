@@ -1,4 +1,5 @@
 import StrokeLog from "../StrokeLog";
+import { isHexColour } from "../../utils/colour";
 import BackgroundWork from "../BackgroundWork";
 import type { DrawableLayer } from "../../rendering/compositing";
 import BrushSettings from "../BrushSettings";
@@ -154,18 +155,7 @@ export const DEFAULT_NAMES: Readonly<PaintCanvasNames> = {
   unknownAuthor: UNKNOWN_AUTHOR,
 };
 
-/** Pattern for colour input values */
-const COLOUR_PATTERN = /^#[0-9a-f]{6}$/i;
-
-/**
- * Check that a value is a 6-digit hex colour, e.g. `#ff0000`.
- *
- * @example
- * isHexColour("#FF00aa"); // true
- * isHexColour("red"); // false
- */
-export const isHexColour = (value: unknown): value is string =>
-  typeof value === "string" && COLOUR_PATTERN.test(value);
+export { isHexColour };
 
 /** How much the canvas holds, e.g. to show in a stats panel */
 export interface CanvasStats {

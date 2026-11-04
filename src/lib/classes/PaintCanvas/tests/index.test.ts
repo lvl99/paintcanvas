@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import PaintCanvas, { MAX_CANVAS_SIZE, Panel, Tool, isHexColour } from "..";
+import PaintCanvas, { MAX_CANVAS_SIZE, Panel, Tool } from "..";
 import {
   BEFORE_COMMIT_EVENT,
   STROKE_BEGIN_EVENT,
@@ -206,16 +206,6 @@ describe("PaintCanvas", () => {
     expect(app.colour).toBe("#ffffff");
     expect(app.selectedColour).toBe("background");
     expect(listener).toHaveBeenCalledTimes(3);
-  });
-
-  it.each([
-    ["#ff0000", true],
-    ["#FFaa00", true],
-    ["#fff", false],
-    ["red", false],
-    [16711680, false],
-  ])("should check %s is a hex colour: %s", (value, valid) => {
-    expect(isHexColour(value)).toBe(valid);
   });
 
   it("should only select a tool from the toolbar, without opening or closing its panel", () => {
