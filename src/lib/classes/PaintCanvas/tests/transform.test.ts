@@ -4,10 +4,11 @@ import { createRecordingCanvasFactory } from "../../../../testing/recordingCanva
 
 /** An app whose layers report one opaque pixel at (2, 2) */
 const createApp = () => {
+  const { factory, created } = createRecordingCanvasFactory();
   const app = new PaintCanvas({
     width: 10,
     height: 10,
-    createCanvas: createRecordingCanvasFactory().factory,
+    createCanvas: factory,
   });
   const data = new Uint8ClampedArray(10 * 10 * 4);
   data[(2 * 10 + 2) * 4 + 3] = 255;
@@ -16,7 +17,7 @@ const createApp = () => {
       data,
     }));
   for (const layer of app.layers.layers) content(layer);
-  return { app, content };
+  return { app, content, created };
 };
 
 /** Give an app a mask covering everything (fake canvases read as empty, so the mask is marked active by hand) */
@@ -87,6 +88,32 @@ describe("PaintCanvas clipboard", () => {
     vi.spyOn(app.strokes, "drawing", "get").mockReturnValue(true);
     app.deleteMasked();
     expect(changeImage).not.toHaveBeenCalled();
+  });
+
+  it("should paint the background colour inside the mask instead of erasing when the layer's alpha lock is on", () => {
+    const { app, created } = createApp();
+    fullMask(app);
+    app.layers.update(app.layers.active.id, { alphaLock: true });
+    app.setColour("#00ff00", "background");
+    const changeImage = vi.spyOn(app.layers, "changeImage");
+    app.deleteMasked();
+    expect(changeImage).toHaveBeenCalledWith(
+      app.layers.active.id,
+      { x: 2, y: 2, width: 1, height: 1 },
+      expect.any(Function),
+    );
+    const { calls } = created.find(
+      ({ canvas }) => canvas === app.layers.active.canvas,
+    )!;
+    expect(calls).toContainEqual([
+      "set:globalCompositeOperation",
+      "source-atop",
+    ]);
+    expect(calls).not.toContainEqual([
+      "set:globalCompositeOperation",
+      "destination-out",
+    ]);
+    expect(app.history.canUndo).toBe(true);
   });
 
   it("should paste over the selected layer with the Move tool, keeping it until another tool is selected", () => {

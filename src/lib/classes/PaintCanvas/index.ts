@@ -116,8 +116,17 @@ export const DEFAULT_CANVAS_SIZE = 2000;
 /** Largest canvas width or height allowed when the `maxCanvasSize` option isn't given */
 export const MAX_CANVAS_SIZE = 2000;
 
-/** Drawing colour to start with */
+/** Foreground colour to start with */
 export const DEFAULT_COLOUR = "#000000";
+
+/** Background colour to start with */
+export const DEFAULT_BACKGROUND_COLOUR = "#ffffff";
+
+/**
+ * One of the two colours: the foreground colour (painted by the brush and foreground fills) or the background colour
+ * (painted by the eraser and Delete when the layer's alpha lock is on, and by background fills).
+ */
+export type ColourSlot = "foreground" | "background";
 
 /** Owner of the custom presets when the `ownerId` option isn't given */
 export const DEFAULT_OWNER_ID = "local";
@@ -147,6 +156,16 @@ export const DEFAULT_NAMES: Readonly<PaintCanvasNames> = {
 
 /** Pattern for colour input values */
 const COLOUR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Check that a value is a 6-digit hex colour, e.g. `#ff0000`.
+ *
+ * @example
+ * isHexColour("#FF00aa"); // true
+ * isHexColour("red"); // false
+ */
+export const isHexColour = (value: unknown): value is string =>
+  typeof value === "string" && COLOUR_PATTERN.test(value);
 
 /** How much the canvas holds, e.g. to show in a stats panel */
 export interface CanvasStats {
@@ -247,7 +266,7 @@ export interface PaintCanvasOptions {
 }
 
 /**
- * The painting engine: canvas size, layers, brush and eraser settings, custom presets, the selected tool, colour,
+ * The painting engine: canvas size, layers, brush and eraser settings, custom presets, the selected tool, foreground and background colours,
  * selection, transforms, clipboard, undo/redo history, viewport and input settings. Where its data is kept and who it
  * is shared with are up to the implementer (see `onMessage` and `receive`).
  *
@@ -258,6 +277,7 @@ export interface PaintCanvasOptions {
  * const canvas = new PaintCanvas({ width: 1000, height: 800 });
  * canvas.selectTool(Tool.Brush, { fromToolbar: true });
  * canvas.setColour("#ff0000");
+ * canvas.setColour("#ffffff", "background");
  */
 export default class PaintCanvas extends EventTarget {
   /** Brush settings */
@@ -375,7 +395,12 @@ export default class PaintCanvas extends EventTarget {
   /** Whether a stroke from elsewhere is being drawn (it isn't sent again) */
   private replaying = false;
 
-  private currentColour = DEFAULT_COLOUR;
+  private currentColours: Record<ColourSlot, string> = {
+    foreground: DEFAULT_COLOUR,
+    background: DEFAULT_BACKGROUND_COLOUR,
+  };
+
+  private currentSelectedColour: ColourSlot = "foreground";
 
   /** Image data copied with cut or copy, and the area it was copied from */
   private clipboard?: { image: OffscreenCanvas; area: Rect };
@@ -1078,21 +1103,22 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
-   * Copy the masked image data of the selected layer to the clipboard, then erase it from the layer as one undoable
-   * action.
+   * Copy the masked image data of the selected layer to the clipboard, then remove it from the layer as one undoable
+   * action (see `deleteMasked`).
    */
   cut(): void {
     const area = this.copy();
-    if (area) this.eraseMasked(area);
+    if (area) this.clearMasked(area);
   }
 
   /**
-   * Erase the masked image data from the selected layer as one undoable action (Delete or Backspace). Needs a mask with
+   * Erase the masked image data from the selected layer as one undoable action (Delete or Backspace). When the layer's
+   * alpha lock is on, it is painted with the background colour instead, keeping its transparency. Needs a mask with
    * image data inside it; does nothing during a stroke or while a transform is pending.
    */
   deleteMasked(): void {
     const area = this.maskedArea();
-    if (area) this.eraseMasked(area);
+    if (area) this.clearMasked(area);
   }
 
   /**
@@ -1118,15 +1144,48 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
-   * Erase the mask's part of an area from the selected layer, as one undoable action.
+   * Erase the mask's part of an area from the selected layer, or paint it with the background colour when the layer's
+   * alpha lock is on, as one undoable action.
    */
-  private eraseMasked(area: Rect): void {
+  private clearMasked(area: Rect): void {
+    const layer = this.layerStack.active;
+    if (layer.alphaLock) {
+      this.paintArea(area, this.currentColours.background);
+      return;
+    }
     const mask = this.currentSelection.mask as OffscreenCanvas;
     const maskPiece = copyArea(this.createCanvas, mask, area);
-    this.layerStack.changeImage(this.layerStack.active.id, area, (ctx) => {
+    this.layerStack.changeImage(layer.id, area, (ctx) => {
       ctx.save();
       ctx.globalCompositeOperation = "destination-out";
       ctx.drawImage(maskPiece, area.x, area.y);
+      ctx.restore();
+    });
+  }
+
+  /**
+   * Paint a colour over an area of the selected layer, cut to the mask if there is one (partly where it is partly), as
+   * one undoable action. Only existing pixels are painted when the layer's alpha lock is on.
+   */
+  private paintArea(area: Rect, colour: string): void {
+    const layer = this.layerStack.active;
+    const mask = this.currentSelection.mask;
+    const paint = this.createCanvas(area.width, area.height);
+    const paintCtx = paint.getContext(
+      "2d",
+    ) as OffscreenCanvasRenderingContext2D;
+    if (mask) {
+      paintCtx.drawImage(copyArea(this.createCanvas, mask, area), 0, 0);
+      paintCtx.globalCompositeOperation = "source-in";
+    }
+    paintCtx.fillStyle = colour;
+    paintCtx.fillRect(0, 0, area.width, area.height);
+    this.layerStack.changeImage(layer.id, area, (ctx) => {
+      ctx.save();
+      ctx.globalCompositeOperation = layer.alphaLock
+        ? "source-atop"
+        : "source-over";
+      ctx.drawImage(paint, area.x, area.y);
       ctx.restore();
     });
   }
@@ -1213,18 +1272,55 @@ export default class PaintCanvas extends EventTarget {
     return this.layerStack;
   }
 
-  /** Current drawing colour as a hex string, e.g. `#000000` */
+  /** Current foreground colour as a hex string, e.g. `#000000` (the same as `colours.foreground`) */
   get colour(): string {
-    return this.currentColour;
+    return this.currentColours.foreground;
+  }
+
+  /** Current foreground and background colours as hex strings, e.g. `{ foreground: "#000000", background: "#ffffff" }` */
+  get colours(): Readonly<Record<ColourSlot, string>> {
+    return this.currentColours;
+  }
+
+  /** Which colour is selected for configuration, e.g. by a colour picker or the colour sample tool ("foreground" by default) */
+  get selectedColour(): ColourSlot {
+    return this.currentSelectedColour;
   }
 
   /**
-   * Set the drawing colour. Must be a 6-digit hex colour, e.g. `#ff0000`.
+   * Set the foreground colour, or the background colour. Must be a 6-digit hex colour, e.g. `#ff0000`.
+   *
+   * @example
+   * canvas.setColour("#ff0000"); // foreground
+   * canvas.setColour("#ffffff", "background");
    */
-  setColour(colour: string): void {
-    if (!COLOUR_PATTERN.test(colour))
-      throw new Error(`Invalid colour ${colour}`);
-    this.currentColour = colour.toLowerCase();
+  setColour(colour: string, slot: ColourSlot = "foreground"): void {
+    if (!isHexColour(colour)) throw new Error(`Invalid colour ${colour}`);
+    this.currentColours = {
+      ...this.currentColours,
+      [slot]: colour.toLowerCase(),
+    };
+    this.notify();
+  }
+
+  /**
+   * Select which colour is configured, e.g. by a colour picker or the colour sample tool. One colour is always selected.
+   *
+   * @example
+   * canvas.selectColour("background");
+   */
+  selectColour(slot: ColourSlot): void {
+    if (slot === this.currentSelectedColour) return;
+    this.currentSelectedColour = slot;
+    this.notify();
+  }
+
+  /**
+   * Swap the foreground and background colours. The selected colour stays the same slot.
+   */
+  swapColours(): void {
+    const { foreground, background } = this.currentColours;
+    this.currentColours = { foreground: background, background: foreground };
     this.notify();
   }
 

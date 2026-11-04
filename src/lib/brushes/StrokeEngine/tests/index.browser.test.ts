@@ -113,13 +113,16 @@ describe("strokes in a real browser", () => {
     expect(pixel(layer, 60, 50)[3]).toBe(0);
   });
 
-  it("should not erase with alpha lock on", () => {
+  it("should paint the eraser's colour onto existing pixels with alpha lock on, instead of erasing", () => {
     const { engine, layer, options } = setup();
     layer.context.fillStyle = "#0000ff";
-    layer.context.fillRect(0, 0, 100, 100);
+    layer.context.fillRect(0, 0, 50, 100);
     layer.alphaLock = true;
-    stroke(engine, { ...options, mode: "erase" }, [[50, 50]]);
-    expect(pixel(layer, 50, 50)).toEqual([0, 0, 255, 255]);
+    stroke(engine, { ...options, mode: "erase", colour: "#00ff00" }, [
+      [45, 50],
+    ]);
+    expect(pixel(layer, 45, 50)).toEqual([0, 255, 0, 255]);
+    expect(pixel(layer, 52, 50)[3]).toBe(0);
   });
 
   it("should show the stroke in the preview before it is written to the layer", () => {

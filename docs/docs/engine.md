@@ -16,12 +16,24 @@ const canvas = new PaintCanvas({ width: 1000, height: 800 });
 document.querySelector("pc-canvas").app = canvas;
 
 canvas.selectTool(Tool.Brush, { fromToolbar: true });
-canvas.setColour("#ff0000");
+canvas.setColour("#ff0000"); // foreground
+canvas.setColour("#ffffff", "background");
 canvas.addEventListener("change", () => render(canvas));
 document.querySelector("#undo").addEventListener("click", () => canvas.undo());
 ```
 
-The engine dispatches `change` when its own state changes (tool, colour, panels). Its parts dispatch their own `change`: `canvas.layers`, `canvas.brush`, `canvas.selection`, `canvas.history` and `canvas.viewport`.
+## Foreground and background colours
+
+The engine has two colours, read with `canvas.colours` (`canvas.colour` is the foreground colour):
+
+- The brush paints the foreground colour.
+- The eraser removes paint. When the layer's alpha lock is on, it paints the background colour onto existing pixels instead, keeping their transparency. Delete and cut (`deleteMasked()`, `cut()`) do the same inside the mask.
+
+One of them is selected for configuration (`canvas.selectedColour`, the foreground by default): the colour sample tool sets it, and colour pickers can use it. Change it with `canvas.selectColour("background")`, and swap the colours with `canvas.swapColours()`.
+
+## Events
+
+The engine dispatches `change` when its own state changes (tool, colours, panels). Its parts dispatch their own `change`: `canvas.layers`, `canvas.brush`, `canvas.selection`, `canvas.history` and `canvas.viewport`.
 
 Useful building blocks:
 

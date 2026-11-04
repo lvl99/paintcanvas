@@ -237,29 +237,34 @@ describe("StrokeEngine", () => {
     ]);
   });
 
-  it("should not tell listeners about strokes that cannot change the layer", () => {
-    const erase = setup({ mode: "erase" });
+  it("should tell listeners about eraser strokes with alpha lock, which paint their colour", () => {
+    const erase = setup({ mode: "erase", colour: "#ffffff" });
     erase.layer.alphaLock = true;
-    const listener = vi.fn();
-    erase.engine.addEventListener(BEFORE_COMMIT_EVENT, listener);
+    const details: StrokeCommitDetail[] = [];
+    erase.engine.addEventListener(BEFORE_COMMIT_EVENT, (event) =>
+      details.push((event as CustomEvent<StrokeCommitDetail>).detail),
+    );
     erase.engine.begin(erase.options, { x: 10, y: 10 }, 0);
     erase.engine.end({ x: 10, y: 10 }, 5);
-    expect(listener).not.toHaveBeenCalled();
+    expect(details).toHaveLength(1);
+    expect(details[0]!.stroke).toMatchObject({
+      mode: "erase",
+      colour: "#ffffff",
+    });
   });
 
   it("should erase with the buffer's shape", () => {
     const { engine, options, canvases } = setup({ mode: "erase" });
     engine.begin(options, { x: 10, y: 10 }, 0);
     engine.end({ x: 10, y: 10 }, 5);
-    const { layer, buffer } = canvases();
-    expect(buffer.calls).toContainEqual(["set:fillStyle", "#000000"]);
+    const { layer } = canvases();
     expect(layer.calls).toContainEqual([
       "set:globalCompositeOperation",
       "destination-out",
     ]);
   });
 
-  it("should only paint onto existing pixels with alpha lock, and not erase at all", () => {
+  it("should only paint onto existing pixels with alpha lock, with the eraser painting its colour", () => {
     const paint = setup();
     paint.layer.alphaLock = true;
     paint.engine.begin(paint.options, { x: 10, y: 10 }, 0);
@@ -269,11 +274,20 @@ describe("StrokeEngine", () => {
       "source-atop",
     ]);
 
-    const erase = setup({ mode: "erase" });
+    const erase = setup({ mode: "erase", colour: "#00ff00" });
     erase.layer.alphaLock = true;
     erase.engine.begin(erase.options, { x: 10, y: 10 }, 0);
     erase.engine.end({ x: 10, y: 10 }, 5);
-    expect(count(erase.canvases().layer.calls, "drawImage")).toBe(0);
+    const { layer, buffer } = erase.canvases();
+    expect(buffer.calls).toContainEqual(["set:fillStyle", "#00ff00"]);
+    expect(layer.calls).toContainEqual([
+      "set:globalCompositeOperation",
+      "source-atop",
+    ]);
+    expect(layer.calls).not.toContainEqual([
+      "set:globalCompositeOperation",
+      "destination-out",
+    ]);
   });
 
   it("should finish smoothed strokes that lag behind the pointer", () => {

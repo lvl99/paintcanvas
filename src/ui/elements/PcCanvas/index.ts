@@ -794,13 +794,14 @@ export class PcCanvas extends PcElement {
     const start = app.strokeLog.now();
     this.stroke = { pointerId: event.pointerId, layerId: layer.id };
     (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    const erasing = app.activeTool === Tool.Eraser;
     app.strokes.begin(
       {
         layer,
-        mode: app.activeTool === Tool.Eraser ? "erase" : "paint",
+        mode: erasing ? "erase" : "paint",
         preset: settings.preset,
         size: { width: settings.width, height: settings.height },
-        colour: app.colour,
+        colour: app.colours[erasing ? "background" : "foreground"],
         tip: app.tips.get(settings.preset),
         isPen: event.pointerType === "pen",
         mask: app.selection.mask,
@@ -1081,7 +1082,7 @@ export class PcCanvas extends PcElement {
   }
 
   /**
-   * Set the current colour from the sample: the pixel under the pointer, or the average of every pixel in the area.
+   * Set the selected colour (foreground or background) from the sample: the pixel under the pointer, or the average of every pixel in the area.
    * Nothing changes if it's outside the canvas.
    */
   private finishSample(): void {
@@ -1092,7 +1093,7 @@ export class PcCanvas extends PcElement {
         ? app.sampleAreaColour(start, point)
         : app.sampleColour(point);
     this.endSample();
-    if (colour) app.setColour(colour);
+    if (colour) app.setColour(colour, app.selectedColour);
   }
 
   /** Stop sampling and close the sampling window */
