@@ -15,36 +15,51 @@ sidebar_label: Layout and slots
 └──────────────────── footer ────────────────────┘
 ```
 
-| Slot      | Default content                                                                              |
-| --------- | -------------------------------------------------------------------------------------------- |
-| `header`  | Nothing                                                                                      |
-| `left`    | `<pc-toolbar>`                                                                               |
-| `top`     | `<pc-tool-settings>` for the tool                                                            |
-| `center`  | `<pc-canvas>`                                                                                |
-| `overlay` | `<pc-canvas-map>`, over the canvas                                                           |
-| `bottom`  | Nothing                                                                                      |
-| `right`   | Nothing                                                                                      |
-| `footer`  | `<pc-stats>`                                                                                 |
-| `menu`    | Opened by the toolbar's menu button, floating with the panels' shadow (give it a background) |
+| Slot      | Default content                                                                       |
+| --------- | ------------------------------------------------------------------------------------- |
+| `header`  | Nothing                                                                               |
+| `left`    | `<pc-toolbar>`, a pane of the colours and tools, then undo, redo, layers and the menu |
+| `top`     | A horizontal `<pc-pane>` with `<pc-tool-settings>` for the tool                       |
+| `center`  | `<pc-canvas>`                                                                         |
+| `overlay` | `<pc-canvas-map>`, over the canvas                                                    |
+| `bottom`  | Nothing                                                                               |
+| `right`   | A `<pc-pane>` with `<pc-panel-layers>`                                                |
+| `footer`  | `<pc-stats>`                                                                          |
+| `menu`    | Opened by the toolbar's menu button, in a `<pc-panel>`                                |
 
-Put your own element in a slot to replace its default. Empty areas take no space. A `<pc-panel-layers>` in the `left` or `right` slot (e.g. in a `<pc-panel>`, as below) replaces the toolbar's layers button. On its own, `<pc-toolbar>` leaves the button out with `.layers=${false}`.
+Put your own element in a slot to replace its default. Empty areas take no space. While a side has a `<pc-panel-layers>` (as the right side does by default), the toolbar has no layers button. On its own, `<pc-toolbar>` leaves the button out with `.layers=${false}`.
 
 ```html
 <paint-canvas menu-text="App" menu-label="App menu">
-  <pc-panel slot="right" icon="layers" label="Layers">
+  <pc-pane slot="right">
     <pc-panel-layers></pc-panel-layers>
-  </pc-panel>
+    <pc-panel icon="chat" label="Chat"><my-chat></my-chat></pc-panel>
+  </pc-pane>
   <nav slot="menu">…</nav>
 </paint-canvas>
 ```
 
+## Panes, panels and menus
+
+The layout's areas are built from a few kinds of elements, each sharing its look and behaviour with the others of its kind:
+
+- **Panes** (`<pc-pane>`): areas where buttons and panels are shown or docked, with `start`, `middle` and `end` slots (content without a slot goes at the start). They run `vertical` (the sides) or `horizontal` (the top); the middle takes the space left. `<pc-toolbar>` is a pane.
+- **Panels** (`<pc-panel>`, and panels made for one purpose that extend `PcPanel`: `<pc-panel-layers>`, `<pc-panel-brushes>` and `<pc-panel-colours>`): boxes of settings or content, with `header`, `body` and `footer` slots (content without a slot goes in the body). A panel's `icon`, `label` and `badge` (a dot meaning something new) are shown on its rail button.
+- **Menus** (`<pc-menu>`): lists of items, each with an optional icon or checkmark and keyboard shortcut. `<pc-context-menu>` is a button (its `icon` slot, ⋮ by default) that opens one: a `pc-menu` in its `menu` slot, or its own of `items`.
+
+```html
+<pc-context-menu label="Layer actions" .items="${items}" @pc-select="${(e)" ="">
+  act(e.detail.value)}></pc-context-menu
+>
+```
+
 ## Side modes
 
-Each side (`left` and `right`) is shown in one of three modes, chosen by the layout's width:
+Each side (`left` and `right`) is shown in one of three modes, chosen by the layout's width. The layout gives the mode to the side's panes (its own, or `<pc-pane>`s you give the side), so give side content in a pane:
 
 - `docked`: beside the canvas.
-- `rail`: a column of buttons, one per `<pc-panel>` in the side. Each button opens its panel over the canvas; Escape or a press outside closes it.
-- `floating`: over the canvas as a palette that starts collapsed to a button.
+- `rail`: a column of buttons, one per panel in the pane. Each button opens its panel over the canvas; Escape or a press outside closes it. Open one from code with `pane.togglePanel(panel)`.
+- `floating`: the pane floats over the canvas as a box that starts collapsed to a button.
 
 Set the rules with `left-modes` and `right-modes`: a mode, then `mode@width` for layouts narrower than that width. The default is `"docked, rail@600"`.
 
