@@ -256,7 +256,7 @@ describe("pc-panel-colours", () => {
     expect(press(tabs, "a").defaultPrevented).toBe(false);
   });
 
-  it("should select a pressed colour and open the browser's colour picker", async () => {
+  it("should select a pressed colour, without the browser's colour picker", async () => {
     const { app, element } = await setup();
     const pair = get<PcColourPair>(element, "pc-colour-pair");
     const openPicker = vi
@@ -265,7 +265,7 @@ describe("pc-panel-colours", () => {
     await pair.updateComplete;
     query<HTMLButtonElement>(pair, "button.background").click();
     expect(app.selectedColour).toBe("background");
-    expect(openPicker).toHaveBeenCalledOnce();
+    expect(openPicker).not.toHaveBeenCalled();
   });
 
   it("should set the selected colour from a saved colour, marking it", async () => {

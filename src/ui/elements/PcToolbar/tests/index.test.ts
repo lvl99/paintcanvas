@@ -72,7 +72,7 @@ describe("pc-toolbar", () => {
     expect(queryAll(element, `[data-panel="${Panel.Layers}"]`)).toHaveLength(1);
   });
 
-  it("should select a pressed colour and open the colour palette, then the colour picker while it's open", async () => {
+  it("should select a pressed colour and open the colour palette, without the browser's colour picker", async () => {
     const app = createApp();
     const element = await mount<PcToolbar>("pc-toolbar", { app });
     const pair = query<PcColourPair>(element, "pc-colour-pair");
@@ -88,13 +88,13 @@ describe("pc-toolbar", () => {
       "background",
       Panel.Palette,
     ]);
-    expect(openPicker).not.toHaveBeenCalled();
     press("foreground");
+    // The palette stays open
     expect([app.selectedColour, app.panel]).toEqual([
       "foreground",
       Panel.Palette,
     ]);
-    expect(openPicker).toHaveBeenCalledOnce();
+    expect(openPicker).not.toHaveBeenCalled();
   });
 
   it("should undo and redo, enabling each button only when there is something to undo or redo", async () => {

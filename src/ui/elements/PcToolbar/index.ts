@@ -11,7 +11,6 @@ import {
   type default as PaintCanvas,
 } from "../../../lib/classes/PaintCanvas";
 import { cmdSymbol, shortcutLabel } from "../../../lib/utils/shortcuts";
-import type { PcColourPair } from "../PcColourPair";
 import "../PcColourPair";
 
 /** Toolbar buttons in display order: tool, icon name, translation key of its name, and its keyboard shortcut action */
@@ -89,7 +88,7 @@ export const TOOLBAR_TOOLS: readonly {
 /**
  * Vertical toolbar: the foreground and background colours, tools, undo and redo (disabled when there is nothing to undo
  * or redo), layers menu toggle (unless `layers` is false) and app menu toggle. Pressing a colour selects it and opens the
- * colour palette, or the browser's colour picker while the palette is open. Tools, undo, redo and the layers toggle show
+ * colour palette (if it isn't open). Tools, undo, redo and the layers toggle show
  * their icons; tools have the user's keyboard shortcuts in their tooltips, and undo and redo theirs (⌘ on Apple
  * devices, ^ elsewhere). The app menu button shows `menuText` and is named `menuLabel` for screen readers.
  *
@@ -150,14 +149,12 @@ export class PcToolbar extends PcPane {
   }
 
   /**
-   * Select the pressed colour, and open the colour palette, or the browser's colour picker while the palette is open.
+   * Select the pressed colour, and open the colour palette if it isn't open.
    */
   private onColourClick(event: CustomEvent<{ slot: ColourSlot }>): void {
     const app = this.app as PaintCanvas;
     app.selectColour(event.detail.slot);
-    if (app.panel === Panel.Palette)
-      (event.currentTarget as PcColourPair).openPicker();
-    else app.togglePanel(Panel.Palette);
+    if (app.panel !== Panel.Palette) app.togglePanel(Panel.Palette);
   }
 
   /** A tool's name, with its keyboard shortcut if it has one */

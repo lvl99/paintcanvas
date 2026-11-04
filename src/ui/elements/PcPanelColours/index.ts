@@ -129,7 +129,7 @@ const clampWhole = (value: number, max: number): number =>
  * The colour palette menu: the foreground and background colours (the selected one is configured), its hex value, RGB
  * and HSL sliders, the saved colours, and buttons to import and export them as a JSON file.
  *
- * - Pressing the foreground or background colour selects it and opens the browser's colour picker.
+ * - Pressing the foreground or background colour selects it.
  * - Pressing a saved colour sets the selected colour; [+] saves the selected colour.
  * - A saved colour is deleted, after asking, by clicking it with Alt/Option held (the cursor shows an "X"), from its
  *   menu (right-click, a long press on touch screens, or the context menu key), or with Delete or Backspace. Arrow keys,
@@ -249,10 +249,9 @@ export class PcPanelColours extends PcPanel {
     app.setColour(colour, app.selectedColour);
   }
 
-  /** Select the pressed colour and open the browser's colour picker */
+  /** Select the pressed colour */
   private onColourClick(event: CustomEvent<{ slot: ColourSlot }>): void {
     this.app?.selectColour(event.detail.slot);
-    (event.currentTarget as HTMLElement & { openPicker(): void }).openPicker();
   }
 
   /** Follow the hex value as it's typed, setting the colour once it's a full 6-digit value */
