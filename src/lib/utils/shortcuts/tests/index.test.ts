@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
   SHORTCUTS,
+  ariaKeyShortcut,
   cmdSymbol,
+  isApplePlatform,
   isTypingTarget,
+  shortcutLabel,
   matchShortcut,
   type KeyEventLike,
 } from "..";
@@ -102,5 +105,55 @@ describe("cmdSymbol", () => {
     expect(cmdSymbol("Win32")).toBe("^");
     expect(cmdSymbol("Linux x86_64")).toBe("^");
     expect(cmdSymbol()).toBe(cmdSymbol(navigator.platform));
+  });
+});
+
+describe("isApplePlatform", () => {
+  it("should detect Apple devices", () => {
+    expect(isApplePlatform("MacIntel")).toBe(true);
+    expect(isApplePlatform("iPhone")).toBe(true);
+    expect(isApplePlatform("Win32")).toBe(false);
+    expect(isApplePlatform()).toBe(isApplePlatform(navigator.platform));
+  });
+});
+
+describe("shortcutLabel", () => {
+  it.each([
+    [{ key: "s", cmd: true }, "MacIntel", "⌘S"],
+    [{ key: "s", cmd: true }, "Win32", "^S"],
+    [{ key: "z", cmd: true, shift: true }, "MacIntel", "⇧⌘Z"],
+    [
+      { key: "x", ctrl: true, alt: true, shift: true, cmd: true },
+      "MacIntel",
+      "^⌥⇧⌘X",
+    ],
+    [{ key: "backspace", alt: true }, "Win32", "⌥⌫"],
+    [{ key: "delete" }, "MacIntel", "⌦"],
+    [{ key: "tab" }, "MacIntel", "⇥"],
+    [{ key: "escape" }, "MacIntel", "⎋"],
+    [{ key: "enter" }, "MacIntel", "↵"],
+    [{ key: "arrowup", shift: true }, "MacIntel", "⇧↑"],
+    [{ key: " " }, "MacIntel", "Space"],
+    [{ key: "[" }, "MacIntel", "["],
+    [{ key: "f5" }, "MacIntel", "F5"],
+  ])("should label %j on %s as %s", (combo, platform, label) => {
+    expect(shortcutLabel(combo, platform)).toBe(label);
+  });
+});
+
+describe("ariaKeyShortcut", () => {
+  it.each([
+    [{ key: "s", cmd: true }, "MacIntel", "Meta+S"],
+    [{ key: "s", cmd: true }, "Win32", "Control+S"],
+    [
+      { key: "z", ctrl: true, alt: true, shift: true },
+      "MacIntel",
+      "Control+Alt+Shift+Z",
+    ],
+    [{ key: "backspace", alt: true }, "Win32", "Alt+Backspace"],
+    [{ key: " " }, "MacIntel", "Space"],
+    [{ key: "]" }, "MacIntel", "]"],
+  ])("should name %j on %s as %s", (combo, platform, value) => {
+    expect(ariaKeyShortcut(combo, platform)).toBe(value);
   });
 });

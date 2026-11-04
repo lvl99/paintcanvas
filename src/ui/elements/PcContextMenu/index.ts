@@ -1,5 +1,14 @@
 import { css, html, nothing, type PropertyValues } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
+import {
+  ariaKeyShortcut,
+  shortcutLabel,
+  type KeyCombo,
+} from "../../../lib/utils/shortcuts";
+import "../PcIcon";
+
+/** Longest shortcut label shown on a menu item (characters); longer ones are left out */
+export const MAX_SHORTCUT_LABEL_LENGTH = 3;
 
 /** An item in a context menu */
 export interface MenuItem {
@@ -9,11 +18,28 @@ export interface MenuItem {
   disabled?: boolean;
   /** Shown in the cancelling colour, e.g. for deleting */
   danger?: boolean;
+  /** Makes the item a toggle, showing a checkmark on its left while on */
+  checked?: boolean;
+  /** Name of an icon to show on its left (see `icons`), when it isn't a toggle */
+  icon?: string;
+  /** The action's keyboard shortcut, shown on its right as symbols (e.g. ⌘S) when 3 characters or fewer */
+  shortcut?: KeyCombo;
 }
+
+/**
+ * Whether a menu item has something to show on its left: a checkmark or an icon.
+ *
+ * @example
+ * hasStart({ value: "grid", label: "Grid", checked: false }); // true
+ */
+const hasStart = (item: MenuItem): boolean =>
+  item.checked !== undefined || item.icon !== undefined;
 
 /**
  * A menu of actions, e.g. for a layer. While `open`, it shows its items at `x`, `y` (in the page's viewport) and takes
  * keyboard focus: arrow keys, Home and End move between items, Enter or Space chooses one, and Escape or Tab closes it.
+ * Items can show a checkmark (toggles) or an icon on their left, and their keyboard shortcut on their right; long
+ * labels wrap.
  * Fires `pc-select` with the chosen item's value, and `pc-close` when it should close (after choosing, Escape, Tab, or a
  * press outside it). The implementer sets `open` to false in response.
  *
@@ -45,6 +71,7 @@ export class PcContextMenu extends PcElement {
       [role="menu"] {
         display: flex;
         min-width: 160px;
+        max-width: min(320px, calc(100vw - 2 * var(--pc-space-3)));
         flex-direction: column;
         padding: var(--pc-space-1) 0;
         border-radius: var(--pc-radius);
@@ -52,6 +79,9 @@ export class PcContextMenu extends PcElement {
         box-shadow: var(--pc-shadow);
       }
       button {
+        display: flex;
+        align-items: baseline;
+        gap: var(--pc-space-2);
         padding: var(--pc-space-2) var(--pc-space-3);
         border: 0;
         background: transparent;
@@ -71,6 +101,24 @@ export class PcContextMenu extends PcElement {
       }
       button.danger {
         color: var(--pc-dismiss-text);
+      }
+      .start {
+        /* Icons as tall as the text, so items with icons are no taller */
+        --pc-icon-size: 1.2em;
+        display: inline-flex;
+        width: var(--pc-icon-size);
+        flex: none;
+        align-self: center;
+        justify-content: center;
+      }
+      .label {
+        flex: 1;
+        overflow-wrap: anywhere;
+      }
+      .end {
+        flex: none;
+        color: var(--pc-text-muted);
+        white-space: nowrap;
       }
       button:disabled {
         color: var(--pc-text-muted);
@@ -160,7 +208,34 @@ export class PcContextMenu extends PcElement {
     }
   }
 
+  /** An item's left side: a checkmark while a toggle is on, its icon, or empty space */
+  private renderStart(item: MenuItem) {
+    const content =
+      item.checked !== undefined
+        ? item.checked
+          ? "✔"
+          : nothing
+        : item.icon
+          ? html`<pc-icon name=${item.icon}></pc-icon>`
+          : nothing;
+    return html`<span part="item-start" class="start" aria-hidden="true"
+      >${content}</span
+    >`;
+  }
+
+  /** An item's right side: its shortcut's label, if short enough */
+  private renderEnd(item: MenuItem) {
+    const label = item.shortcut && shortcutLabel(item.shortcut);
+    return label && [...label].length <= MAX_SHORTCUT_LABEL_LENGTH
+      ? html`<span part="item-end" class="end" aria-hidden="true"
+          >${label}</span
+        >`
+      : nothing;
+  }
+
   override render() {
+    // Every item keeps the left space when any has something there, so labels line up
+    const showStart = this.items.some(hasStart);
     return html`<div
       part="menu"
       role="menu"
@@ -172,13 +247,21 @@ export class PcContextMenu extends PcElement {
           html`<button
             part="item"
             type="button"
-            role="menuitem"
+            role=${item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
+            aria-checked=${
+              item.checked === undefined ? nothing : String(item.checked)
+            }
+            aria-keyshortcuts=${
+              item.shortcut ? ariaKeyShortcut(item.shortcut) : nothing
+            }
             class=${item.danger ? "danger" : nothing}
             ?disabled=${item.disabled}
             data-value=${item.value}
             @click=${() => this.choose(item)}
           >
-            ${item.label}
+            ${showStart ? this.renderStart(item) : nothing}<span class="label"
+              >${item.label}</span
+            >${this.renderEnd(item)}
           </button>`,
       )}
     </div>`;
