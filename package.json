@@ -68,7 +68,10 @@
     "docs": "pnpm --filter paintcanvas-docs start",
     "docs:build": "pnpm --filter paintcanvas-docs build",
     "prepack": "pnpm build",
-    "demo:build": "vite build --config vite.demo.config.ts"
+    "demo:build": "vite build --config vite.demo.config.ts",
+    "pages:build": "node scripts/build-pages.ts",
+    "pages:deploy": "node scripts/deploy-pages.ts",
+    "pages:preview": "vite preview --config vite.demo.config.ts --outDir ../.pages --base /paintcanvas/ --port 5191 --strictPort"
   },
   "packageManager": "pnpm@12.10.1",
   "peerDependencies": {
