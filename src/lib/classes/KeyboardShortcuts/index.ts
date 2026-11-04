@@ -1,8 +1,8 @@
 import { Tool, type default as PaintCanvas } from "../PaintCanvas";
 import {
-  HOLD_TO_PAN_KEY,
+  comboFromEvent,
   isTypingTarget,
-  matchShortcut,
+  sameCombo,
   type ShortcutAction,
 } from "../../utils/shortcuts";
 
@@ -10,12 +10,15 @@ import {
 export const SHORTCUT_EVENT = "pc-shortcut";
 
 /**
- * Listens for key presses and runs the matching shortcut on the app. Shortcuts are ignored while typing in text fields.
+ * Listens for key presses and runs the matching shortcut on the app, using the user's key combinations
+ * (`app.shortcuts`). Shortcuts are ignored while typing in text fields. Key presses are matched on keyboards with
+ * different layouts (see `comboFromEvent`).
  *
- * Tool selection, brush/eraser size, interface visibility, select all/deselect, undo/redo, cut/copy/paste, deleting the
- * masked image data (Delete or Backspace), fills, swapping colours and finishing or cancelling a
- * lasso shape are handled here; other actions (and Escape/Enter for later features) dispatch an `pc-shortcut` event with the action as `detail`.
- * Holding Space pans temporarily; releasing it returns to the selected tool.
+ * Tool selection, brush/eraser size and opacity, interface visibility, select all/invert/deselect, undo/redo,
+ * cut/copy/paste, deleting the masked image data (Delete or Backspace), fills, swapping colours, zooming, layer opacity
+ * and finishing or cancelling a lasso shape are handled here; other actions (and Escape/Enter for later features)
+ * dispatch an `pc-shortcut` event with the action as `detail`. Holding the hold-to-pan key (Space by default) pans
+ * temporarily; releasing it returns to the selected tool.
  *
  * @example
  * const shortcuts = new KeyboardShortcuts(app);
@@ -26,6 +29,9 @@ export default class KeyboardShortcuts {
 
   private target: EventTarget | null = null;
 
+  /** The hold-to-pan key while it is held */
+  private heldKey?: string;
+
   private readonly onKeyDown = (event: Event) =>
     this.handle(event as KeyboardEvent);
 
@@ -33,7 +39,7 @@ export default class KeyboardShortcuts {
     this.handleKeyUp(event as KeyboardEvent);
 
   // Releasing keys outside the window (e.g. switching apps) must not leave a tool held
-  private readonly onBlur = () => this.app.releaseHeldTool();
+  private readonly onBlur = () => this.release();
 
   constructor(app: PaintCanvas) {
     this.app = app;
@@ -67,20 +73,19 @@ export default class KeyboardShortcuts {
     // Events from inside shadow DOM are retargeted, so check the original target
     if (isTypingTarget(event.composedPath()[0] ?? event.target))
       return undefined;
-
-    if (
-      event.key === HOLD_TO_PAN_KEY &&
-      !event.metaKey &&
-      !event.ctrlKey &&
-      !event.altKey
-    ) {
+    const combo = comboFromEvent(event);
+    if (!combo) return undefined;
+    const { holdToPan, shortcuts } = this.app.shortcuts;
+    if (holdToPan && sameCombo(combo, holdToPan)) {
       // Stops the page scrolling while Space is held
       event.preventDefault();
+      this.heldKey = combo.key;
       this.app.holdTool(Tool.Pan);
       return undefined;
     }
-
-    const action = matchShortcut(event);
+    const action = shortcuts.find((shortcut) =>
+      sameCombo(shortcut, combo),
+    )?.action;
     if (!action) return undefined;
     event.preventDefault();
     this.run(action);
@@ -88,10 +93,20 @@ export default class KeyboardShortcuts {
   }
 
   /**
-   * Return to the selected tool when the hold-to-pan key is released.
+   * Return to the selected tool when the hold-to-pan key is released (whatever modifiers are held by then).
    */
   handleKeyUp(event: KeyboardEvent): void {
-    if (event.key === HOLD_TO_PAN_KEY) this.app.releaseHeldTool();
+    if (
+      this.heldKey !== undefined &&
+      comboFromEvent(event)?.key === this.heldKey
+    )
+      this.release();
+  }
+
+  /** Stop holding the hold-to-pan key */
+  private release(): void {
+    this.heldKey = undefined;
+    this.app.releaseHeldTool();
   }
 
   /**
@@ -104,25 +119,40 @@ export default class KeyboardShortcuts {
         app.selectTool(action.tool);
         break;
       case "brush-smaller":
-      case "brush-bigger": {
-        const settings =
-          app.tool === Tool.Eraser
-            ? app.eraser
-            : app.tool === Tool.Brush
-              ? app.brush
-              : undefined;
-        if (action.type === "brush-bigger") settings?.grow();
-        else settings?.shrink();
+        this.brushSettings()?.shrink();
         break;
-      }
+      case "brush-bigger":
+        this.brushSettings()?.grow();
+        break;
+      case "brush-less-opaque":
+        this.brushSettings()?.lessOpaque();
+        break;
+      case "brush-more-opaque":
+        this.brushSettings()?.moreOpaque();
+        break;
       case "toggle-interface":
         app.toggleInterface();
         break;
       case "select-all":
         app.selection.selectAll();
         break;
+      case "invert-selection":
+        app.selection.invert();
+        break;
       case "deselect":
         app.selection.clear();
+        break;
+      case "zoom-in":
+        app.viewport.zoomIn(this.viewportCentre());
+        break;
+      case "zoom-out":
+        app.viewport.zoomOut(this.viewportCentre());
+        break;
+      case "reset-zoom":
+        app.viewport.zoomAt(this.viewportCentre(), 1);
+        break;
+      case "layer-opacity":
+        app.layers.update(app.layers.active.id, { opacity: action.opacity });
         break;
       case "undo":
         app.undo();
@@ -170,6 +200,22 @@ export default class KeyboardShortcuts {
       default:
         this.dispatch(action);
     }
+  }
+
+  /** The brush or eraser settings while that tool is selected */
+  private brushSettings() {
+    const { app } = this;
+    return app.tool === Tool.Eraser
+      ? app.eraser
+      : app.tool === Tool.Brush
+        ? app.brush
+        : undefined;
+  }
+
+  /** The middle of the viewport, which zoom shortcuts zoom around */
+  private viewportCentre() {
+    const { width, height } = this.app.viewport;
+    return { x: width / 2, y: height / 2 };
   }
 
   /**

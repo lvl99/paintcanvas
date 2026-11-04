@@ -75,7 +75,27 @@ In your own Lit elements, `LayoutStateController` gives the same state.
 
 ## Keyboard shortcuts
 
-The layout handles keyboard shortcuts (tools, brush size, undo and redo, selection, clipboard, Tab to hide the interface, Cmd/Ctrl + S to save a PNG). Set `.shortcuts=${false}` to handle them yourself with `KeyboardShortcuts` (`@lvl99dotcom/paintcanvas/lib/classes/KeyboardShortcuts`), which dispatches `pc-shortcut` for actions it leaves to you.
+The layout handles keyboard shortcuts (tools, brush size and opacity, undo and redo, selection, clipboard, fills, zoom, layer opacity, Tab to hide the interface, Cmd/Ctrl + S to save a PNG). Set `.shortcuts=${false}` to handle them yourself with `KeyboardShortcuts` (`@lvl99dotcom/paintcanvas/lib/classes/KeyboardShortcuts`), which dispatches `pc-shortcut` for actions it leaves to you.
+
+`SHORTCUT_DEFINITIONS` (`@lvl99dotcom/paintcanvas/lib/utils/shortcuts`) lists every action and its default key combination. Users can change the key combinations of the configurable ones, kept in `canvas.shortcuts`:
+
+```ts
+canvas.shortcuts.set("tool-brush", { key: "p" }); // { changed: true }
+canvas.shortcuts.set("tool-brush", { key: "e" }); // { changed: true, movedFrom: "tool-eraser" }
+canvas.shortcuts.set("cut", { key: "z", cmd: true }); // { changed: false, fixed: "undo" }
+canvas.shortcuts.set("cut", null); // no key combination
+canvas.shortcuts.load(saved); // e.g. from storage; dispatches "change"
+```
+
+Tab, Cmd/Ctrl + S, Cmd/Ctrl + Z, Shift + Cmd/Ctrl + Z, Delete/Backspace, Escape, Enter and 1–0 (layer opacity 10%–100%) are fixed. `cmd` is Command on Apple devices and Ctrl elsewhere; `ctrl` is Control on Apple devices only.
+
+Key presses are matched on keyboards with any layout:
+
+- Letters follow the key's label, e.g. `a` on a French keyboard.
+- Digits and symbols ignore the Shift or AltGr/Option used to type them, e.g. `<` and `[` on a German keyboard.
+- When a key types a character outside basic Latin (another alphabet, or Option on macOS) or is a dead key, its physical key is used, e.g. `cmd a` with a Russian layout.
+- `=` counts as `+`, so `cmd +` works with or without Shift.
+- Key presses while composing text (e.g. with a Japanese input method) are ignored.
 
 ## Keeping the drawing
 

@@ -1,4 +1,5 @@
 import StrokeLog from "../StrokeLog";
+import { Tool } from "./tool";
 import { isHexColour } from "../../utils/colour";
 import BackgroundWork from "../BackgroundWork";
 import type { DrawableLayer } from "../../rendering/compositing";
@@ -41,6 +42,7 @@ import { BRUSH_PRESET_FILE_FORMAT } from "../../presets";
 import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
 import InputSettings from "../InputSettings";
 import Palette from "../Palette";
+import ShortcutSettings from "../ShortcutSettings";
 import { PALETTE_FILE_FORMAT } from "../../palette";
 import ExternalSheets from "../ExternalSheets";
 import PatchSender from "../../messages/PatchSender";
@@ -79,21 +81,7 @@ import {
   type PixelRect,
 } from "../../rendering/sample";
 
-/** Drawing and navigation tools */
-export enum Tool {
-  Brush = "brush",
-  Eraser = "eraser",
-  /** Move, scale and rotate */
-  Move = "move",
-  RectangleLasso = "rectangle-lasso",
-  CircleLasso = "circle-lasso",
-  PolygonLasso = "polygon-lasso",
-  FreeformLasso = "freeform-lasso",
-  Pan = "pan",
-  Zoom = "zoom",
-  /** Set the current colour from the canvas (eyedropper) */
-  ColourSample = "colour-sample",
-}
+export { Tool };
 
 /** How the colour sample tool samples: the pixel under the pointer, or the average of a dragged rectangle */
 export type SampleMode = "point" | "area";
@@ -304,6 +292,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** The user's saved colours, shown as swatches */
   readonly palette = new Palette();
+
+  /** The user's keyboard shortcuts: each configurable action's key combination */
+  readonly shortcuts = new ShortcutSettings();
   /** The user's pointer position over the canvas, in canvas pixels (undefined when off the canvas) */
   pointer?: Point;
 

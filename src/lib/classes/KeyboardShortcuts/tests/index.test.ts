@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import KeyboardShortcuts, { SHORTCUT_EVENT } from "..";
 import PaintCanvas, { Panel, Tool } from "../../PaintCanvas";
 import { createFakeCanvasFactory } from "../../../../testing/fakeCanvas";
@@ -23,8 +23,13 @@ const press = (
 };
 
 let shortcuts: KeyboardShortcuts | undefined;
+// Key presses are read as on a Mac, where cmd is the Command (meta) key
+beforeEach(() => {
+  vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+});
 afterEach(() => {
   shortcuts?.detach();
+  vi.restoreAllMocks();
   document.body.replaceChildren();
 });
 
@@ -99,7 +104,7 @@ describe("KeyboardShortcuts", () => {
     const redo = vi.spyOn(app, "redo");
     press(window, "z", { metaKey: true });
     expect(undo).toHaveBeenCalledOnce();
-    press(window, "Z", { ctrlKey: true, shiftKey: true });
+    press(window, "Z", { metaKey: true, shiftKey: true });
     expect(redo).toHaveBeenCalledOnce();
   });
 
@@ -132,7 +137,7 @@ describe("KeyboardShortcuts", () => {
     const app = createApp();
     shortcuts = new KeyboardShortcuts(app);
     shortcuts.attach(window);
-    const fill = vi.spyOn(app, "fill");
+    const fill = vi.spyOn(app, "fill").mockImplementation(() => undefined);
     const deleteMasked = vi.spyOn(app, "deleteMasked");
     press(window, "Backspace", { metaKey: true });
     press(window, "Backspace", { altKey: true });
@@ -143,6 +148,15 @@ describe("KeyboardShortcuts", () => {
       foreground: "#ffffff",
       background: "#000000",
     });
+  });
+
+  it("should ignore modifier keys pressed alone", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    expect(press(window, "Shift", { shiftKey: true }).defaultPrevented).toBe(
+      false,
+    );
   });
 
   it("should ignore key presses while typing and unknown keys", () => {
@@ -206,6 +220,7 @@ describe("KeyboardShortcuts", () => {
     press(window, " ", { metaKey: true });
     press(window, " ", { ctrlKey: true });
     press(window, " ", { altKey: true });
+    press(window, " ", { shiftKey: true });
     expect(app.activeTool).toBe(Tool.Brush);
   });
 
@@ -221,19 +236,111 @@ describe("KeyboardShortcuts", () => {
     expect(app.activeTool).toBe(Tool.Brush);
   });
 
-  it("should select all and deselect", () => {
+  it("should select all, invert the selection and deselect", () => {
     const app = createApp();
     shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
     const selectAll = vi
       .spyOn(app.selection, "selectAll")
+      .mockImplementation(() => undefined);
+    const invert = vi
+      .spyOn(app.selection, "invert")
       .mockImplementation(() => undefined);
     const clear = vi
       .spyOn(app.selection, "clear")
       .mockImplementation(() => undefined);
-    shortcuts.run({ type: "select-all" });
-    shortcuts.run({ type: "deselect" });
-    expect(selectAll).toHaveBeenCalled();
-    expect(clear).toHaveBeenCalled();
+    press(window, "a", { metaKey: true });
+    press(window, "I", { metaKey: true, shiftKey: true });
+    press(window, "d", { metaKey: true });
+    expect(selectAll).toHaveBeenCalledOnce();
+    expect(invert).toHaveBeenCalledOnce();
+    expect(clear).toHaveBeenCalledOnce();
+  });
+
+  it("should change the brush or eraser opacity with < and > only when that tool is selected", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    app.brush.update({ alpha: 0.45 });
+    press(window, ">", { shiftKey: true });
+    expect(app.brush.preset.alpha).toBe(0.5);
+    press(window, "<", { shiftKey: true });
+    press(window, "<", { shiftKey: true });
+    expect(app.brush.preset.alpha).toBe(0.3);
+    press(window, "e");
+    app.eraser.update({ alpha: 1 });
+    press(window, "<", { shiftKey: true });
+    expect([app.brush.preset.alpha, app.eraser.preset.alpha]).toEqual([
+      0.3, 0.9,
+    ]);
+    press(window, "z");
+    press(window, ">", { shiftKey: true });
+    expect(app.eraser.preset.alpha).toBe(0.9);
+  });
+
+  it("should zoom in, out and to 100% around the middle of the viewport", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    app.viewport.resize(800, 600);
+    const zoomIn = vi.spyOn(app.viewport, "zoomIn");
+    const zoomOut = vi.spyOn(app.viewport, "zoomOut");
+    const zoomAt = vi.spyOn(app.viewport, "zoomAt");
+    const centre = { x: 400, y: 300 };
+    press(window, "=", { metaKey: true });
+    press(window, "+", { metaKey: true, shiftKey: true });
+    expect(zoomIn.mock.calls).toEqual([[centre], [centre]]);
+    press(window, "-", { metaKey: true });
+    expect(zoomOut).toHaveBeenCalledWith(centre);
+    zoomAt.mockClear();
+    press(window, "0", { metaKey: true });
+    expect(zoomAt).toHaveBeenCalledWith(centre, 1);
+    expect(app.viewport.zoom).toBe(1);
+  });
+
+  it("should set the selected layer's opacity with 1 to 9 and 0", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    press(window, "3");
+    expect(app.layers.active.opacity).toBe(0.3);
+    press(window, "0");
+    expect(app.layers.active.opacity).toBe(1);
+  });
+
+  it("should use the user's key combinations, including for holding to pan", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    app.shortcuts.set("tool-eraser", { key: "p" });
+    app.shortcuts.set("pan", { key: "h" });
+    press(window, "e");
+    expect(app.tool).toBe(Tool.Brush);
+    press(window, "p");
+    expect(app.tool).toBe(Tool.Eraser);
+    expect(press(window, " ").defaultPrevented).toBe(false);
+    expect(app.activeTool).toBe(Tool.Eraser);
+    press(window, "h");
+    expect(app.activeTool).toBe(Tool.Pan);
+    window.dispatchEvent(new KeyboardEvent("keyup", { key: "h" }));
+    expect(app.activeTool).toBe(Tool.Eraser);
+    // Without a hold-to-pan key, nothing pans
+    app.shortcuts.set("pan", null);
+    press(window, "h");
+    expect(app.activeTool).toBe(Tool.Eraser);
+  });
+
+  it("should not release pan for other keys, or before it is held", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    app.holdTool(Tool.Zoom);
+    window.dispatchEvent(new KeyboardEvent("keyup", { key: " " }));
+    expect(app.activeTool).toBe(Tool.Zoom);
+    app.releaseHeldTool();
+    press(window, " ");
+    window.dispatchEvent(new KeyboardEvent("keyup", { key: "Shift" }));
+    expect(app.activeTool).toBe(Tool.Pan);
   });
 
   it("should close a polygon on Enter, and otherwise pass Enter and Escape on", () => {

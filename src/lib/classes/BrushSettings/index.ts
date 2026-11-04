@@ -9,6 +9,12 @@ export const MAX_BRUSH_SIZE = 256;
 /** Fraction of the current size added or removed by `grow` and `shrink` ("]" and "[" keys) */
 export const BRUSH_SIZE_STEP = 0.1;
 
+/** Opacity step for the opacity keyboard shortcuts, in percent */
+export const BRUSH_OPACITY_STEP = 10;
+
+/** Lowest opacity the opacity keyboard shortcuts go to, in percent */
+export const MIN_BRUSH_OPACITY = 1;
+
 /**
  * Clamp a value between min and max.
  *
@@ -17,6 +23,24 @@ export const BRUSH_SIZE_STEP = 0.1;
  */
 export const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
+
+/**
+ * The next opacity step up or down, in percent: to the next multiple of `BRUSH_OPACITY_STEP`, from
+ * `MIN_BRUSH_OPACITY` to 100.
+ *
+ * @example
+ * stepOpacity(45, 1); // 50
+ * stepOpacity(10, -1); // 1
+ * stepOpacity(1, 1); // 10
+ */
+export const stepOpacity = (percent: number, direction: 1 | -1): number => {
+  const steps = percent / BRUSH_OPACITY_STEP;
+  const next =
+    (direction > 0
+      ? Math.floor(steps + 1e-9) + 1
+      : Math.ceil(steps - 1e-9) - 1) * BRUSH_OPACITY_STEP;
+  return clamp(next, MIN_BRUSH_OPACITY, 100);
+};
 
 /**
  * The settings of a brush or eraser: the selected preset, an editable copy of its settings (changed from the tool
@@ -156,6 +180,26 @@ export default class BrushSettings extends EventTarget {
    */
   shrink(): void {
     this.resize(-Math.max(1, Math.round(this.width * BRUSH_SIZE_STEP)));
+  }
+
+  /**
+   * Increase the opacity by one step (see `stepOpacity`).
+   */
+  moreOpaque(): void {
+    this.stepOpacity(1);
+  }
+
+  /**
+   * Decrease the opacity by one step (see `stepOpacity`).
+   */
+  lessOpaque(): void {
+    this.stepOpacity(-1);
+  }
+
+  /** Change the opacity by one step up or down */
+  private stepOpacity(direction: 1 | -1): void {
+    const percent = Math.round((this.current.alpha ?? 1) * 100);
+    this.update({ alpha: stepOpacity(percent, direction) / 100 });
   }
 
   /**
