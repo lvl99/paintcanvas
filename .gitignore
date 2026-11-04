@@ -19,3 +19,6 @@ collaboration
 docs/build
 docs/.docusaurus
 docs/docs/api
+
+# GitHub Pages site build output (see scripts/build-pages.ts)
+.pages

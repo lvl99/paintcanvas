@@ -67,7 +67,8 @@
     "demo": "pnpm dev",
     "docs": "pnpm --filter paintcanvas-docs start",
     "docs:build": "pnpm --filter paintcanvas-docs build",
-    "prepack": "pnpm build"
+    "prepack": "pnpm build",
+    "demo:build": "vite build --config vite.demo.config.ts"
   },
   "packageManager": "pnpm@12.10.1",
   "peerDependencies": {

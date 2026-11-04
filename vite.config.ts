@@ -33,7 +33,7 @@ const copyValidatorTypes = (): Plugin => ({
  * build would treat the source files as side-effect free and remove imports kept only for their side effects, such as
  * `import "../PcButton"`, which registers the elements an element uses.
  */
-const keepSideEffectImports = (): Plugin => ({
+export const keepSideEffectImports = (): Plugin => ({
   name: "paintcanvas:keep-side-effect-imports",
   apply: "build",
   transform(_code, id) {
