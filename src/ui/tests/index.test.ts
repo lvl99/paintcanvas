@@ -17,6 +17,7 @@ describe("@lvl99dotcom/paintcanvas/ui", () => {
       "pc-info-tip",
       "pc-popover",
       "pc-panel",
+      "pc-pane",
     ])
       expect(customElements.get(tag), tag).toBeDefined();
     expect(ui.icons.get("brush")).toBeDefined();

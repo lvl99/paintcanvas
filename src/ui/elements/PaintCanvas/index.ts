@@ -38,7 +38,8 @@ import {
   type SideMode,
 } from "../../layout";
 import { hasToolSettings } from "../PcToolSettings";
-import { PcPanel } from "../PcPanel";
+import "../PcPanel";
+import { PcPane, PANE_COLLAPSE_EVENT } from "../PcPane";
 import "../PcToolbar";
 import "../PcToolSettings";
 import "../PcCanvas";
@@ -54,37 +55,37 @@ import type { DialogChoice } from "../PcDialog";
 /** A side of the layout */
 type Side = "left" | "right";
 
+/** The sides */
+const SIDES: readonly Side[] = ["left", "right"];
+
 /** No space kept clear */
 const NO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 /** The choice that takes the drawing over from another window */
 const TAKE_OVER_CHOICE = "take-over";
 
-/** Elements that can take keyboard focus */
-const FOCUSABLE =
-  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
 /**
  * A ready-made painting app: the drawing elements arranged around the canvas, sized to its container (not the
  * window), with slots to add or replace content:
  *
  * - `header`: across the top (empty by default)
- * - `left`: `<pc-toolbar>` by default
- * - `top`: `<pc-tool-settings>` (for tools that have settings) by default
- * - `right`: empty by default (e.g. a `<pc-panel>` with a layers menu or chat)
+ * - `left`: `<pc-toolbar>` (a pane) by default
+ * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) by default
+ * - `right`: a `<pc-pane>` with `<pc-panel-layers>` by default
  * - `center`: `<pc-canvas>` by default
  * - `overlay`: drawn over the canvas; `<pc-canvas-map>` by default
  * - `bottom`: under the canvas (empty by default)
  * - `footer`: across the bottom; `<pc-stats>` by default
- * - `menu`: the app menu the toolbar's menu button opens (the button shows only with a menu)
+ * - `menu`: the app menu the toolbar's menu button opens, shown in a `<pc-panel>` (the button shows only with a menu)
  *
  * Content given for a slot replaces its default; an empty element clears it. Empty slots take no space. Hiding the
- * interface (Tab key) leaves only the canvas and overlay. A `<pc-panel-layers>` given in a side (e.g. in a `<pc-panel>`)
- * replaces the toolbar's layers menu button.
+ * interface (Tab key) leaves only the canvas and overlay. While a side has a `<pc-panel-layers>` (as the right side
+ * does by default), the toolbar has no layers menu button.
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
- * rail@600"`): `docked` beside the canvas; `rail`, a column of buttons (one per `<pc-panel>`) that open each panel over
- * the canvas; or `floating`, the side over the canvas as a palette that collapses to a button.
+ * rail@600"`), which the layout gives the side's `<pc-pane>`s (see `PcPane`): `docked` beside the canvas; `rail`, a
+ * column of buttons (one per panel) that open each panel over the canvas; or `floating`, the pane over the canvas as a
+ * box that collapses to a button. Give side content in a `<pc-pane>` to have it follow the side's mode.
  *
  * Reports its state for styling as attributes (`narrow`, `input="pen|touch|mouse"`, `ui-hidden`, `left-mode`,
  * `right-mode`) and as `pc-state-change` events (see `LayoutState`). Creates its own canvas unless given one, and
@@ -100,7 +101,10 @@ const FOCUSABLE =
  * @example
  * html`<paint-canvas style="height: 600px"></paint-canvas>`
  * html`<paint-canvas .app=${canvas} right-modes="docked, rail@800">
- *   <pc-panel slot="right" icon="layers" label="Layers"><pc-panel-layers .app=${canvas}></pc-panel-layers></pc-panel>
+ *   <pc-pane slot="right">
+ *     <pc-panel-layers .app=${canvas}></pc-panel-layers>
+ *     <pc-panel icon="chat" label="Chat"><my-chat></my-chat></pc-panel>
+ *   </pc-pane>
  * </paint-canvas>`
  */
 export class PaintCanvasElement extends PcElement {
@@ -118,8 +122,6 @@ export class PaintCanvasElement extends PcElement {
     width: { state: true },
     input: { state: true },
     configuring: { state: true },
-    collapsed: { state: true },
-    openPanel: { state: true },
   };
 
   static override styles = [PcElement.styles, unsafeCSS(styles)];
@@ -164,12 +166,6 @@ export class PaintCanvasElement extends PcElement {
     editingId?: string;
   };
 
-  /** Which floating sides are collapsed to a button */
-  declare collapsed: Record<Side, boolean>;
-
-  /** The panel open from a rail, if any */
-  declare openPanel?: PcPanel;
-
   /** Saves files (replaceable for tests) */
   saveFile: (blob: Blob, name: string) => Promise<SaveMethod | undefined> =
     saveFileToDisk;
@@ -191,9 +187,6 @@ export class PaintCanvasElement extends PcElement {
   /** Whether drawing was blocked when shortcuts were last watched */
   private blockedShortcuts = false;
 
-  /** The panels in each side's slot */
-  private panels: Record<Side, PcPanel[]> = { left: [], right: [] };
-
   /** Whether each side's slot has a layers menu (the toolbar's isn't needed then) */
   private sideLayers: Record<Side, boolean> = { left: false, right: false };
 
@@ -212,20 +205,12 @@ export class PaintCanvasElement extends PcElement {
   /** Space the floating sides cover over the canvas */
   private floatingInsets: Insets = NO_INSETS;
 
-  /** The rail button that opened the open panel, to return focus to */
-  private opener?: HTMLElement;
-
   private readonly resizeObserver?: ResizeObserver =
     typeof ResizeObserver === "function"
       ? new ResizeObserver(([entry]) => {
           this.width = Math.round(entry?.contentRect.width ?? 0);
         })
       : undefined;
-
-  // Panels' icons, labels and badges show on their rail buttons
-  private readonly panelObserver = new MutationObserver(() =>
-    this.requestUpdate(),
-  );
 
   // The input being used, from each press
   private readonly onPointerDown = (event: PointerEvent) => {
@@ -252,22 +237,12 @@ export class PaintCanvasElement extends PcElement {
       void this.saveScreenshot();
   };
 
-  // A press outside the open panel and its rail button closes it
-  private readonly onDocumentPointerDown = (event: PointerEvent) => {
-    const path = event.composedPath();
-    this.closePaletteOutside(path);
-    const panel = this.openPanel;
-    if (!panel) return;
-    if (!path.includes(panel) && !(this.opener && path.includes(this.opener)))
-      this.closePanel(false);
-  };
+  // A press outside the colour palette closes it
+  private readonly onDocumentPointerDown = (event: PointerEvent) =>
+    this.closePaletteOutside(event.composedPath());
 
-  // Escape closes the open panel
-  private readonly onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== "Escape" || !this.openPanel) return;
-    event.preventDefault();
-    this.closePanel(true);
-  };
+  // A floating pane's size changes when it's shown or collapsed
+  private readonly onPaneCollapse = () => this.requestUpdate();
 
   constructor() {
     super();
@@ -278,8 +253,6 @@ export class PaintCanvasElement extends PcElement {
     this.shortcuts = true;
     this.width = 0;
     this.input = isTouchDevice() ? "touch" : "mouse";
-    // Floating sides start as a button, so they don't cover the canvas until wanted
-    this.collapsed = { left: true, right: true };
   }
 
   /** Whether another window is drawing on the stored drawing, so this one is blocked */
@@ -311,13 +284,8 @@ export class PaintCanvasElement extends PcElement {
     this.app ??= new PaintCanvas();
     super.connectedCallback();
     this.resizeObserver?.observe(this);
-    this.panelObserver.observe(this, {
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["icon", "label", "badge"],
-    });
     this.addEventListener("pointerdown", this.onPointerDown, true);
-    this.addEventListener("keydown", this.onKeyDown);
+    this.addEventListener(PANE_COLLAPSE_EVENT, this.onPaneCollapse);
     document.addEventListener("pointerdown", this.onDocumentPointerDown, true);
     this.watchShortcuts();
   }
@@ -325,9 +293,8 @@ export class PaintCanvasElement extends PcElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
-    this.panelObserver.disconnect();
     this.removeEventListener("pointerdown", this.onPointerDown, true);
-    this.removeEventListener("keydown", this.onKeyDown);
+    this.removeEventListener(PANE_COLLAPSE_EVENT, this.onPaneCollapse);
     document.removeEventListener(
       "pointerdown",
       this.onDocumentPointerDown,
@@ -350,10 +317,6 @@ export class PaintCanvasElement extends PcElement {
         this.blocked !== this.blockedShortcuts)
     )
       this.watchShortcuts();
-    // A panel opened from a rail closes when its side stops being a rail
-    const panel = this.openPanel;
-    if (panel && this.modeOf(this.sideOf(panel)) !== "rail")
-      this.closePanel(false);
   }
 
   protected override updated(): void {
@@ -368,15 +331,42 @@ export class PaintCanvasElement extends PcElement {
       this.reported = report;
       this.dispatchEvent(new CustomEvent(STATE_EVENT, { detail: state }));
     }
+    this.setPaneModes();
     this.measureFloatingSides();
+  }
+
+  /** The panes in a side: the default one, or those given for it */
+  private panesIn(side: Side): PcPane[] {
+    // Asked after rendering, so the side's slot is there
+    const slot = this.renderRoot.querySelector(
+      `slot[name="${side}"]`,
+    ) as HTMLSlotElement;
+    const given = slot.assignedElements();
+    const content = given.length ? given : [...slot.children];
+    return content.filter(
+      (element): element is PcPane => element instanceof PcPane,
+    );
+  }
+
+  /** Show each side's panes in the side's mode, facing the canvas */
+  private setPaneModes(): void {
+    for (const side of SIDES)
+      for (const pane of this.panesIn(side)) {
+        pane.mode = this.modeOf(side);
+        pane.edge = side;
+      }
   }
 
   /** Keep the canvas clear of floating sides when fitting it */
   private measureFloatingSides(): void {
     const width = (side: Side) =>
-      this.renderRoot
-        .querySelector(`.side.${side} .float:not(.collapsed)`)
-        ?.getBoundingClientRect().width ?? 0;
+      this.panesIn(side)
+        .filter((pane) => pane.mode === "floating" && !pane.collapsed)
+        .reduce(
+          (widest, pane) =>
+            Math.max(widest, pane.getBoundingClientRect().width),
+          0,
+        );
     const insets = { ...NO_INSETS, left: width("left"), right: width("right") };
     if (
       insets.left === this.floatingInsets.left &&
@@ -521,43 +511,6 @@ export class PaintCanvasElement extends PcElement {
     };
   }
 
-  /** Which side a panel is in */
-  private sideOf(panel: PcPanel): Side {
-    return panel.slot === "left" ? "left" : "right";
-  }
-
-  /**
-   * Open a panel from its rail button (closing any other), or close it if it's open. Focus moves into the panel.
-   */
-  togglePanel(panel: PcPanel, opener?: HTMLElement): void {
-    if (this.openPanel === panel) {
-      this.closePanel(true);
-      return;
-    }
-    if (this.openPanel) this.closePanel(false);
-    this.openPanel = panel;
-    this.opener = opener;
-    panel.toggleAttribute("data-pc-open", true);
-    const focusable = panel.querySelector<HTMLElement>(FOCUSABLE);
-    if (focusable) focusable.focus();
-    else {
-      panel.tabIndex = -1;
-      panel.focus();
-    }
-  }
-
-  /**
-   * Close the panel open from a rail, moving focus back to its rail button if asked.
-   */
-  closePanel(returnFocus: boolean): void {
-    const panel = this.openPanel;
-    if (!panel) return;
-    panel.removeAttribute("data-pc-open");
-    this.openPanel = undefined;
-    if (returnFocus) this.opener?.focus();
-    this.opener = undefined;
-  }
-
   /** Follow which slots have content given (their defaults aren't needed) */
   private onSlotChange(event: Event): void {
     const slot = event.target as HTMLSlotElement;
@@ -575,18 +528,9 @@ export class PaintCanvasElement extends PcElement {
     >`;
   }
 
-  /** Follow the panels given for a side, and whether it has a layers menu */
+  /** Follow whether a side given content has a layers menu */
   private onSideSlotChange(side: Side, event: Event): void {
     const assigned = (event.target as HTMLSlotElement).assignedElements();
-    this.panels = {
-      ...this.panels,
-      [side]: assigned.filter(
-        (element): element is PcPanel => element instanceof PcPanel,
-      ),
-    };
-    // Marks them for the rail's styles (any panel, e.g. <pc-panel-layers>, not only <pc-panel>)
-    for (const panel of this.panels[side])
-      panel.toggleAttribute("data-pc-panel", true);
     this.sideLayers = {
       ...this.sideLayers,
       [side]: assigned.some((element) =>
@@ -605,100 +549,46 @@ export class PaintCanvasElement extends PcElement {
 
   /** Whether a side has a layers menu, replacing the toolbar's */
   private get layersInSide(): boolean {
-    return this.sideLayers.left || this.sideLayers.right;
+    // The right side's default pane has one
+    return this.sideLayers.left || this.sideLayers.right || !this.filled.right;
   }
 
-  /** The toolbar shown on the left unless the implementer gives other content */
-  private renderToolbar(app: PaintCanvas) {
-    return html`<pc-toolbar
-      .app=${app}
-      .menu=${this.hasMenu}
-      .layers=${!this.layersInSide}
-      .menuText=${this.menuText}
-      .menuLabel=${this.menuLabel}
-    ></pc-toolbar>`;
+  /** A side's default content: the toolbar on the left, and the layers on the right */
+  private renderSideDefault(side: Side, app: PaintCanvas, label: string) {
+    if (side === "left")
+      return html`<pc-toolbar
+        .app=${app}
+        .menu=${this.hasMenu}
+        .layers=${!this.layersInSide}
+        .menuText=${this.menuText}
+        .menuLabel=${this.menuLabel}
+        label=${label}
+      ></pc-toolbar>`;
+    return html`<pc-pane label=${label}
+      ><pc-panel-layers slot="start" .app=${app}></pc-panel-layers
+    ></pc-pane>`;
   }
 
-  /** A side's rail buttons, one per panel */
-  private renderRail(side: Side, label: string) {
-    const panels = this.panels[side];
-    if (panels.length === 0) return nothing;
-    return html`<div
-      class="rail"
-      part="${side}-rail"
-      role="toolbar"
-      aria-orientation="vertical"
-      aria-label=${label}
-    >
-      ${panels.map(
-        (panel) =>
-          html`<button
-            type="button"
-            title=${panel.panelLabel}
-            aria-label=${
-              panel.badge
-                ? this.t("paintCanvas.layout.new", { name: panel.panelLabel })
-                : panel.panelLabel
-            }
-            aria-expanded=${String(this.openPanel === panel)}
-            @click=${(event: Event) =>
-              this.togglePanel(panel, event.currentTarget as HTMLElement)}
-          >
-            <img src=${this.iconUrl(panel.panelIcon)} alt="" />
-            ${panel.badge ? html`<span class="badge"></span>` : nothing}
-          </button>`,
-      )}
-    </div>`;
-  }
-
-  /** A side, in its mode */
+  /** A side: its panes, in its mode (set on them after rendering) */
   private renderSide(side: Side, app: PaintCanvas, blocked: boolean) {
-    const mode = this.modeOf(side);
     const label = this.t(
       side === "left"
         ? "paintCanvas.layout.tools"
         : "paintCanvas.layout.panels",
     );
-    const slot = html`<slot
-      name=${side}
-      @slotchange=${(event: Event) => this.onSideSlotChange(side, event)}
-      >${side === "left" && !this.filled.left ? this.renderToolbar(app) : nothing}</slot
-    >`;
-    let content: unknown = slot;
-    if (mode === "rail")
-      content =
-        side === "left"
-          ? html`${slot}${this.renderRail(side, label)}`
-          : html`${this.renderRail(side, label)}${slot}`;
-    else if (mode === "floating") {
-      const collapsed = this.collapsed[side];
-      const arrows = side === "left" ? ["»", "«"] : ["«", "»"];
-      content = html`<div
-        class=${collapsed ? "float collapsed" : "float"}
-        part="${side}-float"
-      >
-        <button
-          type="button"
-          class="collapse"
-          aria-expanded=${String(!collapsed)}
-          aria-label=${this.t(collapsed ? "paintCanvas.layout.show" : "paintCanvas.layout.hide", { name: label })}
-          @click=${() =>
-            (this.collapsed = { ...this.collapsed, [side]: !collapsed })}
-        >
-          ${collapsed ? arrows[0] : arrows[1]}
-        </button>
-        <div class="content" ?hidden=${collapsed}>${slot}</div>
-      </div>`;
-    }
     return html`<div
       class="side ${side}"
       part=${side}
-      data-mode=${mode}
+      data-mode=${this.modeOf(side)}
       role="region"
       aria-label=${label}
       ?inert=${blocked}
     >
-      ${content}
+      <slot
+        name=${side}
+        @slotchange=${(event: Event) => this.onSideSlotChange(side, event)}
+        >${this.filled[side] ? nothing : this.renderSideDefault(side, app, label)}</slot
+      >
     </div>`;
   }
 
@@ -741,9 +631,13 @@ export class PaintCanvasElement extends PcElement {
             ></pc-panel-colours>`
           : nothing
       }
-      <div class="panel menu-panel" ?open=${app.panel === Panel.Menu}>
+      <pc-panel
+        class="panel menu-panel"
+        label=${this.menuLabel || this.t("paintCanvas.toolbar.menu")}
+        ?open=${app.panel === Panel.Menu}
+      >
         <slot name="menu" @slotchange=${this.onMenuSlotChange}></slot>
-      </div>`;
+      </pc-panel>`;
   }
 
   /** The brush configuration window, while open */
@@ -801,12 +695,15 @@ export class PaintCanvasElement extends PcElement {
         ${this.slotWithDefault(
           "top",
           showsToolSettings
-            ? html`<pc-tool-settings
-                .app=${app}
-                @pc-configure-brush=${(
-                  event: CustomEvent<"brush" | "eraser">,
-                ) => this.configure(event.detail)}
-              ></pc-tool-settings>`
+            ? html`<pc-pane orientation="horizontal" edge="top"
+                ><pc-tool-settings
+                  slot="middle"
+                  .app=${app}
+                  @pc-configure-brush=${(
+                    event: CustomEvent<"brush" | "eraser">,
+                  ) => this.configure(event.detail)}
+                ></pc-tool-settings
+              ></pc-pane>`
             : nothing,
         )}
       </div>

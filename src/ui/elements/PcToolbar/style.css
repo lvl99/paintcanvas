@@ -1,6 +1,4 @@
 :host {
-  display: flex;
-  flex-direction: column;
   width: 50px;
   height: 100%;
   background: var(--pc-bar);
@@ -46,6 +44,13 @@ img {
   height: 40px;
   margin: auto;
 }
+/* All the buttons in one column, so they shrink together when the toolbar is short */
+.start,
+.middle,
+.end {
+  display: contents;
+}
+/* The space between the tools and the end */
 .spacer {
   flex: 1;
   border-bottom: 1px solid var(--pc-border);

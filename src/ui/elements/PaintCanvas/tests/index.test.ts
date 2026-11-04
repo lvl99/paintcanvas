@@ -7,6 +7,8 @@ import { SHORTCUT_EVENT } from "../../../../lib/classes/KeyboardShortcuts";
 import { STATE_EVENT, type LayoutState } from "../../../layout";
 import type { PcPanel } from "../../PcPanel";
 import type { PcToolbar } from "../../PcToolbar";
+import type { PcPane } from "../../PcPane";
+import type { PcPanelLayers } from "../../PcPanelLayers";
 import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { createFakeLocks } from "../../../../testing/locks";
@@ -130,9 +132,14 @@ describe("paint-canvas", () => {
   });
 
   it("should show the app menu while it's open, and the toolbar's other menus over the canvas", async () => {
-    const { layout, app } = await setup('<nav slot="menu">Menu</nav>');
+    // A side without layers, so the toolbar opens its own
+    const { layout, app } = await setup(
+      '<nav slot="menu">Menu</nav><pc-pane slot="right"></pc-pane>',
+    );
     expect(query<PcToolbar>(layout, "pc-toolbar").menu).toBe(true);
-    const menu = query(layout, ".menu-panel");
+    const menu = query<PcPanel>(layout, ".menu-panel");
+    expect(menu.localName).toBe("pc-panel");
+    expect(menu.panelLabel).toBe("Menu");
     expect(menu.hasAttribute("open")).toBe(false);
     app.togglePanel(Panel.Menu);
     await layout.updateComplete;
@@ -234,115 +241,56 @@ describe("paint-canvas", () => {
     expect(layout.width).toBe(0);
   });
 
-  it("should open a rail's panels over the canvas, one at a time, and close them on Escape or a press outside", async () => {
-    const { layout } = await setup(
-      panelHtml("right", "Layers") + panelHtml("right", "Chat", "badge"),
-      500,
-    );
-    const [layers, chat] = [
-      ...layout.querySelectorAll<PcPanel>("pc-panel"),
-    ] as [PcPanel, PcPanel];
-    const buttons = queryAll<HTMLButtonElement>(
-      layout,
-      ".side.right .rail button",
-    );
-    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
-      "Layers",
-      "Chat (new)",
+  it("should show the layers in a pane on the right by default, and the tool settings in a pane at the top", async () => {
+    const { layout, app } = await setup();
+    const right = query<PcPane>(layout, ".side.right pc-pane");
+    const layers = right.querySelector<PcPanelLayers>("pc-panel-layers")!;
+    expect(layers.app).toBe(app);
+    expect([right.edge, right.mode, right.label]).toEqual([
+      "right",
+      "docked",
+      "Panels",
     ]);
-    expect(queryAll(layout, ".rail .badge")).toHaveLength(1);
-    buttons[0]!.click();
-    await layout.updateComplete;
-    expect(layers.hasAttribute("data-pc-open")).toBe(true);
-    expect(document.activeElement?.textContent).toBe("Inside Layers");
-    expect(buttons[0]!.getAttribute("aria-expanded")).toBe("true");
-    buttons[1]!.click();
-    expect([
-      layers.hasAttribute("data-pc-open"),
-      chat.hasAttribute("data-pc-open"),
-    ]).toEqual([false, true]);
-    // Pressing inside the panel or its button keeps it open
-    chat.dispatchEvent(
-      new Event("pointerdown", { bubbles: true, composed: true }),
-    );
-    expect(layout.openPanel).toBe(chat);
-    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
-    expect(layout.openPanel).toBeUndefined();
-    buttons[1]!.click();
-    chat.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "a", bubbles: true, composed: true }),
-    );
-    expect(layout.openPanel).toBe(chat);
-    chat.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Escape",
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    expect(layout.openPanel).toBeUndefined();
-    expect(layout.shadowRoot!.activeElement).toBe(buttons[1]);
-    // The button closes it too
-    buttons[1]!.click();
-    buttons[1]!.click();
-    expect(layout.openPanel).toBeUndefined();
-    layout.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(query<PcToolbar>(layout, "pc-toolbar").layers).toBe(false);
+    const top = query<PcPane>(layout, ".top pc-pane");
+    expect(top.orientation).toBe("horizontal");
+    expect(top.querySelector("pc-tool-settings")?.slot).toBe("middle");
   });
 
-  it("should focus a panel without anything focusable, update rail buttons as panels change, and close panels when the rail goes", async () => {
+  it("should give each side's panes the side's mode and edge, its own or given ones", async () => {
     const { layout } = await setup(
-      '<pc-panel slot="left" icon="layers" label="Notes"><p>Text</p></pc-panel>',
+      '<pc-pane slot="right" id="given"><pc-panel label="Chat"></pc-panel></pc-pane><p slot="right">Not a pane</p>',
       500,
     );
-    const panel = layout.querySelector("pc-panel") as PcPanel;
-    const button = query<HTMLButtonElement>(layout, ".side.left .rail button");
-    button.click();
-    expect(document.activeElement).toBe(panel);
-    panel.label = "Ideas";
-    await new Promise((resolve) => setTimeout(resolve));
-    await layout.updateComplete;
-    expect(button.getAttribute("aria-label")).toBe("Ideas");
+    const given = layout.querySelector<PcPane>("#given")!;
+    const toolbar = query<PcToolbar>(layout, "pc-toolbar");
+    expect([given.mode, given.edge]).toEqual(["rail", "right"]);
+    expect([toolbar.mode, toolbar.edge]).toEqual(["rail", "left"]);
+    expect(query(layout, ".side.right").dataset.mode).toBe("rail");
     layout.width = 1000;
     await layout.updateComplete;
-    expect(layout.openPanel).toBeUndefined();
-    expect(panel.hasAttribute("data-pc-open")).toBe(false);
-  });
-
-  it("should float a side over the canvas, collapsed to a button until opened", async () => {
-    const { layout } = await setup(panelHtml("right", "Layers"));
+    expect(given.mode).toBe("docked");
     layout.rightModes = "floating";
     await layout.updateComplete;
-    const toggle = query<HTMLButtonElement>(layout, ".side.right .collapse");
-    expect([
-      toggle.getAttribute("aria-expanded"),
-      toggle.getAttribute("aria-label"),
-    ]).toEqual(["false", "Show Panels"]);
-    expect(query(layout, ".side.right .content").hidden).toBe(true);
-    toggle.click();
-    await layout.updateComplete;
-    expect(toggle.getAttribute("aria-label")).toBe("Hide Panels");
-    expect(query(layout, ".side.right .content").hidden).toBe(false);
-    layout.leftModes = "floating";
-    await layout.updateComplete;
-    expect(query(layout, ".side.left .collapse").textContent?.trim()).toBe("»");
+    expect(given.mode).toBe("floating");
   });
 
-  it("should keep the canvas clear of open floating sides", async () => {
-    const { layout } = await setup(panelHtml("right", "Layers"));
+  it("should keep the canvas clear of open floating panes", async () => {
+    const { layout } = await setup();
     layout.rightModes = "floating";
-    layout.collapsed = { left: true, right: false };
     await layout.updateComplete;
-    const float = query(layout, ".side.right .float");
-    vi.spyOn(float, "getBoundingClientRect").mockReturnValue({
+    const pane = query<PcPane>(layout, ".side.right pc-pane");
+    vi.spyOn(pane, "getBoundingClientRect").mockReturnValue({
       width: 240,
     } as DOMRect);
-    layout.requestUpdate();
+    const insets = () =>
+      query<HTMLElement & { insets: unknown }>(layout, "pc-canvas").insets;
+    // Collapsed to a button, it covers nothing
+    expect(insets()).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
+    query<HTMLButtonElement>(pane, ".collapse").click();
     await layout.updateComplete;
     await layout.updateComplete;
-    expect(
-      query<HTMLElement & { insets: unknown }>(layout, "pc-canvas").insets,
-    ).toEqual({ top: 0, right: 240, bottom: 0, left: 0 });
+    expect(insets()).toEqual({ top: 0, right: 240, bottom: 0, left: 0 });
   });
 
   it("should handle keyboard shortcuts unless asked not to, saving a screenshot on Cmd/Ctrl + S", async () => {
@@ -419,19 +367,13 @@ describe("paint-canvas", () => {
     );
   });
 
-  it("should start with touch input on touch devices, and open panels from code", async () => {
+  it("should start with touch input on touch devices, and leave out the top pane when given other content", async () => {
     vi.stubGlobal("matchMedia", () => ({ matches: false }));
     const { layout } = await setup(
       '<pc-panel slot="right" icon="layers" label="Layers"></pc-panel>',
       500,
     );
     expect(layout.input).toBe("touch");
-    layout.closePanel(true);
-    const panel = layout.querySelector("pc-panel") as PcPanel;
-    layout.togglePanel(panel);
-    expect(layout.openPanel).toBe(panel);
-    layout.closePanel(true);
-    expect(layout.openPanel).toBeUndefined();
     const text = await setup('<span slot="top"></span>');
     expect(queryAll(text.layout, "pc-tool-settings")).toHaveLength(0);
   });

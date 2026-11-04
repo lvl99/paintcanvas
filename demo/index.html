@@ -17,10 +17,6 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        min-width: 220px;
-        padding: 12px;
-        background: var(--pc-surface-raised);
-        color: var(--pc-text);
       }
       #map {
         position: absolute;
@@ -62,7 +58,6 @@
       settings-store="demo"
       right-modes="docked, rail@800, floating@400"
     >
-      <pc-panel-layers id="layers" slot="right"></pc-panel-layers>
       <div slot="menu" class="menu">
         <pc-input-settings id="settings"></pc-input-settings>
         <pc-app-settings id="app-settings"></pc-app-settings>

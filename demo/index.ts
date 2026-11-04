@@ -1,11 +1,10 @@
-// A full-page PaintCanvas with a layers panel on the right, an app menu with input settings, keyboard shortcuts and
+// A full-page PaintCanvas with the layout's layers pane on the right, an app menu with input settings, keyboard shortcuts and
 // settings import/export, a theme picker and a "New drawing" button. The drawing and the app settings are kept in the
 // browser (`store="demo"`, `settings-store="demo"`), so they survive reloading the page.
 // The demo's own text is translated like an app's would be: its locales are added after PaintCanvas's, with `demo.` keys.
 import "../src/ui";
 import { translations } from "../src/lib/i18n";
 import type { PaintCanvasElement } from "../src/ui/elements/PaintCanvas";
-import type { PcPanelLayers } from "../src/ui/elements/PcPanelLayers";
 import type { PcInputSettings } from "../src/ui/elements/PcInputSettings";
 import type { PcAppSettings } from "../src/ui/elements/PcAppSettings";
 import type { PcCanvasMap } from "../src/ui/elements/PcCanvasMap";
@@ -42,7 +41,6 @@ translations.addEventListener("change", showText);
 const layout = find<PaintCanvasElement>("paint-canvas");
 await layout.updateComplete;
 const app = layout.app as NonNullable<PaintCanvasElement["app"]>;
-find<PcPanelLayers>("#layers").app = app;
 find<PcCanvasMap>("#map").app = app;
 find<PcInputSettings>("#settings").settings = app.input;
 find<PcAppSettings>("#app-settings").app = app;

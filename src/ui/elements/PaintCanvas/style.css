@@ -21,6 +21,10 @@ header {
   grid-area: top;
   min-width: 0;
 }
+/* The tool settings fill the top pane */
+.top pc-tool-settings {
+  flex: 1;
+}
 .center {
   position: relative;
   grid-area: center;
@@ -40,6 +44,12 @@ footer {
   z-index: 3;
   display: flex;
   min-height: 0;
+}
+/* A side's panes fill it */
+.side pc-pane,
+.side pc-toolbar,
+.side ::slotted(*) {
+  flex: 1;
 }
 .side.left {
   grid-area: left;
@@ -90,134 +100,17 @@ pc-canvas-map {
   top: 0;
   bottom: auto;
 }
-/* The app menu's content is the implementer's; it floats with the same shadow as the other panels */
-.menu-panel {
-  box-shadow: var(--pc-shadow);
-}
+/* The app menu: the implementer's content in a panel */
 .menu-panel:not([open]) {
   display: none;
 }
 
-/* Rail: a column of buttons, one per panel; the open panel floats over the canvas beside it */
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--pc-space-1);
-  padding: var(--pc-space-1);
-  border-inline: 1px solid var(--pc-border);
-  background: var(--pc-bar);
-}
-.rail button {
-  position: relative;
-  display: inline-flex;
-  padding: var(--pc-space-1);
-  border: 1px solid transparent;
-  border-radius: var(--pc-radius-small);
-  background: transparent;
-  cursor: pointer;
-}
-.rail button:hover {
-  background: var(--pc-surface-hover);
-}
-.rail button[aria-expanded="true"] {
-  border-color: var(--pc-accent);
-  background: var(--pc-accent);
-}
-.rail button:focus-visible {
-  outline: var(--pc-focus-width) solid var(--pc-focus);
-}
-.rail img {
-  width: var(--pc-icon-size);
-  height: var(--pc-icon-size);
-  filter: var(--pc-icon-filter);
-}
-.rail .badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--pc-bar);
-  border-radius: 50%;
-  background: var(--pc-red);
-}
-.side[data-mode="rail"] ::slotted([data-pc-panel]) {
-  display: none;
-}
-.side[data-mode="rail"] ::slotted([data-pc-panel][data-pc-open]) {
-  position: absolute;
-  z-index: 5;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  width: var(--pc-floating-panel-width, min(360px, 85vw));
-  /* Panels are no wider than their space, which here is the rail's */
-  max-width: none;
-  background: var(--pc-surface-raised);
-  box-shadow: var(--pc-shadow);
-}
-/* When narrow, a layers menu fills the panel opened from the rail (a floating side sizes itself to its content) */
-:host([narrow]) .side[data-mode="rail"] ::slotted([data-pc-panel]) {
-  --pc-panel-width: 100%;
-}
-.side.left[data-mode="rail"] ::slotted([data-pc-panel][data-pc-open]) {
-  left: 100%;
-}
-.side.right[data-mode="rail"] ::slotted([data-pc-panel][data-pc-open]) {
-  right: 100%;
-}
-
-/* Floating: the side floats over the canvas as a palette, and collapses to a button */
+/* Floating: the side's panes float over the canvas (see pc-pane), so the side takes no space */
 .side[data-mode="floating"] {
   /* Beside the canvas only, so it floats over the canvas and not the tool settings */
   grid-row: 3;
   width: 0;
 }
-.float {
-  position: absolute;
-  z-index: 5;
-  top: var(--pc-space-2);
-  bottom: var(--pc-space-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--pc-space-1);
-  max-width: var(--pc-floating-panel-width, min(360px, 85vw));
-  border-radius: var(--pc-radius);
-  background: var(--pc-surface-raised);
-  box-shadow: var(--pc-shadow);
-  overflow: hidden;
-}
-.side.left .float {
-  left: var(--pc-space-2);
-}
-.side.right .float {
-  right: var(--pc-space-2);
-}
-.float.collapsed {
-  bottom: auto;
-}
-.float .collapse {
-  align-self: flex-end;
-  min-width: var(--pc-control-size);
-  min-height: var(--pc-control-size);
-  border: 0;
-  background: transparent;
-  color: var(--pc-text);
-  font-size: 18px;
-  cursor: pointer;
-}
-.float .collapse:focus-visible {
-  outline: var(--pc-focus-width) solid var(--pc-focus);
-}
-.float .content {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-}
-.float .content[hidden] {
-  display: none;
-}
-
 /* While another window is drawing, its message covers only the layout (not the whole page) */
 pc-dialog.elsewhere {
   position: absolute;

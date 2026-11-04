@@ -1,7 +1,8 @@
 import { html, nothing, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
-import { PcElement, defineElement } from "../../base";
+import { defineElement } from "../../base";
+import { PcPane } from "../PcPane";
 import ChangeController from "../../ChangeController";
 import {
   Panel,
@@ -90,15 +91,17 @@ export const TOOLBAR_TOOLS: readonly {
  * or redo), layers menu toggle (unless `layers` is false) and app menu toggle. Pressing a colour selects it and opens the
  * colour palette, or the browser's colour picker while the palette is open. Tools, undo, redo and the layers toggle show
  * their icons; tools have the user's keyboard shortcuts in their tooltips, and undo and redo theirs (⌘ on Apple
- * devices, ^ elsewhere). The app menu button shows
- * `menuText` and is named `menuLabel` for screen readers.
+ * devices, ^ elsewhere). The app menu button shows `menuText` and is named `menuLabel` for screen readers.
+ *
+ * It's a `PcPane`: the colours and tools are at its start, and undo, redo, the layers toggle and the app menu toggle at
+ * its end, after anything slotted there.
  *
  * @example
  * html`<pc-toolbar .app=${app} menuText="App" menuLabel="App menu"></pc-toolbar>`
  */
-export class PcToolbar extends PcElement {
+export class PcToolbar extends PcPane {
   static override properties = {
-    ...PcElement.properties,
+    ...PcPane.properties,
     app: { attribute: false },
     menuText: { type: String },
     menuLabel: { type: String },
@@ -107,7 +110,7 @@ export class PcToolbar extends PcElement {
   };
 
   static override styles = [
-    PcElement.styles,
+    ...PcPane.styles,
     unsafeCSS(noTextSelection),
     unsafeCSS(styles),
   ];
@@ -172,34 +175,42 @@ export class PcToolbar extends PcElement {
       : this.t(name);
   }
 
-  override render() {
+  /** The colours and tools */
+  protected override renderStart() {
     const app = this.app;
-    if (!app) return html``;
-    const cmd = cmdSymbol();
-    // The key's name for assistive technology
-    const cmdKey = cmd === "⌘" ? "Meta" : "Control";
-    return html`
-      <pc-colour-pair
+    if (!app) return nothing;
+    return html`<pc-colour-pair
         .app=${app}
         @pc-colour-click=${this.onColourClick}
       ></pc-colour-pair>
       ${TOOLBAR_TOOLS.map(({ tool, icon, name, shortcutId }) => {
         const label = this.toolLabel(app, name, shortcutId);
-        return html`
-          <button
-            type="button"
-            data-tool=${tool}
-            title=${label}
-            aria-label=${label}
-            aria-pressed=${app.tool === tool}
-            @click=${() => this.onToolClick(tool)}
-          >
-            <img src=${this.iconUrl(icon)} alt="" />
-          </button>
-        `;
-      })}
-      <div class="spacer"></div>
-      <button
+        return html`<button
+          type="button"
+          data-tool=${tool}
+          title=${label}
+          aria-label=${label}
+          aria-pressed=${app.tool === tool}
+          @click=${() => this.onToolClick(tool)}
+        >
+          <img src=${this.iconUrl(icon)} alt="" />
+        </button>`;
+      })}`;
+  }
+
+  /** The space between the tools and the end */
+  protected override renderMiddle() {
+    return html`<div class="spacer"></div>`;
+  }
+
+  /** Undo, redo, and the layers and app menu toggles */
+  protected override renderEnd() {
+    const app = this.app;
+    if (!app) return nothing;
+    const cmd = cmdSymbol();
+    // The key's name for assistive technology
+    const cmdKey = cmd === "⌘" ? "Meta" : "Control";
+    return html`<button
         type="button"
         data-action="undo"
         title=${this.t("paintCanvas.toolbar.undoWithShortcut", { shortcut: `${cmd}Z` })}
@@ -247,8 +258,7 @@ export class PcToolbar extends PcElement {
               ${this.menuText}
             </button>`
           : nothing
-      }
-    `;
+      }`;
   }
 }
 

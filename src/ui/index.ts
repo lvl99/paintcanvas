@@ -34,6 +34,12 @@ export { PcInfoTip } from "./elements/PcInfoTip";
 export { PcPopover } from "./elements/PcPopover";
 export { PcPanel } from "./elements/PcPanel";
 export {
+  PcPane,
+  PANE_COLLAPSE_EVENT,
+  type PaneEdge,
+  type PaneOrientation,
+} from "./elements/PcPane";
+export {
   PcInputSettings,
   type InputSettingsLike,
 } from "./elements/PcInputSettings";
