@@ -74,21 +74,26 @@ const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((h) =>
 );
 
 /**
- * The CSS gradient a channel's slider track shows: the colours its values give, from the lowest to the highest. Red,
- * green and blue go from black to that pure colour, and hue through every hue. Saturation and lightness keep the
- * colour's other HSL values: saturation goes from grey to full colour, and lightness from black through the colour to
- * white.
+ * The CSS gradient a channel's slider track shows: the colours its values give, from the lowest to the highest, keeping
+ * the colour's other values. Red, green and blue go from none to all of that channel (e.g. red from `rgb(0, g, b)` to
+ * `rgb(255, g, b)`), saturation from grey to full colour, and lightness from black through the colour to white. Hue goes
+ * through every hue at full saturation, so it never shows as grey.
  *
  * @example
- * channelGradient("r", { h: 0, s: 0, l: 0 }); // "linear-gradient(to right, #000000, #ff0000)"
- * channelGradient("s", { h: 120, s: 40, l: 50 }); // "linear-gradient(to right, #808080, #00ff00)"
+ * channelGradient("r", { r: 0, g: 128, b: 255 }, { h: 210, s: 100, l: 50 }); // "linear-gradient(to right, #0080ff, #ff80ff)"
+ * channelGradient("s", { r: 77, g: 179, b: 77 }, { h: 120, s: 40, l: 50 }); // "linear-gradient(to right, #808080, #00ff00)"
  */
-export const channelGradient = (key: string, hsl: Hsl): string => {
+export const channelGradient = (key: string, rgb: Rgb, hsl: Hsl): string => {
   const { h, s, l } = hsl;
+  /** The colour with no and all of an RGB channel */
+  const rgbStops = (channel: keyof Rgb) => [
+    rgbToHex({ ...rgb, [channel]: 0 }),
+    rgbToHex({ ...rgb, [channel]: 255 }),
+  ];
   const stops: Record<string, string[]> = {
-    r: ["#000000", "#ff0000"],
-    g: ["#000000", "#00ff00"],
-    b: ["#000000", "#0000ff"],
+    r: rgbStops("r"),
+    g: rgbStops("g"),
+    b: rgbStops("b"),
     h: HUE_STOPS,
     s: [hslToHex({ h, s: 0, l }), hslToHex({ h, s: 100, l })],
     l: [0, 50, 100].map((lightness) => hslToHex({ h, s, l: lightness })),
@@ -525,8 +530,8 @@ export class PcColourPalette extends PcElement {
 
   /** The colour model tabs and the selected model's sliders */
   private renderChannels() {
-    const values: Rgb | Hsl =
-      this.model === "rgb" ? hexToRgb(this.colour) : this.hsl;
+    const rgb = hexToRgb(this.colour);
+    const values: Rgb | Hsl = this.model === "rgb" ? rgb : this.hsl;
     return html`<div class="channels">
       <div
         role="tablist"
@@ -565,7 +570,7 @@ export class PcColourPalette extends PcElement {
             ><input
               type="range"
               data-channel=${channel.key}
-              style="--track: ${channelGradient(channel.key, this.hsl)}"
+              style="--track: ${channelGradient(channel.key, rgb, this.hsl)}"
               min="0"
               max=${channel.max}
               aria-label=${name}

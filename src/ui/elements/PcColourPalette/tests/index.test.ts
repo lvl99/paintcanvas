@@ -63,31 +63,39 @@ const press = (target: Element, key: string, init: KeyboardEventInit = {}) => {
 };
 
 describe("channelGradient", () => {
-  it("should go from black to pure red, green or blue", () => {
-    const hsl = { h: 200, s: 50, l: 30 };
-    expect(channelGradient("r", hsl)).toBe(
+  it("should go from none to all of red, green or blue, keeping the other channels", () => {
+    const rgb = { r: 0, g: 128, b: 255 };
+    const hsl = { h: 210, s: 100, l: 50 };
+    expect(channelGradient("r", rgb, hsl)).toBe(
+      "linear-gradient(to right, #0080ff, #ff80ff)",
+    );
+    expect(channelGradient("g", rgb, hsl)).toBe(
+      "linear-gradient(to right, #0000ff, #00ffff)",
+    );
+    expect(channelGradient("b", rgb, hsl)).toBe(
+      "linear-gradient(to right, #008000, #0080ff)",
+    );
+    // From black to the pure colour for black
+    expect(channelGradient("r", { r: 0, g: 0, b: 0 }, hsl)).toBe(
       "linear-gradient(to right, #000000, #ff0000)",
-    );
-    expect(channelGradient("g", hsl)).toBe(
-      "linear-gradient(to right, #000000, #00ff00)",
-    );
-    expect(channelGradient("b", hsl)).toBe(
-      "linear-gradient(to right, #000000, #0000ff)",
     );
   });
 
   it("should go through every hue, from red back to red", () => {
-    expect(channelGradient("h", { h: 0, s: 0, l: 0 })).toBe(
+    expect(
+      channelGradient("h", { r: 0, g: 0, b: 0 }, { h: 0, s: 0, l: 0 }),
+    ).toBe(
       "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
     );
   });
 
   it("should go from grey to full colour, and from black through the colour to white, keeping the other HSL values", () => {
+    const rgb = { r: 77, g: 179, b: 77 };
     const hsl = { h: 120, s: 40, l: 50 };
-    expect(channelGradient("s", hsl)).toBe(
+    expect(channelGradient("s", rgb, hsl)).toBe(
       "linear-gradient(to right, #808080, #00ff00)",
     );
-    expect(channelGradient("l", hsl)).toBe(
+    expect(channelGradient("l", rgb, hsl)).toBe(
       "linear-gradient(to right, #000000, #4db34d, #ffffff)",
     );
   });
@@ -156,8 +164,10 @@ describe("pc-colour-palette", () => {
         `input[type=range][data-channel="${key}"]`,
       ).style.getPropertyValue("--track");
     expect(track("r")).toBe("linear-gradient(to right, #000000, #ff0000)");
-    get(element, '[role="tab"][data-model="hsl"]').click();
     app.setColour("#00ff00");
+    await element.updateComplete;
+    expect(track("r")).toBe("linear-gradient(to right, #00ff00, #ffff00)");
+    get(element, '[role="tab"][data-model="hsl"]').click();
     await element.updateComplete;
     expect(track("s")).toBe("linear-gradient(to right, #808080, #00ff00)");
     expect(track("l")).toBe(
