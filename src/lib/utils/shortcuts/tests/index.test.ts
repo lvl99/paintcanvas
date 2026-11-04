@@ -57,10 +57,13 @@ describe("SHORTCUT_DEFINITIONS", () => {
       expect(combos.length).toBeGreaterThan(0);
     expect(FIXED_SHORTCUTS.map(({ id }) => id)).toEqual([
       ...Array.from({ length: 10 }, (_, i) => `layer-opacity-${(i + 1) * 10}`),
-      "toggle-interface",
-      "save",
+      "cut",
+      "copy",
+      "paste",
       "undo",
       "redo",
+      "toggle-interface",
+      "save",
       "delete",
       "cancel",
       "commit",
@@ -159,17 +162,19 @@ describe("sanitiseShortcutBindings", () => {
 
   it("should use defaults for missing and invalid actions, and leave out unknown ones", () => {
     const bindings = sanitiseShortcutBindings(
-      { "tool-brush": { key: "p" }, cut: "nope", unknown: { key: "q" } },
+      { "tool-brush": { key: "p" }, deselect: "nope", unknown: { key: "q" } },
       defaults,
     );
     expect(bindings["tool-brush"]).toEqual({ key: "p" });
-    expect(bindings.cut).toEqual(defaults.cut);
+    expect(bindings.deselect).toEqual(defaults.deselect);
     expect(bindings.unknown).toBeUndefined();
     expect(sanitiseShortcutBindings("nope", defaults)).toEqual(defaults);
   });
 
   it("should remove a key combination with null", () => {
-    expect(sanitiseShortcutBindings({ cut: null }, defaults).cut).toBeNull();
+    expect(
+      sanitiseShortcutBindings({ deselect: null }, defaults).deselect,
+    ).toBeNull();
   });
 
   it("should remove key combinations fixed actions use, or that an earlier action has", () => {
@@ -192,10 +197,12 @@ describe("shortcutsFor", () => {
   it("should list configurable and fixed shortcuts, without the hold-to-pan key or removed ones", () => {
     const shortcuts = shortcutsFor({
       ...defaultShortcutBindings(),
-      cut: null,
+      deselect: null,
     });
     expect(shortcuts.some(({ action }) => action.type === "pan")).toBe(false);
-    expect(shortcuts.some(({ action }) => action.type === "cut")).toBe(false);
+    expect(shortcuts.some(({ action }) => action.type === "deselect")).toBe(
+      false,
+    );
     expect(shortcuts).toContainEqual({
       key: "b",
       action: { type: "tool", tool: Tool.Brush },

@@ -57,28 +57,30 @@ describe("ShortcutSettings", () => {
 
   it("should not set a key combination a fixed action uses", () => {
     const { settings, listener } = setup();
-    expect(settings.set("cut", { key: "z", cmd: true })).toEqual({
+    expect(settings.set("deselect", { key: "z", cmd: true })).toEqual({
       changed: false,
       fixed: "undo",
     });
-    expect(settings.combo("cut")).toEqual({ key: "x", cmd: true });
+    expect(settings.combo("deselect")).toEqual({ key: "d", cmd: true });
     expect(listener).not.toHaveBeenCalled();
   });
 
   it("should remove a key combination", () => {
     const { settings, listener } = setup();
-    expect(settings.set("cut", null)).toEqual({ changed: true });
-    expect(settings.combo("cut")).toBeNull();
-    expect(settings.shortcuts.some((s) => s.action.type === "cut")).toBe(false);
+    expect(settings.set("deselect", null)).toEqual({ changed: true });
+    expect(settings.combo("deselect")).toBeNull();
+    expect(settings.shortcuts.some((s) => s.action.type === "deselect")).toBe(
+      false,
+    );
     expect(listener).toHaveBeenCalledOnce();
   });
 
   it("should change nothing for the same key combination, removing none, or unknown and fixed actions", () => {
-    const { settings, listener } = setup({ cut: null });
+    const { settings, listener } = setup({ deselect: null });
     expect(settings.set("tool-brush", { key: "b" })).toEqual({
       changed: false,
     });
-    expect(settings.set("cut", null)).toEqual({ changed: false });
+    expect(settings.set("deselect", null)).toEqual({ changed: false });
     expect(settings.set("unknown", { key: "q" })).toEqual({ changed: false });
     expect(settings.set("undo", { key: "q" })).toEqual({ changed: false });
     expect(listener).not.toHaveBeenCalled();
@@ -88,14 +90,14 @@ describe("ShortcutSettings", () => {
     const { settings, listener } = setup();
     settings.load(defaultShortcutBindings());
     expect(listener).not.toHaveBeenCalled();
-    settings.load({ "tool-brush": { key: "p" }, cut: null });
+    settings.load({ "tool-brush": { key: "p" }, deselect: null });
     expect(settings.combo("tool-brush")).toEqual({ key: "p" });
-    expect(settings.combo("cut")).toBeNull();
+    expect(settings.combo("deselect")).toBeNull();
     expect(listener).toHaveBeenCalledOnce();
     // Removed and changed in the other direction
     settings.load({ "tool-brush": null });
     expect(settings.combo("tool-brush")).toBeNull();
-    expect(settings.combo("cut")).toEqual({ key: "x", cmd: true });
+    expect(settings.combo("deselect")).toEqual({ key: "d", cmd: true });
     expect(listener).toHaveBeenCalledTimes(2);
   });
 

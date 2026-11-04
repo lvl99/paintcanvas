@@ -210,6 +210,7 @@
   "paintCanvas.shortcuts.group.fills": "填充和颜色",
   "paintCanvas.shortcuts.group.viewport": "视图",
   "paintCanvas.shortcuts.group.layers": "图层",
+  "paintCanvas.shortcuts.group.history": "历史记录",
   "paintCanvas.shortcuts.group.general": "常规",
   "paintCanvas.shortcuts.pan": "按住时平移（松开后回到上一个工具）",
   "paintCanvas.shortcuts.tool-move": "移动",

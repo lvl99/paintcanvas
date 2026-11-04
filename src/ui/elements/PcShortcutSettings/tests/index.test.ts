@@ -57,11 +57,12 @@ describe("pc-shortcut-settings", () => {
     expect(queryAll(element, "h3").map((h) => h.textContent?.trim())).toEqual([
       "Tools",
       "Brushes & erasers",
-      "Clipboard",
       "Masking",
       "Fills and colors",
       "View",
       "Layers",
+      "Clipboard",
+      "History",
       "General",
     ]);
     expect(field("tool-brush").value).toBe("b");
@@ -80,6 +81,8 @@ describe("pc-shortcut-settings", () => {
     const { element } = await setup();
     const fixed = (id: string) => query(element, `span.combo[data-id="${id}"]`);
     expect(fixed("delete").textContent).toBe("delete, backspace");
+    expect(fixed("cut").textContent).toBe("cmd x");
+    expect(fixed("paste").textContent).toBe("cmd v");
     expect(fixed("undo").getAttribute("aria-description")).toBe(
       "Can't be changed",
     );
@@ -154,8 +157,8 @@ describe("pc-shortcut-settings", () => {
 
   it("should say when a fixed action uses a key combination, leaving it as it was", async () => {
     const { settings, element, field, toasts } = await setup();
-    press(field("cut"), "z", { metaKey: true });
-    expect(settings.combo("cut")).toEqual({ key: "x", cmd: true });
+    press(field("deselect"), "z", { metaKey: true });
+    expect(settings.combo("deselect")).toEqual({ key: "d", cmd: true });
     await element.updateComplete;
     expect(query(element, ".status").textContent).toBe(
       "cmd z is used by Undo, which can't be changed",
@@ -176,13 +179,13 @@ describe("pc-shortcut-settings", () => {
 
   it("should remove a key combination with its ⨉ button", async () => {
     const { settings, element, remove } = await setup();
-    expect(remove("cut").getAttribute("aria-label")).toBe(
-      "Remove the Cut shortcut",
+    expect(remove("deselect").getAttribute("aria-label")).toBe(
+      "Remove the Deselect shortcut",
     );
-    remove("cut").click();
-    expect(settings.combo("cut")).toBeNull();
+    remove("deselect").click();
+    expect(settings.combo("deselect")).toBeNull();
     await element.updateComplete;
-    expect(remove("cut").disabled).toBe(true);
+    expect(remove("deselect").disabled).toBe(true);
   });
 
   it("should go back to the default key combinations", async () => {

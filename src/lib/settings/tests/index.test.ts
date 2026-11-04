@@ -56,7 +56,7 @@ describe("isValidSettings", () => {
     const settings = collectSettings(createApp());
     expect(isValidSettings(settings)).toEqual({ valid: true, value: settings });
     expect(isValidSettings({ palette: [] }).valid).toBe(true);
-    expect(isValidSettings({ shortcuts: { cut: null } }).valid).toBe(true);
+    expect(isValidSettings({ shortcuts: { deselect: null } }).valid).toBe(true);
     expect(isValidSettings({}).valid).toBe(true);
   });
 
@@ -130,9 +130,9 @@ describe("collectSettings and applySettings", () => {
     const app = createApp();
     const settings = collectSettings(app);
     app.palette.add("#123456");
-    app.shortcuts.set("cut", null);
+    app.shortcuts.set("deselect", null);
     expect(settings.palette).toEqual(DEFAULT_PALETTE);
-    expect(settings.shortcuts?.cut).toEqual({ key: "x", cmd: true });
+    expect(settings.shortcuts?.deselect).toEqual({ key: "d", cmd: true });
   });
 
   it("should use settings on another canvas", () => {

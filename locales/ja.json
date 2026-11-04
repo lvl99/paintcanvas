@@ -210,6 +210,7 @@
   "paintCanvas.shortcuts.group.fills": "塗りつぶしと色",
   "paintCanvas.shortcuts.group.viewport": "表示",
   "paintCanvas.shortcuts.group.layers": "レイヤー",
+  "paintCanvas.shortcuts.group.history": "履歴",
   "paintCanvas.shortcuts.group.general": "全般",
   "paintCanvas.shortcuts.pan": "押している間パン（離すと前のツールに戻る）",
   "paintCanvas.shortcuts.tool-move": "移動",

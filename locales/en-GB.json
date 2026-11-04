@@ -210,6 +210,7 @@
   "paintCanvas.shortcuts.group.fills": "Fills and colours",
   "paintCanvas.shortcuts.group.viewport": "View",
   "paintCanvas.shortcuts.group.layers": "Layers",
+  "paintCanvas.shortcuts.group.history": "History",
   "paintCanvas.shortcuts.group.general": "General",
   "paintCanvas.shortcuts.pan": "Pan while held (back to the last tool when let go)",
   "paintCanvas.shortcuts.tool-move": "Move",

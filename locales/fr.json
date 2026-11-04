@@ -210,6 +210,7 @@
   "paintCanvas.shortcuts.group.fills": "Remplissages et couleurs",
   "paintCanvas.shortcuts.group.viewport": "Affichage",
   "paintCanvas.shortcuts.group.layers": "Calques",
+  "paintCanvas.shortcuts.group.history": "Historique",
   "paintCanvas.shortcuts.group.general": "Général",
   "paintCanvas.shortcuts.pan": "Déplacer la vue tant que maintenu (retour à l'outil précédent au relâchement)",
   "paintCanvas.shortcuts.tool-move": "Déplacer",

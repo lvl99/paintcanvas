@@ -210,6 +210,7 @@
   "paintCanvas.shortcuts.group.fills": "채우기 및 색상",
   "paintCanvas.shortcuts.group.viewport": "보기",
   "paintCanvas.shortcuts.group.layers": "레이어",
+  "paintCanvas.shortcuts.group.history": "기록",
   "paintCanvas.shortcuts.group.general": "일반",
   "paintCanvas.shortcuts.pan": "누르는 동안 이동(놓으면 이전 도구로 돌아감)",
   "paintCanvas.shortcuts.tool-move": "이동",

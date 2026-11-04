@@ -51,11 +51,12 @@ export interface Shortcut extends KeyCombo {
 export type ShortcutGroup =
   | "tools"
   | "brushes"
-  | "clipboard"
   | "masking"
   | "fills"
   | "viewport"
   | "layers"
+  | "clipboard"
+  | "history"
   | "general";
 
 /** A keyboard shortcut action and its default key combinations */
@@ -119,9 +120,6 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
   define("brush-less-opaque", "brushes", { type: "brush-less-opaque" }, [
     { key: "<" },
   ]),
-  define("cut", "clipboard", { type: "cut" }, [{ key: "x", cmd: true }]),
-  define("copy", "clipboard", { type: "copy" }, [{ key: "c", cmd: true }]),
-  define("paste", "clipboard", { type: "paste" }, [{ key: "v", cmd: true }]),
   define("select-all", "masking", { type: "select-all" }, [
     { key: "a", cmd: true },
   ]),
@@ -146,6 +144,29 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
     { key: "0", cmd: true },
   ]),
   ...LAYER_OPACITY_SHORTCUTS,
+  define("cut", "clipboard", { type: "cut" }, [{ key: "x", cmd: true }], false),
+  define(
+    "copy",
+    "clipboard",
+    { type: "copy" },
+    [{ key: "c", cmd: true }],
+    false,
+  ),
+  define(
+    "paste",
+    "clipboard",
+    { type: "paste" },
+    [{ key: "v", cmd: true }],
+    false,
+  ),
+  define("undo", "history", { type: "undo" }, [{ key: "z", cmd: true }], false),
+  define(
+    "redo",
+    "history",
+    { type: "redo" },
+    [{ key: "z", cmd: true, shift: true }],
+    false,
+  ),
   define(
     "toggle-interface",
     "general",
@@ -154,14 +175,6 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
     false,
   ),
   define("save", "general", { type: "save" }, [{ key: "s", cmd: true }], false),
-  define("undo", "general", { type: "undo" }, [{ key: "z", cmd: true }], false),
-  define(
-    "redo",
-    "general",
-    { type: "redo" },
-    [{ key: "z", cmd: true, shift: true }],
-    false,
-  ),
   define(
     "delete",
     "general",

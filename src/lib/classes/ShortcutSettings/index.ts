@@ -64,7 +64,7 @@ export default class ShortcutSettings extends EventTarget {
    * A configurable action's key combination (null when it has none or there's no such action).
    *
    * @example
-   * shortcuts.combo("cut"); // { key: "x", cmd: true }
+   * shortcuts.combo("deselect"); // { key: "d", cmd: true }
    */
   combo(id: string): KeyCombo | null {
     return this.values[id] ?? null;
@@ -76,7 +76,7 @@ export default class ShortcutSettings extends EventTarget {
    *
    * @example
    * shortcuts.set("tool-brush", { key: "e" }); // { changed: true, movedFrom: "tool-eraser" }
-   * shortcuts.set("cut", { key: "z", cmd: true }); // { changed: false, fixed: "undo" }
+   * shortcuts.set("deselect", { key: "z", cmd: true }); // { changed: false, fixed: "undo" }
    */
   set(id: string, combo: KeyCombo | null): ShortcutChangeResult {
     if (!CONFIGURABLE_SHORTCUTS.some((definition) => definition.id === id))
