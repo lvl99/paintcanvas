@@ -2,6 +2,40 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.4.0 (2026-11-04)
+
+Foreground and background colours, fills, a colour palette, configurable keyboard shortcuts kept with the user's settings, and the UI rebuilt from panes, panels and menus.
+
+### Fixed
+
+- Layer rows stay inside the layers panel when the blend mode or layer name is wide (Safari and Firefox made the blend mode dropdown as wide as its longest option).
+- Keyboard shortcuts no longer run inside an open `<dialog>`, so Escape closes it.
+
+### Added
+
+- Foreground and background colours: `colours`, `setColour(colour, slot)`, `selectedColour`, `selectColour` and `swapColours`. The brush paints the foreground colour; the colour sample tool sets the selected colour.
+- With alpha lock on, the eraser, Delete and cut paint the background colour onto existing pixels instead of erasing (or doing nothing).
+- `fill("foreground" | "background")` fills the selected layer, or only the masked area, as one undoable action.
+- Colour palettes: `canvas.palette`, a JSON palette file format with a schema, and export and import (`lib/palette`). `<pc-colour-pair>` shows the colours in the toolbar and opens `<pc-panel-colours>`: hex value, RGB and HSL sliders whose tracks show the colours their values give, saved colours, and import and export.
+- Colour functions in `lib/utils/colour`: `isHexColour`, `normaliseHex` and conversions between hex, RGB and HSL.
+- Configurable keyboard shortcuts: `canvas.shortcuts`, `SHORTCUT_DEFINITIONS`, and `<pc-shortcut-settings>` to change them. Key presses are matched on any keyboard layout. New shortcuts: brush and eraser opacity (`<`, `>`), invert selection (`shift cmd i`), zoom in, out and to 100% (`cmd +`, `cmd -`, `cmd 0`), layer opacity (1–0), fills (`cmd backspace`, `alt backspace`) and swapping colours (`x`).
+- App settings (input settings, shortcuts, palette and colours): `collectSettings`, `applySettings` and a JSON settings file format with a schema (`lib/settings`), kept in IndexedDB with `<paint-canvas settings-store="name">` (`SettingsAutosave`, `IndexedDbSettingsStore`). `<pc-app-settings>` has "Keyboard shortcuts", "Import settings" and "Export settings" buttons.
+- `<pc-pane>`: an area with `start`, `middle` and `end` slots that shows its panels docked, in a rail or floating.
+- `PcPanel` is the base of all panels, with `header`, `body` and `footer` slots and `--pc-panel-width`.
+- `<pc-context-menu>`: a button that opens a `pc-menu`. Menu items can show a checkmark or icon and their keyboard shortcut (e.g. `⌘S`), and long labels wrap.
+- The `--pc-delete-cursor` design token.
+
+### Changed
+
+- **Breaking:** `pc-layers-menu`, `pc-brush-menu` and `pc-colour-palette` are now `pc-panel-layers`, `pc-panel-brushes` and `pc-panel-colours`, extending `PcPanel`.
+- **Breaking:** the menu list `pc-context-menu` is now `pc-menu`; `pc-context-menu` is now the button that opens one.
+- **Breaking:** side content follows the side's rail and floating modes only inside a `<pc-pane>`. The layout's `openPanel`, `togglePanel` and `closePanel` are now `PcPane`'s.
+- **Breaking:** `--pc-panel-width` replaces `--pc-layers-menu-width` and `--pc-panel-max-width`.
+- The layout's right side shows a pane with the layers by default, the top a pane with the tool settings, and the app menu opens in a `<pc-panel>`. `<pc-toolbar>` is a pane.
+- The layer row's actions menu is a `pc-context-menu`.
+- Cut, copy and paste are fixed shortcuts with undo and redo; `h` no longer selects the pan tool (hold Space).
+- The IndexedDB database moves to version 2 (adding settings), keeping saved drawings.
+
 ## 0.3.1 (2026-11-03)
 
 ### Fixed
