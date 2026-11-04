@@ -68,6 +68,34 @@ const CHANNELS: Readonly<Record<ColourModel, readonly Channel[]>> = {
   ],
 };
 
+/** Hues the hue slider's track passes through, every 60 degrees from red back to red */
+const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((h) =>
+  hslToHex({ h, s: 100, l: 50 }),
+);
+
+/**
+ * The CSS gradient a channel's slider track shows: the colours its values give, from the lowest to the highest. Red,
+ * green and blue go from black to that pure colour, and hue through every hue. Saturation and lightness keep the
+ * colour's other HSL values: saturation goes from grey to full colour, and lightness from black through the colour to
+ * white.
+ *
+ * @example
+ * channelGradient("r", { h: 0, s: 0, l: 0 }); // "linear-gradient(to right, #000000, #ff0000)"
+ * channelGradient("s", { h: 120, s: 40, l: 50 }); // "linear-gradient(to right, #808080, #00ff00)"
+ */
+export const channelGradient = (key: string, hsl: Hsl): string => {
+  const { h, s, l } = hsl;
+  const stops: Record<string, string[]> = {
+    r: ["#000000", "#ff0000"],
+    g: ["#000000", "#00ff00"],
+    b: ["#000000", "#0000ff"],
+    h: HUE_STOPS,
+    s: [hslToHex({ h, s: 0, l }), hslToHex({ h, s: 100, l })],
+    l: [0, 50, 100].map((lightness) => hslToHex({ h, s, l: lightness })),
+  };
+  return `linear-gradient(to right, ${(stops[key] as string[]).join(", ")})`;
+};
+
 /** The colour models in tab order */
 const MODELS: readonly ColourModel[] = ["rgb", "hsl"];
 
@@ -537,6 +565,7 @@ export class PcColourPalette extends PcElement {
             ><input
               type="range"
               data-channel=${channel.key}
+              style="--track: ${channelGradient(channel.key, this.hsl)}"
               min="0"
               max=${channel.max}
               aria-label=${name}

@@ -99,11 +99,48 @@
 .letter {
   font-weight: bold;
 }
+/* Each slider's track shows the colours its values give (--track, set per slider), under a round white handle with a
+   dark outline that shows on any colour */
 .sliders input[type="range"] {
   width: 100%;
   min-width: 0;
+  height: 20px;
   margin: 0;
-  accent-color: var(--pc-accent);
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.sliders input[type="range"]::-webkit-slider-runnable-track {
+  height: 12px;
+  border: 1px solid var(--pc-border);
+  border-radius: var(--pc-radius-pill);
+  background: var(--track);
+}
+.sliders input[type="range"]::-moz-range-track {
+  height: 12px;
+  border: 1px solid var(--pc-border);
+  border-radius: var(--pc-radius-pill);
+  background: var(--track);
+}
+.sliders input[type="range"]::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+  margin-top: -4px;
+  border: 2px solid #000000;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
+  -webkit-appearance: none;
+}
+.sliders input[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #000000;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 .sliders input[type="number"] {
   box-sizing: border-box;
