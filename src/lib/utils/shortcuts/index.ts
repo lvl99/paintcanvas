@@ -553,12 +553,35 @@ export const matchShortcut = (
 };
 
 /**
+ * The modifier keys held during a key press, as a key combination without a key (e.g. to show them while recording a
+ * key combination). Read like `comboFromEvent`: `cmd` is Command on Apple devices and Ctrl elsewhere.
+ *
+ * @example
+ * heldModifiers({ key: "Shift", metaKey: true, ctrlKey: false, shiftKey: true, altKey: false }, "MacIntel");
+ * // { key: "", cmd: true, shift: true }
+ */
+export const heldModifiers = (
+  event: KeyEventLike,
+  platform?: string,
+): KeyCombo => {
+  const apple = isApplePlatform(platform);
+  return normaliseCombo({
+    key: "",
+    cmd: apple ? event.metaKey : event.ctrlKey,
+    ctrl: apple && event.ctrlKey,
+    shift: event.shiftKey,
+    alt: event.altKey,
+  });
+};
+
+/**
  * A key combination as words, e.g. for a text field: modifiers in the order shift, alt, cmd, ctrl, then the key
  * (Space as `space`). "cmd" is written `ctrl` except on Apple devices.
  *
  * @example
  * comboText({ key: "g", shift: true, alt: true, cmd: true, ctrl: true }, "MacIntel"); // "shift alt cmd ctrl g"
  * comboText({ key: "s", cmd: true }, "Win32"); // "ctrl s"
+ * comboText({ key: "", shift: true }, "MacIntel"); // "shift" (modifiers only)
  */
 export const comboText = (combo: KeyCombo, platform?: string): string =>
   [

@@ -6,12 +6,19 @@ import {
   type ShortcutAction,
 } from "../../utils/shortcuts";
 
+/**
+ * Whether a key press happened inside an open `<dialog>` (e.g. a settings window), where shortcuts must not apply and
+ * Escape is left to close it.
+ */
+const inOpenDialog = (path: EventTarget[]): boolean =>
+  path.some((target) => target instanceof HTMLDialogElement && target.open);
+
 /** Event dispatched on the window for shortcut actions handled elsewhere (e.g. saving) */
 export const SHORTCUT_EVENT = "pc-shortcut";
 
 /**
  * Listens for key presses and runs the matching shortcut on the app, using the user's key combinations
- * (`app.shortcuts`). Shortcuts are ignored while typing in text fields. Key presses are matched on keyboards with
+ * (`app.shortcuts`). Shortcuts are ignored while typing in text fields and inside open `<dialog>` elements. Key presses are matched on keyboards with
  * different layouts (see `comboFromEvent`).
  *
  * Tool selection, brush/eraser size and opacity, interface visibility, select all/invert/deselect, undo/redo,
@@ -71,7 +78,8 @@ export default class KeyboardShortcuts {
    */
   handle(event: KeyboardEvent): ShortcutAction | undefined {
     // Events from inside shadow DOM are retargeted, so check the original target
-    if (isTypingTarget(event.composedPath()[0] ?? event.target))
+    const path = event.composedPath();
+    if (isTypingTarget(path[0] ?? event.target) || inOpenDialog(path))
       return undefined;
     const combo = comboFromEvent(event);
     if (!combo) return undefined;

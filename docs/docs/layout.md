@@ -87,6 +87,8 @@ canvas.shortcuts.set("cut", null); // no key combination
 canvas.shortcuts.load(saved); // e.g. from storage; dispatches "change"
 ```
 
+`<pc-shortcut-settings .settings=${canvas.shortcuts}>` lists every action in its group: users change a key combination by focusing its field and pressing the keys, and remove it with its ⨉ button. `<pc-app-settings .app=${canvas}>` has a "Keyboard shortcuts" button that opens it in a modal window, and buttons to import and export the app settings file. Shortcuts don't run while a `<dialog>` is open.
+
 Tab, Cmd/Ctrl + S, Cmd/Ctrl + Z, Shift + Cmd/Ctrl + Z, Delete/Backspace, Escape, Enter and 1–0 (layer opacity 10%–100%) are fixed. `cmd` is Command on Apple devices and Ctrl elsewhere; `ctrl` is Control on Apple devices only.
 
 Key presses are matched on keyboards with any layout:

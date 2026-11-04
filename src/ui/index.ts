@@ -32,6 +32,11 @@ export {
 export { PcMatch } from "./elements/PcMatch";
 export { PcColourPair, COLOUR_CLICK_EVENT } from "./elements/PcColourPair";
 export {
+  PcShortcutSettings,
+  type ShortcutSettingsLike,
+} from "./elements/PcShortcutSettings";
+export { PcAppSettings } from "./elements/PcAppSettings";
+export {
   PcColourPalette,
   LONG_PRESS_MS,
   type ColourModel,

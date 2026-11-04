@@ -10,6 +10,7 @@ import {
   comboFromEvent,
   comboText,
   defaultShortcutBindings,
+  heldModifiers,
   fixedShortcutFor,
   isApplePlatform,
   isTypingTarget,
@@ -349,8 +350,25 @@ describe("matchShortcut", () => {
   });
 });
 
+describe("heldModifiers", () => {
+  it("should list the modifiers held, as on each platform", () => {
+    expect(
+      heldModifiers(key("Shift", { shiftKey: true, metaKey: true }), MAC),
+    ).toEqual({ key: "", shift: true, cmd: true });
+    expect(
+      heldModifiers(key("Control", { ctrlKey: true, altKey: true }), MAC),
+    ).toEqual({ key: "", ctrl: true, alt: true });
+    expect(heldModifiers(key("Control", { ctrlKey: true }), WINDOWS)).toEqual({
+      key: "",
+      cmd: true,
+    });
+    expect(heldModifiers(key("a"))).toEqual({ key: "" });
+  });
+});
+
 describe("comboText", () => {
   it.each([
+    [{ key: "", shift: true, alt: true }, MAC, "shift alt"],
     [
       { key: "g", shift: true, alt: true, cmd: true, ctrl: true },
       MAC,

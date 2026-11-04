@@ -150,6 +150,26 @@ describe("KeyboardShortcuts", () => {
     });
   });
 
+  it("should ignore key presses inside an open dialog, leaving Escape to close it", () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    const dialog = document.createElement("dialog");
+    const button = document.createElement("button");
+    dialog.append(button);
+    document.body.append(dialog);
+    dialog.setAttribute("open", "");
+    expect(press(button, "Escape", { bubbles: true }).defaultPrevented).toBe(
+      false,
+    );
+    press(button, "e", { bubbles: true });
+    expect(app.tool).toBe(Tool.Brush);
+    // A closed dialog doesn't count
+    dialog.removeAttribute("open");
+    press(button, "e", { bubbles: true });
+    expect(app.tool).toBe(Tool.Eraser);
+  });
+
   it("should ignore modifier keys pressed alone", () => {
     const app = createApp();
     shortcuts = new KeyboardShortcuts(app);

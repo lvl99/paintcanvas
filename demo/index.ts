@@ -1,11 +1,13 @@
-// A full-page PaintCanvas with a layers panel on the right, an app menu with input settings, a theme picker and a
-// "New drawing" button. The drawing is kept in the browser (`store="demo"`), so it survives reloading the page.
+// A full-page PaintCanvas with a layers panel on the right, an app menu with input settings, keyboard shortcuts and
+// settings import/export, a theme picker and a "New drawing" button. The drawing and the app settings are kept in the
+// browser (`store="demo"`, `settings-store="demo"`), so they survive reloading the page.
 // The demo's own text is translated like an app's would be: its locales are added after PaintCanvas's, with `demo.` keys.
 import "../src/ui";
 import { translations } from "../src/lib/i18n";
 import type { PaintCanvasElement } from "../src/ui/elements/PaintCanvas";
 import type { PcLayersMenu } from "../src/ui/elements/PcLayersMenu";
 import type { PcInputSettings } from "../src/ui/elements/PcInputSettings";
+import type { PcAppSettings } from "../src/ui/elements/PcAppSettings";
 import type { PcCanvasMap } from "../src/ui/elements/PcCanvasMap";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
 import type { PcToast } from "../src/ui/elements/PcToast";
@@ -47,6 +49,7 @@ const app = layout.app as NonNullable<PaintCanvasElement["app"]>;
 find<PcLayersMenu>("#layers").app = app;
 find<PcCanvasMap>("#map").app = app;
 find<PcInputSettings>("#settings").settings = app.input;
+find<PcAppSettings>("#app-settings").app = app;
 
 // Start again with one empty layer, after asking (the saved drawing is replaced)
 find("#new-drawing").addEventListener("click", () => {

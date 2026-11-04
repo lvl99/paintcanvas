@@ -58,12 +58,17 @@
     </style>
   </head>
   <body>
-    <paint-canvas store="demo" right-modes="docked, rail@800, floating@400">
+    <paint-canvas
+      store="demo"
+      settings-store="demo"
+      right-modes="docked, rail@800, floating@400"
+    >
       <pc-panel id="layers-panel" slot="right" icon="layers" label="Layers">
         <pc-layers-menu id="layers"></pc-layers-menu>
       </pc-panel>
       <div slot="menu" class="menu">
         <pc-input-settings id="settings"></pc-input-settings>
+        <pc-app-settings id="app-settings"></pc-app-settings>
         <pc-theme-picker></pc-theme-picker>
         <pc-button id="new-drawing">New drawing</pc-button>
       </div>
