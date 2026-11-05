@@ -2,6 +2,43 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.5.0 (2026-11-06)
+
+A narrow layout with the interface over the canvas, number sliders that are dragged or typed, the system clipboard, and a system theme by default.
+
+### Fixed
+
+- Resizing a brush whose proportions are constrained keeps its proportions: it stops when the smaller side reaches 1 or the larger side 256, instead of the sides becoming equal.
+- The tool settings bar scrolls sideways when its content is wider than the layout.
+- Pasting a shape copied on the canvas into the brush configuration window no longer says it needs PNG data.
+- The dark theme's purple meets WCAG 2.2 AA contrast with white text.
+
+### Added
+
+- `<pc-number-slider>`: a number dragged right or up to raise it and left or down to lower it, or tapped to type a value (`step`, `page-step`, `drag-step`, `unit`, `text`). `<pc-brush-size>` is built on it, and the tool settings bar uses it for the brush size, width, height and opacity and the Move tool's width, height and angle.
+- A cog button beside the brush size opens a popover with pressure, tilt and focus pen mode above the width, constrain proportions and height. `<pc-popover>` gains `arrow` and `placeBelow()`.
+- `<pc-clipboard-tools>`: Cut, Copy and Paste for the brush, eraser, lassos and Move tool (`CLIPBOARD_TOOLS`), at the end of the layout's top pane, and one ⋮ menu while the layout is narrow.
+- Copy and cut also put a PNG on the system clipboard (the `systemClipboard` option). Pasting (Cmd/Ctrl + V) pastes images copied in other apps onto the canvas (`pasteImage`). Added `hasClipboard`, `copiedPng()` and `copyCount`.
+- The brush configuration window's shape opens the device's own list of built-in shapes (`BUILT_IN_SHAPES`, `builtInShapeId` in `lib/brushes/shapes`); uploaded or pasted shapes show as "Custom". Its Paste button uses the image data copied on the canvas when the clipboard has no PNG.
+- "Show stroke points" in the brush testing area draws a stroke's sampled points and stamps, for 3 seconds after it ends.
+- An `overlay` side mode: a side's rail or toolbar sits over the canvas, and presses between its buttons reach the canvas (`showsRail`).
+- Below `narrow-width` (600px), `<pc-toolbar minimised>` shows its tools as one button that opens a menu of them.
+- `pc-menu` items can be non-interactive labels and dividers, and `selected`.
+- A press outside an open panel or menu closes it; a press on the canvas that closes one only draws once it moves 4px (`markDismissingPress`, `PointerDrag`, `DRAG_THRESHOLD`).
+- The theme and language are kept with the app settings (`canvas.ui`, `UiSettings`, the settings file's `ui` part); `<pc-theme-picker>` (`settings`) and `<pc-input-settings>` (`ui`) restore them.
+- `<pc-tool-settings>` has `start` and `end` slots.
+- Icons are SVG source artwork with 128×128 `@2x.png` images made by `pnpm icons:build`; new rotate, size arrow and cog icons.
+- `--pc-side-button-size`, `--pc-side-icon-size` and `--pc-panel-max-width` design tokens.
+
+### Changed
+
+- **Breaking:** the `auto` theme is now `system`, and it's the default: a page without `data-pc-theme` follows the device.
+- **Breaking:** the tool settings bar's brush width, height, constrain proportions, pressure, tilt and focus pen mode are in the size settings popover, and its number fields are `pc-number-slider`s.
+- **Breaking:** the kick-out and send-invitation icons are removed, and icon images are named `icon-<name>@2x.png`.
+- Every button in the layout's sides is 52 × 52 pixels with 40px icons.
+- Panels are at most 290px wide in every layout, and panels opened from a rail are only as tall as their content (at most 90% of the window's height).
+- The round and square presets go up to 150px, with Bezier cubic smoothing and a sample rate of 5; round 1px snaps to the pixel grid.
+
 ## 0.4.0 (2026-11-04)
 
 Foreground and background colours, fills, a colour palette, configurable keyboard shortcuts kept with the user's settings, and the UI rebuilt from panes, panels and menus.
