@@ -1,22 +1,33 @@
 import { BUILT_IN_AUTHOR } from "../../authors";
-import type { BrushConfig, BrushesConfig } from "../../types";
+import {
+  SmoothingType,
+  type BrushConfig,
+  type BrushesConfig,
+} from "../../types";
 import { sizedPresets } from "../sized";
 import ROUND_IMAGE from "./round.png?inline";
 import SOFT_ROUND_IMAGE from "./soft-round.png?inline";
 
 /** Settings shared by the round presets */
 const DEFAULT_CONFIG: Partial<BrushConfig> = {
-  version: "1.0.0",
+  version: "1.1.0",
   author: BUILT_IN_AUTHOR,
   constrainProportions: true,
+  smoothingType: SmoothingType.BezierCubic,
+  sampleRate: 5,
 };
 
 /** Hard round brushes */
 export const round: BrushesConfig = sizedPresets(
   "round",
   "Round",
-  [1, 5, 10, 20, 50],
-  { ...DEFAULT_CONFIG, image: ROUND_IMAGE, sampleRate: 20, spacing: 1 },
+  [1, 5, 10, 20, 30, 40, 50, 100, 150],
+  {
+    ...DEFAULT_CONFIG,
+    image: ROUND_IMAGE,
+    spacing: 1,
+  },
+  (size) => (size === 1 ? { snapToPixelGrid: true } : {}),
 );
 
 /** Soft-edged round brushes, for shading. Stamps are about a quarter of the size apart: closer, the soft edges add up and look hard. */
@@ -24,7 +35,10 @@ export const softRound: BrushesConfig = sizedPresets(
   "softRound",
   "Soft round",
   [5, 10, 20, 30, 40, 50, 100, 150],
-  { ...DEFAULT_CONFIG, image: SOFT_ROUND_IMAGE, sampleRate: 5 },
+  {
+    ...DEFAULT_CONFIG,
+    image: SOFT_ROUND_IMAGE,
+  },
   (size) => ({ spacing: Math.max(1, Math.round(size / 4)) }),
 );
 

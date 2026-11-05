@@ -24,6 +24,7 @@ import { createRecordingContext } from "../../../../testing/recordingContext";
 import { mount } from "../../../../testing/elements";
 import { markDismissingPress } from "../../../dismiss";
 import { createApp } from "../../../../testing/app";
+import { SmoothingType } from "../../../../lib/brushes/types";
 
 /** Give an element a fixed on-screen size (jsdom has no layout) */
 const setSize = (element: HTMLElement, width: number, height: number) => {
@@ -584,6 +585,8 @@ describe("pc-canvas", () => {
 
   it("should redraw with the stroke preview while drawing, before the pointer is released", async () => {
     const { element, app, canvas, calls } = await mountStage();
+    // Straight lines place stamps on every move (smoothed curves wait for the next points)
+    app.brush.update({ smoothingType: SmoothingType.Linear });
     // Let any redraw from mounting finish first
     await element.updateComplete;
     await nextFrame();
@@ -738,7 +741,8 @@ describe("pc-canvas", () => {
     await nextFrame();
     expect(overlayCalls).toContainEqual(["translate", 210, 110]);
     overlayCalls.length = 0;
-    app.brush.select("round1");
+    // Presets that don't snap draw it where the pointer is
+    app.brush.select("round5");
     canvas.dispatchEvent(pointer("pointermove", 107, 53));
     // Changing the brush redraws, which draws the cursor
     await nextFrame();
