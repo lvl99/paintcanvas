@@ -121,6 +121,7 @@
   "paintCanvas.brushConfig.shapeFailed": "Impossible d’utiliser la forme du pinceau",
   "paintCanvas.brushConfig.test": "Essai",
   "paintCanvas.brushConfig.testArea": "Zone d’essai du pinceau",
+  "paintCanvas.brushConfig.showStrokePoints": "Afficher les points du trait",
   "paintCanvas.shape.notPng": "Les formes de pinceau doivent être des images PNG",
   "paintCanvas.shape.tooLarge": "Les images de forme de pinceau peuvent faire jusqu’à 2 Mo",
   "paintCanvas.shape.readFailed": "Impossible de lire l’image de la forme du pinceau",

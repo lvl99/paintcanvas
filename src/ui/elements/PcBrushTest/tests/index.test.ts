@@ -4,11 +4,14 @@ import {
   TEST_AREA_HEIGHT,
   TEST_AREA_WIDTH,
   TEST_COLOUR,
+  POINT_COLOUR,
+  STAMP_COLOUR,
   type PcBrushTest,
 } from "..";
 import StrokeEngine from "../../../../lib/brushes/StrokeEngine";
 import { createRecordingCanvasFactory } from "../../../../testing/recordingCanvas";
 import { query } from "../../../../testing/elements";
+import { createRecordingContext } from "../../../../testing/recordingContext";
 import { createApp } from "../../../../testing/app";
 
 afterEach(() => {
@@ -157,5 +160,57 @@ describe("pc-brush-test", () => {
       { x: 5, y: 6 },
       expect.any(Number),
     );
+  });
+});
+
+describe("pc-brush-test stroke points", () => {
+  it("should draw the last stroke's sampled points and stamps while shown", async () => {
+    const { element, canvas } = await setup();
+    const { ctx, calls } = createRecordingContext();
+    Object.defineProperty(canvas, "getContext", {
+      value: () => ctx,
+      configurable: true,
+    });
+    const toggle = query<HTMLInputElement>(element, ".show-points input");
+    expect(toggle.checked).toBe(false);
+    expect(query(element, ".show-points").textContent!.trim()).toBe(
+      "Show stroke points",
+    );
+    const draw = () => {
+      canvas.dispatchEvent(pointer("pointerdown", 10, 10));
+      canvas.dispatchEvent(pointer("pointermove", 40, 20));
+      canvas.dispatchEvent(pointer("pointerup", 60, 30));
+    };
+    draw();
+    expect(calls.some(([name]) => name === "arc")).toBe(false);
+
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change"));
+    expect(element.showPoints).toBe(true);
+    calls.length = 0;
+    draw();
+    expect(calls).toContainEqual(["set:strokeStyle", POINT_COLOUR]);
+    expect(calls).toContainEqual(["set:fillStyle", STAMP_COLOUR]);
+    expect(calls.some(([name]) => name === "arc")).toBe(true);
+    expect(calls.some(([name]) => name === "fillRect")).toBe(true);
+
+    // Hidden again: nothing drawn over the strokes
+    element.setShowPoints(false);
+    calls.length = 0;
+    draw();
+    expect(calls.some(([name]) => name === "arc")).toBe(false);
+  });
+
+  it("should record points from the start when shown before the first stroke", async () => {
+    const { element, canvas } = await setup();
+    const { ctx } = createRecordingContext();
+    Object.defineProperty(canvas, "getContext", {
+      value: () => ctx,
+      configurable: true,
+    });
+    const setDebug = vi.spyOn(StrokeEngine.prototype, "setDebug");
+    element.setShowPoints(true);
+    query(element, "canvas").dispatchEvent(pointer("pointerdown", 10, 10));
+    expect(setDebug).toHaveBeenCalledWith(true);
   });
 });

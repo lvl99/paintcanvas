@@ -121,6 +121,7 @@
   "paintCanvas.brushConfig.shapeFailed": "無法使用此筆刷形狀",
   "paintCanvas.brushConfig.test": "試畫",
   "paintCanvas.brushConfig.testArea": "筆刷試畫區域",
+  "paintCanvas.brushConfig.showStrokePoints": "顯示筆畫點",
   "paintCanvas.shape.notPng": "筆刷形狀必須是 PNG 影像",
   "paintCanvas.shape.tooLarge": "筆刷形狀影像最大為 2 MB",
   "paintCanvas.shape.readFailed": "無法讀取筆刷形狀影像",

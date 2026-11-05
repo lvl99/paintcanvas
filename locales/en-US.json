@@ -121,6 +121,7 @@
   "paintCanvas.brushConfig.shapeFailed": "Couldn't use the brush shape",
   "paintCanvas.brushConfig.test": "Test",
   "paintCanvas.brushConfig.testArea": "Brush testing area",
+  "paintCanvas.brushConfig.showStrokePoints": "Show stroke points",
   "paintCanvas.shape.notPng": "Brush shapes must be PNG images",
   "paintCanvas.shape.tooLarge": "Brush shape images can be up to 2 MB",
   "paintCanvas.shape.readFailed": "Couldn't read the brush shape image",

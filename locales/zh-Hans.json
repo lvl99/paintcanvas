@@ -121,6 +121,7 @@
   "paintCanvas.brushConfig.shapeFailed": "无法使用此画笔形状",
   "paintCanvas.brushConfig.test": "试画",
   "paintCanvas.brushConfig.testArea": "画笔试画区域",
+  "paintCanvas.brushConfig.showStrokePoints": "显示笔画点",
   "paintCanvas.shape.notPng": "画笔形状必须是 PNG 图像",
   "paintCanvas.shape.tooLarge": "画笔形状图像最大为 2 MB",
   "paintCanvas.shape.readFailed": "无法读取画笔形状图像",

@@ -121,6 +121,7 @@
   "paintCanvas.brushConfig.shapeFailed": "브러시 모양을 사용할 수 없습니다",
   "paintCanvas.brushConfig.test": "테스트",
   "paintCanvas.brushConfig.testArea": "브러시 테스트 영역",
+  "paintCanvas.brushConfig.showStrokePoints": "획의 점 표시",
   "paintCanvas.shape.notPng": "브러시 모양은 PNG 이미지여야 합니다",
   "paintCanvas.shape.tooLarge": "브러시 모양 이미지는 최대 2MB입니다",
   "paintCanvas.shape.readFailed": "브러시 모양 이미지를 읽지 못했습니다",

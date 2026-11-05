@@ -18,9 +18,20 @@ export const TEST_AREA_HEIGHT = 320;
 /** The colour test strokes are drawn in, whatever the current colour */
 export const TEST_COLOUR = "#000000";
 
+/** The colour of the circles showing a stroke's sampled points, while stroke points are shown */
+export const POINT_COLOUR = "#e8175d";
+
+/** The colour of the dots showing where a stroke placed its stamps, while stroke points are shown */
+export const STAMP_COLOUR = "#1e88e5";
+
+/** Radius of the circles showing a stroke's sampled points (test area pixels) */
+const POINT_RADIUS = 8;
+
 /**
  * A small area to try brush settings before saving them: strokes are drawn in black, at the settings' own size, on a
  * white background at double resolution (800 × 320 pixels shown in the window's width). "Clear" (a red pill) empties it.
+ * "Show stroke points" draws the last stroke's sampled points (pink circles) and where it placed stamps (blue dots) over
+ * it, like the canvas's debug overlay, to see how sampling and smoothing work.
  *
  * @example
  * html`<pc-brush-test .config=${config} .tips=${app.tips}></pc-brush-test>`
@@ -30,6 +41,7 @@ export class PcBrushTest extends PcElement {
     ...PcElement.properties,
     config: { attribute: false },
     tips: { attribute: false },
+    showPoints: { type: Boolean, attribute: "show-points" },
   };
 
   static override styles = [PcElement.styles, unsafeCSS(styles)];
@@ -39,6 +51,14 @@ export class PcBrushTest extends PcElement {
 
   /** Brush shapes */
   declare tips?: BrushTipCache;
+
+  /** Whether the last stroke's sampled points and stamps are drawn over it */
+  declare showPoints: boolean;
+
+  constructor() {
+    super();
+    this.showPoints = false;
+  }
 
   /** Creates the layer and stroke canvases (replaceable for tests) */
   createCanvas: CanvasFactory = createOffscreenCanvas;
@@ -77,6 +97,7 @@ export class PcBrushTest extends PcElement {
         this.createCanvas,
       );
       this.engine.addEventListener("change", this.onEngineChange);
+      this.engine.setDebug(this.showPoints);
     }
     return { layer: this.layer, engine: this.engine };
   }
@@ -137,6 +158,15 @@ export class PcBrushTest extends PcElement {
   }
 
   /**
+   * Show or hide the last stroke's sampled points and stamps. They're recorded from the next stroke.
+   */
+  setShowPoints(shown: boolean): void {
+    this.showPoints = shown;
+    this.engine?.setDebug(shown);
+    this.paint();
+  }
+
+  /**
    * Empty the testing area.
    */
   clear(): void {
@@ -152,6 +182,27 @@ export class PcBrushTest extends PcElement {
     ctx.clearRect(0, 0, TEST_AREA_WIDTH, TEST_AREA_HEIGHT);
     const image = this.engine?.preview?.image ?? this.layer?.canvas;
     if (image) ctx.drawImage(image, 0, 0);
+    if (this.showPoints && this.engine) this.paintPoints(ctx, this.engine);
+  }
+
+  /** Draw the last stroke's sampled points (circles) and stamp positions (dots) */
+  private paintPoints(
+    ctx: CanvasRenderingContext2D,
+    engine: StrokeEngine,
+  ): void {
+    const { points, stamps } = engine.debugTrace;
+    ctx.save();
+    ctx.fillStyle = STAMP_COLOUR;
+    for (const { x, y } of stamps) ctx.fillRect(x - 2, y - 2, 4, 4);
+    ctx.strokeStyle = POINT_COLOUR;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (const { x, y } of points) {
+      ctx.moveTo(x + POINT_RADIUS, y);
+      ctx.arc(x, y, POINT_RADIUS, 0, Math.PI * 2);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   override render() {
@@ -165,9 +216,20 @@ export class PcBrushTest extends PcElement {
         @pointerup=${this.onPointerUp}
         @pointercancel=${this.onPointerUp}
       ></canvas>
-      <button type="button" class="clear" @click=${() => this.clear()}>
-        ${this.t("paintCanvas.common.clear")}
-      </button>
+      <div class="actions">
+        <button type="button" class="clear" @click=${() => this.clear()}>
+          ${this.t("paintCanvas.common.clear")}
+        </button>
+        <label class="show-points">
+          <input
+            type="checkbox"
+            .checked=${this.showPoints}
+            @change=${(e: Event) =>
+              this.setShowPoints((e.target as HTMLInputElement).checked)}
+          />
+          ${this.t("paintCanvas.brushConfig.showStrokePoints")}
+        </label>
+      </div>
     `;
   }
 }

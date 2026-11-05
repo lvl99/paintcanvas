@@ -121,6 +121,7 @@
   "paintCanvas.brushConfig.shapeFailed": "このブラシ形状は使用できません",
   "paintCanvas.brushConfig.test": "試し描き",
   "paintCanvas.brushConfig.testArea": "ブラシの試し描きエリア",
+  "paintCanvas.brushConfig.showStrokePoints": "ストロークの点を表示",
   "paintCanvas.shape.notPng": "ブラシ形状はPNG画像にしてください",
   "paintCanvas.shape.tooLarge": "ブラシ形状の画像は2MBまでです",
   "paintCanvas.shape.readFailed": "ブラシ形状の画像を読み込めませんでした",
