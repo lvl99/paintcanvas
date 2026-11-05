@@ -2,6 +2,7 @@ import { afterEach, describe, it, expect } from "vitest";
 import "..";
 import { isMenuItem, menuSections, type MenuEntry, type PcMenu } from "..";
 import { events, mount } from "../../../../testing/elements";
+import { isDismissingPress } from "../../../dismiss";
 import {
   ariaKeyShortcut,
   shortcutLabel,
@@ -98,8 +99,10 @@ describe("pc-menu", () => {
       .dispatchEvent(
         new Event("pointerdown", { bubbles: true, composed: true }),
       );
-    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    const outside = new Event("pointerdown", { bubbles: true });
+    document.body.dispatchEvent(outside);
     expect(closes).toHaveLength(4);
+    expect(isDismissingPress(outside)).toBe(true);
     menu.open = false;
     await menu.updateComplete;
     document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));

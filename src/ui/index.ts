@@ -17,6 +17,7 @@ export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
 export { PcBrushSize, sizeText } from "./elements/PcBrushSize";
 export { PointerDrag, DRAG_THRESHOLD, dragDelta } from "./drag";
+export { markDismissingPress, isDismissingPress } from "./dismiss";
 export {
   PcMenu,
   isMenuItem,

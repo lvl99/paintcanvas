@@ -1,5 +1,6 @@
 import { css, html, nothing, type PropertyValues } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
+import { markDismissingPress } from "../../dismiss";
 import {
   ariaKeyShortcut,
   shortcutLabel,
@@ -226,11 +227,13 @@ export class PcMenu extends PcElement {
   private readonly onPointerDown = (event: PointerEvent) => {
     const path = event.composedPath();
     if (
-      this.open &&
-      !path.includes(this) &&
-      !(this.anchor && path.includes(this.anchor))
+      !this.open ||
+      path.includes(this) ||
+      (this.anchor && path.includes(this.anchor))
     )
-      this.close();
+      return;
+    markDismissingPress(event);
+    this.close();
   };
 
   constructor() {

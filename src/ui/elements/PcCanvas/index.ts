@@ -4,6 +4,8 @@ import styles from "./style.css?inline";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
 import { PcElement, defineElement } from "../../base";
 import ChangeController from "../../ChangeController";
+import { isDismissingPress } from "../../dismiss";
+import { DRAG_THRESHOLD } from "../../drag";
 import {
   Tool,
   type default as PaintCanvas,
@@ -275,6 +277,9 @@ export class PcCanvas extends PcElement {
 
   /** Pointer drawing the current stroke, and the layer it draws on */
   private stroke: { pointerId: number; layerId: string } | null = null;
+
+  /** A press that closed a panel or menu, held until it moves far enough to count (see `onPointerDown`) */
+  private heldPress: PointerEvent | null = null;
 
   /** Pointer position over the stage (for the brush cursor), or null when outside */
   private hover: Point | null = null;
@@ -613,7 +618,7 @@ export class PcCanvas extends PcElement {
       point: app.viewport.screenToCanvas(screen),
       constrain: app.constrainProportions,
     };
-    (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    this.capturePointer(event.pointerId);
   }
 
   /**
@@ -715,8 +720,7 @@ export class PcCanvas extends PcElement {
     const nearFirstNode =
       first !== undefined &&
       isNear(app.viewport.canvasToScreen(first), point, CLOSE_DISTANCE);
-    if (kind !== "polygon")
-      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    if (kind !== "polygon") this.capturePointer(event.pointerId);
     app.applyLasso(
       app.lasso.down(
         kind,
@@ -793,7 +797,7 @@ export class PcCanvas extends PcElement {
       app.strokeLog.cancel(`a ${event.pointerType} started another stroke`);
     const start = app.strokeLog.now();
     this.stroke = { pointerId: event.pointerId, layerId: layer.id };
-    (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    this.capturePointer(event.pointerId);
     const erasing = app.activeTool === Tool.Eraser;
     app.strokes.begin(
       {
@@ -829,12 +833,51 @@ export class PcCanvas extends PcElement {
   }
 
   /**
+   * Send a pointer's events to the canvas until it's lifted, even outside it.
+   */
+  private capturePointer(pointerId: number): void {
+    this.renderRoot
+      .querySelector("canvas.scene")
+      ?.setPointerCapture?.(pointerId);
+  }
+
+  /**
+   * Handle a press, unless it closed a panel or menu (see `isDismissingPress`): that press is held, and only starts
+   * drawing (or whatever the tool does) once it moves `DRAG_THRESHOLD` pixels, so tapping the canvas to close a panel
+   * leaves no mark.
+   */
+  private onPointerDown(event: PointerEvent): void {
+    if (!this.app) return;
+    if (!isDismissingPress(event)) {
+      this.pointerDown(event);
+      return;
+    }
+    this.heldPress = event;
+    this.capturePointer(event.pointerId);
+  }
+
+  /**
+   * Start a held press (see `onPointerDown`) once it moves far enough. Returns whether the pointer is still held.
+   */
+  private releaseHeldPress(event: PointerEvent): boolean {
+    const held = this.heldPress;
+    if (held?.pointerId !== event.pointerId) return false;
+    const moved = Math.hypot(
+      event.clientX - held.clientX,
+      event.clientY - held.clientY,
+    );
+    if (moved < DRAG_THRESHOLD) return true;
+    this.heldPress = null;
+    this.pointerDown(held);
+    return false;
+  }
+
+  /**
    * Start panning, or zoom, depending on the tool and button. In focus pen mode, touches only pan, pinch and make
    * gestures, and are ignored while a pen is down or just lifted (see `focusPenTouch`).
    */
-  private onPointerDown(event: PointerEvent): void {
-    const app = this.app;
-    if (!app) return;
+  private pointerDown(event: PointerEvent): void {
+    const app = this.app as PaintCanvas;
     if (event.pointerType === "pen") this.penDown(event);
     if (event.pointerType === "touch") {
       const ignored = this.focusPenTouch(event);
@@ -873,7 +916,7 @@ export class PcCanvas extends PcElement {
     } else if (app.activeTool === Tool.Pan || middleButton) {
       event.preventDefault();
       this.drag = { pointerId: event.pointerId, last: point };
-      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+      this.capturePointer(event.pointerId);
       this.updateCursor();
     } else if (app.activeTool === Tool.Zoom && event.button === 0) {
       if (event.altKey) app.viewport.zoomOut(point);
@@ -887,6 +930,7 @@ export class PcCanvas extends PcElement {
   private onPointerMove(event: PointerEvent): void {
     const app = this.app;
     if (!app || this.ignoredTouches.has(event.pointerId)) return;
+    if (this.releaseHeldPress(event)) return;
     const point = this.pointerPoint(event);
     if (this.touches.has(event.pointerId)) {
       this.touches.set(event.pointerId, point);
@@ -931,10 +975,23 @@ export class PcCanvas extends PcElement {
   }
 
   /**
+   * Forget a held press lifted (or cancelled) before it moved far enough. Returns whether it was one.
+   */
+  private dropHeldPress(event: PointerEvent): boolean {
+    if (this.heldPress?.pointerId !== event.pointerId) return false;
+    this.heldPress = null;
+    return true;
+  }
+
+  /**
    * Finish a stroke (writing it into the layer) or stop panning.
    */
   private onPointerUp(event: PointerEvent): void {
-    if (this.ignoredTouches.delete(event.pointerId)) return;
+    if (
+      this.ignoredTouches.delete(event.pointerId) ||
+      this.dropHeldPress(event)
+    )
+      return;
     this.penUp(event);
     this.touchUp(event);
     if (this.sampling?.pointerId === event.pointerId) this.finishSample();
@@ -973,7 +1030,11 @@ export class PcCanvas extends PcElement {
    * Abandon a stroke or pan when the browser cancels the pointer (e.g. a system gesture).
    */
   private onPointerCancel(event: PointerEvent): void {
-    if (this.ignoredTouches.delete(event.pointerId)) return;
+    if (
+      this.ignoredTouches.delete(event.pointerId) ||
+      this.dropHeldPress(event)
+    )
+      return;
     this.navigationTouches.delete(event.pointerId);
     this.penUp(event);
     this.touchUp(event);
@@ -1057,7 +1118,7 @@ export class PcCanvas extends PcElement {
       this.drag = null;
       const [a, b] = [...this.touches.values()] as [Point, Point];
       this.pinch = touchPair(a, b);
-      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+      this.capturePointer(event.pointerId);
     }
     return true;
   }
@@ -1076,7 +1137,7 @@ export class PcCanvas extends PcElement {
       point,
       screen,
     };
-    (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    this.capturePointer(event.pointerId);
     this.updateCursor();
     this.drawOverlay();
   }

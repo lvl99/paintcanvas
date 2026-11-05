@@ -22,6 +22,7 @@ import {
 } from "../../../../lib/rendering/cursors";
 import { createRecordingContext } from "../../../../testing/recordingContext";
 import { mount } from "../../../../testing/elements";
+import { markDismissingPress } from "../../../dismiss";
 import { createApp } from "../../../../testing/app";
 
 /** Give an element a fixed on-screen size (jsdom has no layout) */
@@ -391,6 +392,52 @@ describe("pc-canvas", () => {
     expect(end).toHaveBeenCalledWith({ x: 30, y: 20 }, expect.any(Number));
     expect(changed).toHaveBeenCalled();
     await element.updateComplete;
+  });
+
+  it("should only start a press that closed a panel or menu once it moves far enough", async () => {
+    const { app, canvas } = await mountStage();
+    app.viewport.zoomAt({ x: 0, y: 0 }, 1);
+    app.viewport.panBy(-app.viewport.offsetX, -app.viewport.offsetY);
+    const begin = vi.spyOn(app.strokes, "begin");
+    const move = vi.spyOn(app.strokes, "move");
+    const end = vi.spyOn(app.strokes, "end");
+    /** A press that closed something */
+    const dismissing = (x: number, y: number) => {
+      const event = pointer("pointerdown", x, y);
+      markDismissingPress(event);
+      return event;
+    };
+
+    // A tap leaves no mark
+    canvas.dispatchEvent(dismissing(10, 20));
+    expect(canvas.setPointerCapture).toHaveBeenCalledWith(1);
+    canvas.dispatchEvent(pointer("pointermove", 12, 22));
+    canvas.dispatchEvent(pointer("pointerup", 12, 22));
+    expect(begin).not.toHaveBeenCalled();
+    expect(end).not.toHaveBeenCalled();
+
+    // Moves of other pointers don't count
+    canvas.dispatchEvent(dismissing(10, 20));
+    canvas.dispatchEvent(pointer("pointermove", 90, 20, { pointerId: 2 }));
+    expect(begin).not.toHaveBeenCalled();
+    // A cancelled press is forgotten
+    canvas.dispatchEvent(pointer("pointercancel", 10, 20));
+    canvas.dispatchEvent(pointer("pointermove", 90, 20));
+    expect(begin).not.toHaveBeenCalled();
+
+    // Dragging starts the stroke where it was pressed
+    canvas.dispatchEvent(dismissing(10, 20));
+    canvas.dispatchEvent(pointer("pointermove", 13, 20));
+    expect(begin).not.toHaveBeenCalled();
+    canvas.dispatchEvent(pointer("pointermove", 14, 20));
+    expect(begin).toHaveBeenCalledWith(
+      expect.anything(),
+      { x: 10, y: 20 },
+      expect.any(Number),
+    );
+    expect(move).toHaveBeenCalledWith({ x: 14, y: 20 }, expect.any(Number));
+    canvas.dispatchEvent(pointer("pointerup", 14, 20));
+    expect(end).toHaveBeenCalledWith({ x: 14, y: 20 }, expect.any(Number));
   });
 
   it("should erase with the eraser tool, with the background colour for alpha lock", async () => {

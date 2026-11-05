@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect } from "vitest";
 import "..";
+import { isDismissingPress } from "../../../dismiss";
 import { PANE_COLLAPSE_EVENT, type PcPane } from "..";
 import "../../PcPanel";
 import type { PcPanel } from "../../PcPanel";
@@ -26,10 +27,11 @@ const regionOf = (pane: PcPane, child: Element) =>
     ?.closest(".start, .middle, .end")?.className;
 
 /** Press somewhere */
-const pressOn = (target: EventTarget) =>
-  target.dispatchEvent(
-    new Event("pointerdown", { bubbles: true, composed: true }),
-  );
+const pressOn = (target: EventTarget) => {
+  const event = new Event("pointerdown", { bubbles: true, composed: true });
+  target.dispatchEvent(event);
+  return event;
+};
 
 /** Press a key on an element */
 const pressKey = (target: EventTarget, key: string) =>
@@ -94,7 +96,7 @@ describe("pc-pane", () => {
     // Pressing inside the panel or its button keeps it open
     pressOn(chat);
     expect(pane.openPanel).toBe(chat);
-    pressOn(document.body);
+    expect(isDismissingPress(pressOn(document.body))).toBe(true);
     expect(pane.openPanel).toBeUndefined();
     buttons[1]!.click();
     pressKey(chat, "a");

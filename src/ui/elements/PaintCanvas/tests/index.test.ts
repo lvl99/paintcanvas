@@ -5,6 +5,7 @@ import type { PaintCanvasElement } from "..";
 import PaintCanvas, { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import { SHORTCUT_EVENT } from "../../../../lib/classes/KeyboardShortcuts";
 import { STATE_EVENT, type LayoutState } from "../../../layout";
+import { isDismissingPress } from "../../../dismiss";
 import type { PcPanel } from "../../PcPanel";
 import type { PcToolbar } from "../../PcToolbar";
 import type { PcPane } from "../../PcPane";
@@ -45,6 +46,16 @@ const setup = async (content = "", width = 1000, app = createApp()) => {
   // Slot changes render once more
   await layout.updateComplete;
   return { layout, app };
+};
+
+/** Press on an element, returning the press */
+const pressOn = (target: EventTarget) => {
+  const event = new PointerEvent("pointerdown", {
+    bubbles: true,
+    composed: true,
+  });
+  target.dispatchEvent(event);
+  return event;
 };
 
 /** A panel for a side */
@@ -162,12 +173,8 @@ describe("paint-canvas", () => {
 
   it("should close the colour palette on a press outside it and the colours that open it", async () => {
     const { layout, app } = await setup();
-    const pressOn = (target: EventTarget) =>
-      target.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, composed: true }),
-      );
     // Nothing to close
-    pressOn(document.body);
+    expect(isDismissingPress(pressOn(document.body))).toBe(false);
     app.togglePanel(Panel.Palette);
     await layout.updateComplete;
     const palette = query(layout, ".center pc-panel-colours");
@@ -177,8 +184,53 @@ describe("paint-canvas", () => {
     const toolbar = query(layout, "pc-toolbar");
     pressOn(toolbar.shadowRoot!.querySelector("pc-colour-pair")!);
     expect(app.panel).toBe(Panel.Palette);
-    pressOn(document.body);
+    expect(isDismissingPress(pressOn(document.body))).toBe(true);
     expect(app.panel).toBeNull();
+  });
+
+  it("should close every panel on a press outside it and the button that opens it, but not in a dialog", async () => {
+    const { layout, app } = await setup(
+      '<nav slot="menu"><button>In menu</button></nav><pc-pane slot="right"></pc-pane>',
+    );
+    const toolbar = query<PcToolbar>(layout, "pc-toolbar");
+    const toggles = {
+      [Panel.Layers]: () =>
+        toolbar.shadowRoot!.querySelector('[data-panel="layers"]')!,
+      [Panel.Menu]: () =>
+        toolbar.shadowRoot!.querySelector('[data-panel="menu"]')!,
+      [Panel.Brush]: () =>
+        query(layout, "pc-tool-settings").shadowRoot!.querySelector(
+          '[data-panel="brush"]',
+        )!,
+    };
+    const canvas = query(layout, "pc-canvas");
+    for (const [panel, toggle] of Object.entries(toggles)) {
+      app.togglePanel(panel as Panel);
+      await layout.updateComplete;
+      const shown = queryAll(layout, ".panel").find(
+        (element) =>
+          !element.matches(".menu-panel") || element.hasAttribute("open"),
+      )!;
+      pressOn(shown);
+      pressOn(toggle());
+      expect(app.panel, panel).toBe(panel);
+      expect(isDismissingPress(pressOn(canvas)), panel).toBe(true);
+      expect(app.panel, panel).toBeNull();
+    }
+    // Slotted menu content is in the menu's panel
+    app.togglePanel(Panel.Menu);
+    await layout.updateComplete;
+    pressOn(layout.querySelector("nav button")!);
+    expect(app.panel).toBe(Panel.Menu);
+    // Another panel's button closes it (and then opens its own)
+    pressOn(toggles[Panel.Layers]());
+    expect(app.panel).toBeNull();
+    // Dialogs (e.g. opened from a panel) are left open over it
+    app.togglePanel(Panel.Brush);
+    const dialog = document.createElement("dialog");
+    document.body.append(dialog);
+    pressOn(dialog);
+    expect(app.panel).toBe(Panel.Brush);
   });
 
   it("should minimise its toolbars while narrow", async () => {

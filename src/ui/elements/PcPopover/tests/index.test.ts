@@ -2,6 +2,7 @@ import { afterEach, describe, it, expect } from "vitest";
 import "..";
 import type { PcPopover } from "..";
 import { events, mount, shadow } from "../../../../testing/elements";
+import { isDismissingPress } from "../../../dismiss";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -31,8 +32,10 @@ describe("pc-popover", () => {
     box.dispatchEvent(
       new Event("pointerdown", { bubbles: true, composed: true }),
     );
-    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    const outside = new Event("pointerdown", { bubbles: true });
+    document.body.dispatchEvent(outside);
     expect(closes).toHaveLength(2);
+    expect(isDismissingPress(outside)).toBe(true);
     popover.anchor = undefined;
     document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     expect(closes).toHaveLength(3);

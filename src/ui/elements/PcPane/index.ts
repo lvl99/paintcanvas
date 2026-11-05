@@ -6,6 +6,7 @@ import {
   type TemplateResult,
 } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
+import { markDismissingPress } from "../../dismiss";
 import { PcPanel } from "../PcPanel";
 import type { SideMode } from "../../layout";
 
@@ -210,8 +211,10 @@ export class PcPane extends PcElement {
     const panel = this.openPanel;
     if (!panel) return;
     const path = event.composedPath();
-    if (!path.includes(panel) && !(this.opener && path.includes(this.opener)))
-      this.closePanel(false);
+    if (path.includes(panel) || (this.opener && path.includes(this.opener)))
+      return;
+    markDismissingPress(event);
+    this.closePanel(false);
   };
 
   // Escape closes the open panel

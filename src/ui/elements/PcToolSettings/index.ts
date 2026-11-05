@@ -306,6 +306,7 @@ export class PcToolSettings extends PcElement {
       <button
         type="button"
         class="preset"
+        data-panel=${panel}
         title=${this.t("paintCanvas.toolSettings.presets", { tool: label })}
         aria-expanded=${app.panel === panel ? "true" : "false"}
         @click=${() => app.togglePanel(panel)}

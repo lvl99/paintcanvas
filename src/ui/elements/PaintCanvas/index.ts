@@ -1,6 +1,7 @@
 import { html, nothing, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
 import { PcElement, defineElement, emit } from "../../base";
+import { markDismissingPress } from "../../dismiss";
 import ChangeController from "../../ChangeController";
 import PaintCanvas, { Panel } from "../../../lib/classes/PaintCanvas";
 import KeyboardShortcuts, {
@@ -240,7 +241,7 @@ export class PaintCanvasElement extends PcElement {
 
   // A press outside the colour palette closes it
   private readonly onDocumentPointerDown = (event: PointerEvent) =>
-    this.closePaletteOutside(event.composedPath());
+    this.closePanelOutside(event);
 
   // A floating pane's size changes when it's shown or collapsed
   private readonly onPaneCollapse = () => this.requestUpdate();
@@ -596,18 +597,26 @@ export class PaintCanvasElement extends PcElement {
   }
 
   /**
-   * Close the colour palette on a press outside it and the colours that open it.
+   * Close the open panel (brush, eraser, layers, app menu or colour palette) on a press outside it and the button that
+   * opens it, marking the press (see `markDismissingPress`) so the canvas doesn't draw unless it's dragged. Presses in
+   * dialogs (e.g. one the panel opened) don't count as outside.
    */
-  private closePaletteOutside(path: EventTarget[]): void {
-    const app = this.app;
-    if (app?.panel !== Panel.Palette) return;
-    const inside = path.some(
+  private closePanelOutside(event: PointerEvent): void {
+    const panel = this.app?.panel;
+    if (!panel) return;
+    const inside = event.composedPath().some(
       (target) =>
         target instanceof Element &&
-        (target.localName === "pc-panel-colours" ||
-          target.localName === "pc-colour-pair"),
+        // The open panel (the layout's floating ones), and dialogs
+        ((target.classList.contains("panel") &&
+          target.getRootNode() === this.renderRoot) ||
+          target.matches("dialog, pc-dialog") ||
+          target.getAttribute("data-panel") === panel ||
+          (panel === Panel.Palette && target.localName === "pc-colour-pair")),
     );
-    if (!inside) app.closePanel();
+    if (inside) return;
+    markDismissingPress(event);
+    (this.app as PaintCanvas).closePanel();
   }
 
   /** The menus the toolbar opens, floating over the canvas beside it */

@@ -1,5 +1,6 @@
 import { css, html, type PropertyValues } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
+import { markDismissingPress } from "../../dismiss";
 
 /**
  * A floating box for a menu or settings (e.g. the brush presets), shown while `open`. The implementer places it (e.g.
@@ -57,8 +58,10 @@ export class PcPopover extends PcElement {
   private readonly onPointerDown = (event: PointerEvent) => {
     if (!this.open) return;
     const path = event.composedPath();
-    if (!path.includes(this) && !(this.anchor && path.includes(this.anchor)))
-      emit(this, "pc-close");
+    if (path.includes(this) || (this.anchor && path.includes(this.anchor)))
+      return;
+    markDismissingPress(event);
+    emit(this, "pc-close");
   };
 
   constructor() {
