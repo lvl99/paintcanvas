@@ -53,6 +53,8 @@ describe("fitNumber", () => {
     expect(fitNumber(-5, 1, 256, 1)).toBe(1);
     expect(fitNumber(12.4, 0, 100, 5)).toBe(10);
     expect(fitNumber(20.6, 1, 256, 1)).toBe(21);
+    expect(fitNumber(45.678, -360, 360, 0.01)).toBe(45.68);
+    expect(fitNumber(0.3, 0, 1, 0.1)).toBe(0.3);
   });
 });
 
@@ -106,9 +108,13 @@ describe("pc-number-slider", () => {
     control().dispatchEvent(pointerEvent("pointerdown", 0, 0));
     control().dispatchEvent(pointerEvent("pointermove", 4, 0));
     expect(element.value).toBe(40);
-    control().dispatchEvent(pointerEvent("pointercancel", 4, 0));
+    // A drag step of its own: 2 per pixel, kept to multiples of the step
+    element.dragStep = 2;
+    control().dispatchEvent(pointerEvent("pointermove", 9, 0));
+    expect(element.value).toBe(50);
+    control().dispatchEvent(pointerEvent("pointercancel", 9, 0));
     control().dispatchEvent(pointerEvent("pointermove", 50, 0));
-    expect(element.value).toBe(40);
+    expect(element.value).toBe(50);
   });
 
   it("should change with the arrow keys, Page Up and Down, Home and End", async () => {

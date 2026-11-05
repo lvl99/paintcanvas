@@ -8,6 +8,7 @@ import { DRAG_THRESHOLD, PointerDrag } from "../../drag";
  * @example
  * fitNumber(300, 1, 256, 1); // 256
  * fitNumber(12.4, 0, 100, 5); // 10
+ * fitNumber(45.678, -360, 360, 0.01); // 45.68
  */
 export const fitNumber = (
   value: number,
@@ -15,13 +16,17 @@ export const fitNumber = (
   max: number,
   step: number,
 ): number => {
-  const stepped = min + Math.round((value - min) / step) * step;
+  // As many decimal places as the step, without the tiny errors of adding fractions (e.g. 0.1 + 0.2)
+  const decimals = String(step).split(".")[1]?.length ?? 0;
+  const stepped = Number(
+    (min + Math.round((value - min) / step) * step).toFixed(decimals),
+  );
   return Math.min(max, Math.max(min, stepped));
 };
 
 /**
  * A number shown as text that changes when pressed and dragged: right or up raises it, left or down lowers it, a step
- * per pixel, within `min` and `max`. A press that barely moves (a tap or click) turns it into a field to type a value
+ * per pixel (or `drag-step`), within `min` and `max`. A press that barely moves (a tap or click) turns it into a field to type a value
  * in: Enter or leaving the field keeps the value, Escape cancels.
  *
  * With keyboard focus, the arrow keys change it by `step`, Page Up and Page Down by `pageStep`, Home and End go to
@@ -43,6 +48,7 @@ export class PcNumberSlider extends PcElement {
     max: { type: Number },
     step: { type: Number },
     pageStep: { type: Number, attribute: "page-step" },
+    dragStep: { type: Number, attribute: "drag-step" },
     unit: { type: String },
     text: { type: String },
     label: { type: String },
@@ -118,6 +124,9 @@ export class PcNumberSlider extends PcElement {
   /** How much Page Up and Page Down change it (10 steps by default) */
   declare pageStep?: number;
 
+  /** How much a pixel of dragging changes it (`step` by default), e.g. 1 for an angle typed to 0.01 */
+  declare dragStep?: number;
+
   /** Shown after the value, e.g. "%" */
   declare unit: string;
 
@@ -136,7 +145,7 @@ export class PcNumberSlider extends PcElement {
   private refocus = false;
 
   private readonly drag = new PointerDrag(
-    (delta) => this.change(this.value + delta * this.step),
+    (delta) => this.change(this.value + delta * (this.dragStep ?? this.step)),
     DRAG_THRESHOLD,
   );
 
