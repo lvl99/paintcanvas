@@ -253,7 +253,15 @@ export interface PaintCanvasOptions {
   names?: Partial<PaintCanvasNames>;
   /** Where to keep the user's layers so the drawing survives reloading the page (see `useLayerStore`) */
   layerStore?: LayerStoreLike;
+  /**
+   * The system clipboard, which copying and cutting also put a PNG of the copied image data on so other apps (and brush
+   * shapes) can use it (the browser's by default; `null` for none)
+   */
+  systemClipboard?: SystemClipboardLike | null;
 }
+
+/** The part of the system clipboard PaintCanvas writes to (the browser's `navigator.clipboard`) */
+export type SystemClipboardLike = Pick<Clipboard, "write">;
 
 /**
  * The painting engine: canvas size, layers, brush and eraser settings, custom presets, the selected tool, foreground and background colours,
@@ -404,6 +412,9 @@ export default class PaintCanvas extends EventTarget {
   /** Image data copied with cut or copy, and the area it was copied from */
   private clipboard?: { image: OffscreenCanvas; area: Rect };
 
+  /** The system clipboard copies are also put on, if any */
+  private readonly systemClipboard?: SystemClipboardLike;
+
   /** Drawings from elsewhere */
   private externalSheets: ExternalSheets;
 
@@ -458,6 +469,10 @@ export default class PaintCanvas extends EventTarget {
     );
     void this.customPresets.load().catch(() => undefined);
     this.createCanvas = options.createCanvas ?? createOffscreenCanvas;
+    this.systemClipboard =
+      options.systemClipboard === null
+        ? undefined
+        : (options.systemClipboard ?? globalThis.navigator?.clipboard);
     this.canvasWidth = DEFAULT_CANVAS_SIZE;
     this.canvasHeight = DEFAULT_CANVAS_SIZE;
     this.layerStack = new LayerStack(
@@ -1098,7 +1113,37 @@ export default class PaintCanvas extends EventTarget {
     const image = copyArea(this.createCanvas, layer.canvas, area);
     applyMask(image, copyArea(this.createCanvas, mask, area));
     this.clipboard = { image, area };
+    this.writeSystemClipboard(image);
+    this.notify();
     return area;
+  }
+
+  /** Whether there is copied image data to paste (see `copy` and `cut`) */
+  get hasClipboard(): boolean {
+    return this.clipboard !== undefined;
+  }
+
+  /**
+   * The copied image data as a PNG, if there is any (e.g. to use as a brush shape).
+   *
+   * @example
+   * const png = await canvas.copiedPng(); // Blob of type "image/png", or undefined
+   */
+  async copiedPng(): Promise<Blob | undefined> {
+    return this.clipboard?.image.convertToBlob({ type: "image/png" });
+  }
+
+  /**
+   * Put copied image data on the system clipboard as a PNG, if there is one and the browser can. The item is made
+   * straight away (some browsers only allow writing while handling the key press or click) with the PNG to follow.
+   * Failing (e.g. the page isn't focused) changes nothing: the image data can still be pasted here.
+   */
+  private writeSystemClipboard(image: OffscreenCanvas): void {
+    if (!this.systemClipboard || typeof ClipboardItem === "undefined") return;
+    const item = new ClipboardItem({
+      "image/png": image.convertToBlob({ type: "image/png" }),
+    });
+    this.systemClipboard.write([item]).catch(() => undefined);
   }
 
   /**
@@ -1244,6 +1289,45 @@ export default class PaintCanvas extends EventTarget {
       clipboard.image,
       clipboard.area,
     );
+  }
+
+  /**
+   * Show an image from elsewhere (e.g. pasted from another app) over the selected layer, in the middle of the part of
+   * the canvas in view, and select the Move tool to place, scale and rotate it, like `paste`. An image larger than the
+   * canvas is shrunk to fit it. Does nothing during a stroke.
+   *
+   * @example
+   * canvas.pasteImage(await createImageBitmap(file));
+   */
+  pasteImage(
+    source: CanvasImageSource & { width: number; height: number },
+  ): void {
+    if (this.strokeEngine.drawing) return;
+    const scale = Math.min(
+      1,
+      this.canvasWidth / source.width,
+      this.canvasHeight / source.height,
+    );
+    const width = Math.max(1, Math.round(source.width * scale));
+    const height = Math.max(1, Math.round(source.height * scale));
+    const image = this.createCanvas(width, height);
+    (image.getContext("2d") as OffscreenCanvasRenderingContext2D).drawImage(
+      source,
+      0,
+      0,
+      width,
+      height,
+    );
+    const view = this.view.visibleRect();
+    const area = {
+      x: Math.round(view.x + (view.width - width) / 2),
+      y: Math.round(view.y + (view.height - height) / 2),
+      width,
+      height,
+    };
+    if (this.transformer.pending) this.commitTransform();
+    this.selectTool(Tool.Move);
+    this.transformer.float(this.layerStack.active, image, area);
   }
 
   /**
