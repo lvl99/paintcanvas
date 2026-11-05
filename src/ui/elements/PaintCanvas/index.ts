@@ -43,6 +43,7 @@ import "../PcPanel";
 import { PcPane, PANE_COLLAPSE_EVENT } from "../PcPane";
 import { PcToolbar } from "../PcToolbar";
 import "../PcToolSettings";
+import "../PcClipboardTools";
 import "../PcCanvas";
 import "../PcCanvasMap";
 import "../PcPanelBrushes";
@@ -72,7 +73,8 @@ const TAKE_OVER_CHOICE = "take-over";
  * - `header`: across the top (empty by default)
  * - `left`: `<pc-toolbar>` (a pane) by default; toolbars in the sides are minimised (their tools one button that opens a
  *   menu of them) while the layout is narrow
- * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) by default
+ * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) and, at its end,
+ *   `<pc-clipboard-tools>` (cut, copy and paste; a ⋮ menu while the layout is narrow) by default
  * - `right`: a `<pc-pane>` with `<pc-panel-layers>` by default
  * - `center`: `<pc-canvas>` by default
  * - `overlay`: drawn over the canvas; `<pc-canvas-map>` by default
@@ -714,11 +716,15 @@ export class PaintCanvasElement extends PcElement {
                 ><pc-tool-settings
                   slot="middle"
                   .app=${app}
-                  ?narrow=${this.width < this.narrowWidth}
                   @pc-configure-brush=${(
                     event: CustomEvent<"brush" | "eraser">,
                   ) => this.configure(event.detail)}
                 ></pc-tool-settings
+                ><pc-clipboard-tools
+                  slot="end"
+                  .app=${app}
+                  ?narrow=${this.width < this.narrowWidth}
+                ></pc-clipboard-tools
               ></pc-pane>`
             : nothing,
         )}

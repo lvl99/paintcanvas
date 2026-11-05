@@ -23,8 +23,6 @@ import { iconLabel } from "../../icons";
 import "../PcBrushSize";
 import "../PcNumberSlider";
 import "../PcPopover";
-import "../PcContextMenu";
-import type { MenuItem } from "../PcMenu";
 import type { PcPopover } from "../PcPopover";
 
 /** The lasso tools, which share the mask settings */
@@ -44,21 +42,6 @@ const TILT_PARAMS = ["widthConfig", "heightConfig", "rotationConfig"] as const;
 /** A setting's variation config key */
 type ParamKey = (typeof TILT_PARAMS)[number];
 
-/** An action in the bar: a button, or at its end an item of its ⋮ menu while narrow */
-interface EndAction {
-  /** Its class and menu value, e.g. "copy" */
-  name: string;
-  label: string;
-  /** Its tooltip (the label by default) */
-  title?: string;
-  /** An icon shown instead of the label on its button */
-  icon?: string;
-  /** Whether it's a toggle that's on (or off); undefined when it isn't a toggle */
-  pressed?: boolean;
-  disabled?: boolean;
-  run(): void;
-}
-
 /** How a setting's `pc-number-slider` works (see `renderNumberField`) */
 interface NumberFieldOptions {
   min?: number;
@@ -77,8 +60,6 @@ interface ToolView {
   label: string;
   /** The settings at the start of the bar */
   start: unknown;
-  /** The actions at its end */
-  end: readonly EndAction[];
   /** Shown after the bar (e.g. a popover) */
   after?: unknown;
 }
@@ -173,21 +154,19 @@ export const zoomPercent = (zoom: number): string => {
 
 /**
  * The bar of settings for the current tool, shown at the top of the canvas when the tool has any. The tool's settings
- * are at the start (part `start`) and its actions at the end, on the right (part `end`); the `start` and `end` slots
- * add your own after them. While `narrow` (set by `<paint-canvas>` while its layout is narrow), several actions at the
- * end become one ⋮ menu (`pc-context-menu`).
+ * are at the start (part `start`); the end, on the right (part `end`), is for your own items. The `start` and `end`
+ * slots add your own items to each. (Cut, copy and paste are `<pc-clipboard-tools>`.)
  *
  * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`), the
  *   size settings (a cog button that shows or hides a popover under it with the width, constrain proportions and
  *   height), pressure, tilt, opacity and "Configure" (fires `pc-configure-brush` with the tool, "brush" or "eraser").
  *   The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or up to raise them, left or
  *   down to lower them, or tapped to type a value. Focus pen mode (only pens draw, and touches are ignored while a pen
- *   is down or just lifted) follows tilt. At the end: cut, copy and paste, as for the lassos.
- * - Lassos: select all, and invert selection and deselect (only while there is a mask). At the end: cut and copy (while
- *   there is a mask) and paste (while there is copied image data).
+ *   is down or just lifted) follows tilt.
+ * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
  *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform). The width, height
- *   and angle are `pc-number-slider`s. At the end: cut, copy and paste, as for the lassos.
+ *   and angle are `pc-number-slider`s.
  * - Colour sample: point sample (the pixel under the pointer) or area sample (the average of a dragged rectangle).
  * - Zoom: zoom in and out, a slider across the zoom range (logarithmic) with the zoom as a percentage, and reset (100%),
  *   all around the centre of the view.
@@ -195,7 +174,7 @@ export const zoomPercent = (zoom: number): string => {
  * Changes to the brush or eraser apply to the current settings only, not the preset. Styling is structural only.
  *
  * @example
- * html`<pc-tool-settings .app=${app} ?narrow=${narrow}>
+ * html`<pc-tool-settings .app=${app}>
  *   <button slot="end" @click=${share}>Share</button>
  * </pc-tool-settings>`
  */
@@ -205,7 +184,6 @@ export class PcToolSettings extends PcElement {
     app: { attribute: false },
     percent: { state: true },
     sizeOpen: { state: true },
-    narrow: { type: Boolean, reflect: true },
   };
 
   static override styles = [
@@ -220,9 +198,6 @@ export class PcToolSettings extends PcElement {
 
   /** Whether the move tool's width and height are in percent (of the original size) instead of pixels */
   declare percent: boolean;
-
-  /** Whether the layout is narrow: the actions at the end of the bar become a ⋮ menu */
-  declare narrow: boolean;
 
   /** Whether the brush or eraser's size settings (width, height, constrain proportions) are shown */
   declare sizeOpen: boolean;
@@ -249,7 +224,6 @@ export class PcToolSettings extends PcElement {
     super();
     this.percent = false;
     this.sizeOpen = false;
-    this.narrow = false;
   }
 
   override disconnectedCallback(): void {
@@ -322,87 +296,20 @@ export class PcToolSettings extends PcElement {
   }
 
   /**
-   * The focus pen mode toggle, for the brush and eraser: while on, only pens draw, and touches are ignored while a pen is
-   * down or just lifted.
+   * Render the focus pen mode toggle, for the brush and eraser: while on, only pens draw, and touches are ignored while a
+   * pen is down or just lifted.
    */
-  private focusPenAction(app: PaintCanvas): EndAction {
+  private renderFocusPen(app: PaintCanvas) {
     const on = app.input.data.focusPen;
-    return {
-      name: "focus-pen",
-      label: this.t("paintCanvas.toolSettings.focusPen"),
-      title: this.t("paintCanvas.toolSettings.focusPenHint"),
-      icon: "focusPen",
-      pressed: on,
-      run: () => app.input.update({ focusPen: !on }),
-    };
-  }
-
-  /**
-   * Cut, copy (while there's a mask, and no transform is pending) and paste (while there's copied image data).
-   */
-  private clipboardActions(app: PaintCanvas): EndAction[] {
-    const noCopy = !app.selection.active || app.transform.pending;
-    return [
-      {
-        name: "cut",
-        label: this.t("paintCanvas.common.cut"),
-        disabled: noCopy,
-        run: () => app.cut(),
-      },
-      {
-        name: "copy",
-        label: this.t("paintCanvas.common.copy"),
-        disabled: noCopy,
-        run: () => app.copy(),
-      },
-      {
-        name: "paste",
-        label: this.t("paintCanvas.common.paste"),
-        disabled: !app.hasClipboard,
-        run: () => app.paste(),
-      },
-    ];
-  }
-
-  /**
-   * Render the actions at the end of the bar: as buttons, or while narrow (and there's more than one) as a ⋮ menu.
-   */
-  private renderEnd(actions: readonly EndAction[]) {
-    if (this.narrow && actions.length > 1)
-      return html`<pc-context-menu
-        class="more"
-        label=${this.t("paintCanvas.toolSettings.moreActions")}
-        .items=${actions.map((action): MenuItem => ({
-          value: action.name,
-          label: action.label,
-          disabled: action.disabled,
-          icon: action.icon,
-          selected: action.pressed,
-        }))}
-        @pc-select=${(event: CustomEvent<{ value: string }>) =>
-          actions.find((action) => action.name === event.detail.value)?.run()}
-      ></pc-context-menu>`;
-    return actions.map((action) => this.renderActionButton(action));
-  }
-
-  /** Render an action as a button: its icon (named for screen readers) or its label */
-  private renderActionButton(action: EndAction) {
     return html`<button
       type="button"
-      class=${action.icon ? `${action.name} icon-button` : `${action.name} pill`}
-      title=${action.title ?? action.label}
-      aria-label=${action.icon ? action.label : nothing}
-      aria-pressed=${
-        action.pressed === undefined ? nothing : String(action.pressed)
-      }
-      ?disabled=${action.disabled}
-      @click=${action.run}
+      class="focus-pen icon-button"
+      title=${this.t("paintCanvas.toolSettings.focusPenHint")}
+      aria-label=${this.t("paintCanvas.toolSettings.focusPen")}
+      aria-pressed=${String(on)}
+      @click=${() => app.input.update({ focusPen: !on })}
     >
-      ${
-        action.icon
-          ? html`<img src=${this.iconUrl(action.icon)} alt="" />`
-          : action.label
-      }
+      <img src=${this.iconUrl("focusPen")} alt="" />
     </button>`;
   }
 
@@ -464,7 +371,6 @@ export class PcToolSettings extends PcElement {
     const sizeSettings = this.t("paintCanvas.toolSettings.sizeSettings");
     return {
       label: this.t("paintCanvas.toolSettings.settings", { tool: label }),
-      end: this.clipboardActions(app),
       start: html`<button
           type="button"
           class="preset"
@@ -543,7 +449,7 @@ export class PcToolSettings extends PcElement {
           />
           ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
         </label>
-        ${this.renderActionButton(this.focusPenAction(app))}
+        ${this.renderFocusPen(app)}
         ${this.renderNumberField(
           "opacity",
           this.t("paintCanvas.common.opacity"),
@@ -602,7 +508,6 @@ export class PcToolSettings extends PcElement {
   private renderMask(app: PaintCanvas): ToolView {
     return {
       label: this.t("paintCanvas.toolSettings.maskSettings"),
-      end: this.clipboardActions(app),
       start: html`<button
           type="button"
           class="pill select-all"
@@ -684,7 +589,6 @@ export class PcToolSettings extends PcElement {
       label: this.t("paintCanvas.toolSettings.settings", {
         tool: this.t("paintCanvas.tool.move"),
       }),
-      end: this.clipboardActions(app),
       start: html`${side("width", this.t("paintCanvas.common.width"))}
         <label
           class="icon-toggle"
@@ -784,7 +688,6 @@ export class PcToolSettings extends PcElement {
       label: this.t("paintCanvas.toolSettings.settings", {
         tool: this.t("paintCanvas.tool.zoom"),
       }),
-      end: [],
       start: html`<button
           type="button"
           class="zoom-in"
@@ -852,7 +755,6 @@ export class PcToolSettings extends PcElement {
       label: this.t("paintCanvas.toolSettings.settings", {
         tool: this.t("paintCanvas.tool.colourSample"),
       }),
-      end: [],
       start: html`${modes.map(
         ([mode, label, icon]) =>
           html`<button
@@ -910,7 +812,7 @@ export class PcToolSettings extends PcElement {
           ${view.start}<slot name="start"></slot>
         </div>
         <div class="end" part="end">
-          ${this.renderEnd(view.end)}<slot name="end"></slot>
+          <slot name="end"></slot>
         </div>
       </div>
       ${view.after ?? nothing}`;

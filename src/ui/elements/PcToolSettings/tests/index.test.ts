@@ -12,7 +12,6 @@ import {
 import type { PcBrushSize } from "../../PcBrushSize";
 import type { PcNumberSlider } from "../../PcNumberSlider";
 import type { PcPopover } from "../../PcPopover";
-import type { PcContextMenu } from "../../PcContextMenu";
 import { icons } from "../../../icons";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../../lib/classes/Viewport";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
@@ -341,7 +340,7 @@ describe("pc-tool-settings", () => {
     },
   );
 
-  it("should put the tool's settings at the start and actions at the end, each with a slot", async () => {
+  it("should put the tool's settings at the start, with a slot at the start and the end", async () => {
     const { element } = await setup(Tool.RectangleLasso);
     const start = query(element, "[role=toolbar] > .start");
     const end = query(element, "[role=toolbar] > .end");
@@ -350,99 +349,6 @@ describe("pc-tool-settings", () => {
     expect(start.querySelector("button.select-all")).not.toBeNull();
     expect(start.lastElementChild!.getAttribute("name")).toBe("start");
     expect(end.lastElementChild!.getAttribute("name")).toBe("end");
-  });
-
-  it.each([
-    Tool.Brush,
-    Tool.Eraser,
-    Tool.RectangleLasso,
-    Tool.CircleLasso,
-    Tool.Move,
-  ])(
-    "should cut, copy (with a mask) and paste (with copied image data) at the end for tool %s",
-    async (tool) => {
-      const { app, element } = await setup(tool);
-      const button = (name: string) =>
-        query<HTMLButtonElement>(element, `.end > button.${name}`);
-      expect(
-        queryAll(element, ".end > button").map((b) => b.textContent!.trim()),
-      ).toEqual(["Cut", "Copy", "Paste"]);
-      expect(
-        ["cut", "copy", "paste"].map((name) => button(name).disabled),
-      ).toEqual([true, true, true]);
-      const cut = vi.spyOn(app, "cut").mockImplementation(() => undefined);
-      const copy = vi.spyOn(app, "copy").mockReturnValue(undefined);
-      const paste = vi.spyOn(app, "paste").mockImplementation(() => undefined);
-      app.selection.active = true;
-      vi.spyOn(app, "hasClipboard", "get").mockReturnValue(true);
-      app.selection.dispatchEvent(new Event("change"));
-      await element.updateComplete;
-      expect(
-        ["cut", "copy", "paste"].map((name) => button(name).disabled),
-      ).toEqual([false, false, false]);
-      button("cut").click();
-      button("copy").click();
-      button("paste").click();
-      expect([cut, copy, paste].map((spy) => spy.mock.calls.length)).toEqual([
-        1, 1, 1,
-      ]);
-    },
-  );
-
-  it("should not cut or copy while a transform is pending", async () => {
-    const { app, element } = await setup(Tool.Move);
-    app.selection.active = true;
-    vi.spyOn(app.transform, "pending", "get").mockReturnValue(true);
-    app.selection.dispatchEvent(new Event("change"));
-    await element.updateComplete;
-    expect(
-      query<HTMLButtonElement>(element, ".end > button.copy").disabled,
-    ).toBe(true);
-  });
-
-  it("should put the actions at the end in a ⋮ menu while narrow", async () => {
-    const { app, element } = await setup(Tool.RectangleLasso);
-    element.narrow = true;
-    await element.updateComplete;
-    expect(queryAll(element, ".end > button")).toHaveLength(0);
-    const menu = query<PcContextMenu>(element, ".end > pc-context-menu.more");
-    expect(menu.label).toBe("More actions");
-    expect(menu.items).toEqual([
-      {
-        value: "cut",
-        label: "Cut",
-        disabled: true,
-        icon: undefined,
-        selected: undefined,
-      },
-      {
-        value: "copy",
-        label: "Copy",
-        disabled: true,
-        icon: undefined,
-        selected: undefined,
-      },
-      {
-        value: "paste",
-        label: "Paste",
-        disabled: true,
-        icon: undefined,
-        selected: undefined,
-      },
-    ]);
-    const paste = vi.spyOn(app, "paste").mockImplementation(() => undefined);
-    menu.dispatchEvent(
-      new CustomEvent("pc-select", { detail: { value: "paste" } }),
-    );
-    menu.dispatchEvent(
-      new CustomEvent("pc-select", { detail: { value: "unknown" } }),
-    );
-    expect(paste).toHaveBeenCalledOnce();
-    // Buttons at the start (e.g. focus pen mode) stay buttons
-    app.selectTool(Tool.Brush);
-    await element.updateComplete;
-    expect(query(element, ".end > pc-context-menu.more")).not.toBeNull();
-    expect(query(element, ".start > button.focus-pen")).not.toBeNull();
   });
 
   it("should ask to configure the brush or eraser", async () => {

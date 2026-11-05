@@ -57,6 +57,7 @@ export {
 } from "./elements/PcInputSettings";
 export { PcMatch } from "./elements/PcMatch";
 export { PcColourPair, COLOUR_CLICK_EVENT } from "./elements/PcColourPair";
+export { PcClipboardTools, CLIPBOARD_TOOLS } from "./elements/PcClipboardTools";
 export {
   PcShortcutSettings,
   type ShortcutSettingsLike,
