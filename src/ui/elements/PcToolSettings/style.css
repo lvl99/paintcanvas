@@ -83,11 +83,15 @@ button img {
   align-self: stretch;
   min-width: 56px;
 }
-/* Brush width, height and opacity: dragged or typed, as tall as the other fields */
+/* Brush width, height and opacity: dragged or typed, 24px tall (WCAG 2.2's smallest target) under their names */
+.field {
+  line-height: 1;
+}
 .field pc-number-slider {
   min-width: 4.5em;
 }
 .field pc-number-slider::part(control),
 .field pc-number-slider::part(field) {
-  min-height: 22px;
+  box-sizing: border-box;
+  min-height: 24px;
 }
