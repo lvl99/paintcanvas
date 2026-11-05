@@ -21,7 +21,7 @@ import type { TransformBox } from "../../../lib/transform/geometry";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/classes/Viewport";
 import { iconLabel } from "../../icons";
 import "../PcBrushSize";
-import { DRAG_THRESHOLD, PointerDrag } from "../../drag";
+import "../PcNumberSlider";
 
 /** The lasso tools, which share the mask settings */
 const MASK_TOOLS: readonly Tool[] = [
@@ -131,10 +131,10 @@ const numberValue = (event: Event): number | undefined => {
 /**
  * The bar of settings for the current tool, shown at the top of the canvas when the tool has any:
  *
- * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`, drag to
- *   resize), width, height (pressed and dragged right or up to grow, left or down to shrink; a press that barely moves
- *   focuses the field), constrain proportions, pressure, tilt, opacity and "Configure" (fires
- *   `pc-configure-brush` with the tool, "brush" or "eraser").
+ * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`),
+ *   width, height, constrain proportions, pressure, tilt, opacity and "Configure" (fires `pc-configure-brush` with the
+ *   tool, "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or
+ *   up to raise them, left or down to lower them, or tapped to type a value.
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
  *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform).
@@ -182,65 +182,9 @@ export class PcToolSettings extends PcElement {
       : [];
   });
 
-  /** The brush or eraser settings whose width or height field is being pressed */
-  private pressedSettings?: BrushSettings;
-
-  /** Press-and-drag on the width field: right or up wider, left or down narrower */
-  private readonly widthDrag = new PointerDrag((delta) => {
-    const settings = this.pressedSettings as BrushSettings;
-    settings.setSize(settings.width + delta, settings.height);
-  }, DRAG_THRESHOLD);
-
-  /** Press-and-drag on the height field: right or up taller, left or down shorter */
-  private readonly heightDrag = new PointerDrag((delta) => {
-    const settings = this.pressedSettings as BrushSettings;
-    settings.setHeight(settings.height + delta);
-  }, DRAG_THRESHOLD);
-
   constructor() {
     super();
     this.percent = false;
-  }
-
-  /**
-   * Start pressing a size field. While the field isn't being typed in, the press doesn't focus it straight away: it
-   * becomes a drag if the pointer moves far enough, or focuses the field when released (see `onSizeFieldPointerUp`).
-   */
-  private onSizeFieldPointerDown(
-    drag: PointerDrag,
-    settings: BrushSettings,
-    event: PointerEvent,
-  ): void {
-    const input = event.currentTarget as HTMLInputElement;
-    if (this.shadowRoot?.activeElement === input) return;
-    event.preventDefault();
-    this.pressedSettings = settings;
-    drag.start(event);
-  }
-
-  /**
-   * Finish pressing a size field: a press that didn't become a drag focuses the field for typing.
-   */
-  private onSizeFieldPointerUp(drag: PointerDrag, event: PointerEvent): void {
-    const pressed = this.pressedSettings !== undefined;
-    this.pressedSettings = undefined;
-    if (!pressed || drag.end()) return;
-    const input = event.currentTarget as HTMLInputElement;
-    input.focus();
-    input.select();
-  }
-
-  /** Press-and-drag handlers for a brush size field */
-  private sizeFieldDrag(drag: PointerDrag, settings: BrushSettings) {
-    return {
-      down: (event: PointerEvent) =>
-        this.onSizeFieldPointerDown(drag, settings, event),
-      up: (event: PointerEvent) => this.onSizeFieldPointerUp(drag, event),
-      cancel: () => {
-        this.pressedSettings = undefined;
-        drag.end();
-      },
-    };
   }
 
   /** Fire an event that crosses shadow DOM boundaries */
@@ -282,6 +226,35 @@ export class PcToolSettings extends PcElement {
     </label>`;
   }
 
+  /**
+   * Render a brush setting as a named `pc-number-slider` (dragged or typed), from 1 to 256 pixels unless given another
+   * range.
+   */
+  private renderNumberField(
+    name: string,
+    label: string,
+    value: number,
+    change: (value: number) => void,
+    { min = MIN_BRUSH_SIZE, max = MAX_BRUSH_SIZE, unit = "" } = {},
+  ) {
+    return html`<div class="field">
+      <span aria-hidden="true">${label}</span>
+      <pc-number-slider
+        class=${name}
+        min=${min}
+        max=${max}
+        unit=${unit}
+        label=${label}
+        .value=${live(value)}
+        @pc-change=${(e: CustomEvent<{ value: number }>) => {
+          change(e.detail.value);
+          // Show the value it got, which can differ (e.g. the other side reached a limit)
+          this.requestUpdate();
+        }}
+      ></pc-number-slider>
+    </div>`;
+  }
+
   /** Render the brush or eraser settings */
   private renderBrush(
     app: PaintCanvas,
@@ -297,8 +270,6 @@ export class PcToolSettings extends PcElement {
       kind === "eraser" ? "paintCanvas.tool.eraser" : "paintCanvas.tool.brush",
     );
     const panel = kind === "eraser" ? Panel.Eraser : Panel.Brush;
-    const width = this.sizeFieldDrag(this.widthDrag, settings);
-    const height = this.sizeFieldDrag(this.heightDrag, settings);
     return html`<div
       role="toolbar"
       aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: label })}
@@ -327,24 +298,12 @@ export class PcToolSettings extends PcElement {
         .settings=${settings}
         label=${this.t("paintCanvas.brushMenu.size", { tool: label })}
       ></pc-brush-size>
-      <label>
-        ${this.t("paintCanvas.common.width")}
-        <input
-          type="number"
-          class="width drag-field"
-          min=${MIN_BRUSH_SIZE}
-          max=${MAX_BRUSH_SIZE}
-          .value=${String(settings.width)}
-          @pointerdown=${width.down}
-          @pointermove=${this.widthDrag.move}
-          @pointerup=${width.up}
-          @pointercancel=${width.cancel}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined) settings.setSize(value, settings.height);
-          }}
-        />
-      </label>
+      ${this.renderNumberField(
+        "width",
+        this.t("paintCanvas.common.width"),
+        settings.width,
+        (value) => settings.setSize(value, settings.height),
+      )}
       <label
         class="icon-toggle"
         title=${this.t("paintCanvas.toolSettings.constrainProportions")}
@@ -360,24 +319,12 @@ export class PcToolSettings extends PcElement {
         />
         ${iconLabel(this.iconUrl(preset.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
       </label>
-      <label>
-        ${this.t("paintCanvas.common.height")}
-        <input
-          type="number"
-          class="height drag-field"
-          min=${MIN_BRUSH_SIZE}
-          max=${MAX_BRUSH_SIZE}
-          .value=${String(settings.height)}
-          @pointerdown=${height.down}
-          @pointermove=${this.heightDrag.move}
-          @pointerup=${height.up}
-          @pointercancel=${height.cancel}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined) settings.setHeight(value);
-          }}
-        />
-      </label>
+      ${this.renderNumberField(
+        "height",
+        this.t("paintCanvas.common.height"),
+        settings.height,
+        (value) => settings.setHeight(value),
+      )}
       <label
         class="icon-toggle"
         title=${this.t("paintCanvas.toolSettings.pressure")}
@@ -418,24 +365,13 @@ export class PcToolSettings extends PcElement {
         />
         ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
       </label>
-      <label>
-        ${this.t("paintCanvas.common.opacity")}
-        <input
-          type="number"
-          class="opacity"
-          min="0"
-          max="100"
-          .value=${String(Math.round((preset.alpha ?? 1) * 100))}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined)
-              settings.update({
-                alpha: Math.max(0, Math.min(100, value)) / 100,
-              });
-          }}
-        />
-        <span class="unit">%</span>
-      </label>
+      ${this.renderNumberField(
+        "opacity",
+        this.t("paintCanvas.common.opacity"),
+        Math.round((preset.alpha ?? 1) * 100),
+        (value) => settings.update({ alpha: value / 100 }),
+        { min: 0, max: 100, unit: "%" },
+      )}
       <button
         type="button"
         class="configure"

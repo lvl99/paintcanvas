@@ -10,6 +10,7 @@ import {
   type PcToolSettings,
 } from "..";
 import type { PcBrushSize } from "../../PcBrushSize";
+import type { PcNumberSlider } from "../../PcNumberSlider";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../../lib/classes/Viewport";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import type { TransformBox } from "../../../../lib/transform/geometry";
@@ -21,6 +22,25 @@ afterEach(() => document.body.replaceChildren());
 /** Create a pointer-like event (jsdom has no PointerEvent) */
 const pointer = (type: string, clientX: number, clientY: number) =>
   new MouseEvent(type, { clientX, clientY, bubbles: true, cancelable: true });
+
+/** A brush setting's number slider in the bar, e.g. "width" */
+const slider = (element: PcToolSettings, name: string) =>
+  query<PcNumberSlider>(element, `pc-number-slider.${name}`);
+
+/** A number slider's control, pressed and dragged */
+const control = (numberSlider: PcNumberSlider) =>
+  query(numberSlider, "[role=slider]");
+
+/** Type a value into a number slider and press Enter */
+const typeInto = async (numberSlider: PcNumberSlider, value: string) => {
+  numberSlider.startEditing();
+  const field = query<HTMLInputElement>(numberSlider, "input");
+  field.value = value;
+  field.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Enter", cancelable: true }),
+  );
+  await numberSlider.updateComplete;
+};
 
 /** Show the bar for a tool */
 const setup = async (tool: Tool = Tool.Brush) => {
@@ -104,29 +124,24 @@ describe("pc-tool-settings", () => {
       true,
     );
     expect(
-      size.nextElementSibling!.querySelector("input.width"),
+      size.nextElementSibling!.querySelector("pc-number-slider.width"),
     ).not.toBeNull();
   });
 
-  it("should change the width and height when their fields are pressed and dragged", async () => {
+  it("should change the width and height when pressed and dragged", async () => {
     const { app, element } = await setup();
     app.brush.select("round20");
     await element.updateComplete;
-    const width = query<HTMLInputElement>(element, "input.width");
-    const height = query<HTMLInputElement>(element, "input.height");
+    const width = control(slider(element, "width"));
+    const height = control(slider(element, "height"));
 
     // Right and up wider; the height follows while proportions are constrained
-    const down = pointer("pointerdown", 0, 0);
-    width.dispatchEvent(down);
-    expect(down.defaultPrevented).toBe(true);
-    width.dispatchEvent(pointer("pointermove", 2, 0));
-    expect(app.brush.width).toBe(20);
+    width.dispatchEvent(pointer("pointerdown", 0, 0));
     width.dispatchEvent(pointer("pointermove", 5, -5));
     expect([app.brush.width, app.brush.height]).toEqual([30, 30]);
     width.dispatchEvent(pointer("pointermove", 0, 0));
     expect([app.brush.width, app.brush.height]).toEqual([20, 20]);
     width.dispatchEvent(pointer("pointerup", 0, 0));
-    expect(element.shadowRoot!.activeElement).toBeNull();
 
     // Left and down shorter, down to 1 pixel; the width stays without constrained proportions
     app.brush.update({ constrainProportions: false });
@@ -136,55 +151,52 @@ describe("pc-tool-settings", () => {
     height.dispatchEvent(pointer("pointermove", 0, 0));
     expect([app.brush.width, app.brush.height]).toEqual([20, 201]);
     height.dispatchEvent(pointer("pointercancel", 0, 0));
-    height.dispatchEvent(pointer("pointermove", 100, 0));
-    expect(app.brush.height).toBe(201);
   });
 
-  it("should focus a size field for typing when pressed without dragging", async () => {
-    const { app, element } = await setup(Tool.Eraser);
-    const width = query<HTMLInputElement>(element, "input.width");
-    width.dispatchEvent(pointer("pointerdown", 0, 0));
-    width.dispatchEvent(pointer("pointermove", 1, 1));
-    width.dispatchEvent(pointer("pointerup", 1, 1));
-    expect(element.shadowRoot!.activeElement).toBe(width);
-    // While typing, pressing works as usual: placing the caret, not dragging
-    const down = pointer("pointerdown", 0, 0);
-    width.dispatchEvent(down);
-    expect(down.defaultPrevented).toBe(false);
-    const before = app.eraser.width;
-    width.dispatchEvent(pointer("pointermove", 50, 0));
-    width.dispatchEvent(pointer("pointerup", 50, 0));
-    expect(app.eraser.width).toBe(before);
-  });
-
-  it("should change the brush's size, proportions and opacity", async () => {
+  it("should change the brush's size, proportions and opacity when typed", async () => {
     const { app, element } = await setup();
     app.brush.select("round20");
     await element.updateComplete;
     expect(query(element, "[role=toolbar]").getAttribute("aria-label")).toBe(
       "Brush settings",
     );
-    enter(element, "input.width", "30");
+    const width = slider(element, "width");
+    expect(width.label).toBe("Width");
+    await typeInto(width, "30");
     expect([app.brush.width, app.brush.height]).toEqual([30, 30]);
-    enter(element, "input.width", "");
-    expect(app.brush.width).toBe(30);
     const constrain = query<HTMLInputElement>(element, "input.constrain");
     expect(constrain.checked).toBe(true);
     constrain.checked = false;
     constrain.dispatchEvent(new Event("change"));
     expect(app.brush.preset.constrainProportions).toBe(false);
-    enter(element, "input.height", "12");
-    enter(element, "input.height", "x");
+    await typeInto(slider(element, "height"), "12");
     expect([app.brush.width, app.brush.height]).toEqual([30, 12]);
-    enter(element, "input.opacity", "150");
-    expect(app.brush.preset.alpha).toBe(1);
-    enter(element, "input.opacity", "40");
-    enter(element, "input.opacity", "");
+    const opacity = slider(element, "opacity");
+    expect([opacity.min, opacity.max, opacity.unit]).toEqual([0, 100, "%"]);
+    // Already at the most (100%)
+    await typeInto(opacity, "150");
+    expect(opacity.value).toBe(100);
+    expect(app.brush.preset.alpha ?? 1).toBe(1);
+    await typeInto(opacity, "40");
     expect(app.brush.preset.alpha).toBe(0.4);
     await element.updateComplete;
-    expect(query<HTMLInputElement>(element, "input.opacity").value).toBe("40");
+    expect(opacity.value).toBe(40);
     // The preset itself is unchanged
     expect(app.brush.selectedPreset?.alpha).toBeUndefined();
+  });
+
+  it("should show the size a constrained brush got when a typed size is past a limit", async () => {
+    const { app, element } = await setup();
+    app.brush.update({ constrainProportions: false });
+    app.brush.setSize(30, 10);
+    app.brush.update({ constrainProportions: true });
+    await element.updateComplete;
+    const height = slider(element, "height");
+    await typeInto(height, "200");
+    await element.updateComplete;
+    // The width stops at 256 pixels, so the height stops at a third of it
+    expect([app.brush.width, app.brush.height]).toEqual([256, 85]);
+    expect(height.value).toBe(85);
   });
 
   it("should turn pressure and tilt on and off", async () => {

@@ -55,7 +55,8 @@ button img {
   height: 24px;
 }
 /* Fields' names small and in capitals above them, as designed */
-[role="toolbar"] > label:not(.icon-toggle) {
+[role="toolbar"] > label:not(.icon-toggle),
+[role="toolbar"] > .field {
   display: inline-flex;
   flex-direction: column;
   gap: 1px;
@@ -82,8 +83,11 @@ button img {
   align-self: stretch;
   min-width: 56px;
 }
-/* Width and height change when pressed and dragged, until focused for typing */
-.drag-field:not(:focus) {
-  cursor: ew-resize;
-  touch-action: none;
+/* Brush width, height and opacity: dragged or typed, as tall as the other fields */
+.field pc-number-slider {
+  min-width: 4.5em;
+}
+.field pc-number-slider::part(control),
+.field pc-number-slider::part(field) {
+  min-height: 22px;
 }
