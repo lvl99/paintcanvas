@@ -27,6 +27,8 @@ export interface MenuItem {
   icon?: string;
   /** The action's keyboard shortcut, shown on its right as symbols (e.g. ⌘S) when 3 characters or fewer */
   shortcut?: KeyCombo;
+  /** Marks the current choice (e.g. the selected tool) with the `selected` class and a purple background */
+  selected?: boolean;
 }
 
 /** A non-interactive label naming the items after it (up to the next label or divider), e.g. "Tools" */
@@ -69,6 +71,17 @@ export const isMenuItem = (entry: MenuEntry): entry is MenuItem =>
  */
 const hasStart = (item: MenuItem): boolean =>
   item.checked !== undefined || item.icon !== undefined;
+
+/**
+ * A menu item's classes: `danger` and `selected`, when it is.
+ *
+ * @example
+ * itemClasses({ value: "brush", label: "Brush", selected: true }); // "selected"
+ */
+const itemClasses = (item: MenuItem): string =>
+  [item.danger && "danger", item.selected && "selected"]
+    .filter(Boolean)
+    .join(" ");
 
 /**
  * Split menu entries into sections: a label or divider starts a new one.
@@ -165,6 +178,16 @@ export class PcMenu extends PcElement {
       }
       button.danger {
         color: var(--pc-dismiss-text);
+      }
+      /* The current choice, e.g. the selected tool, like other selected buttons */
+      button.selected,
+      button.selected:hover:not(:disabled),
+      button.selected:focus-visible {
+        background: var(--pc-accent);
+        color: var(--pc-accent-text);
+      }
+      button.selected .end {
+        color: inherit;
       }
       .start {
         /* Icons as tall as the text, so items with icons are no taller */
@@ -336,7 +359,8 @@ export class PcMenu extends PcElement {
       aria-keyshortcuts=${
         item.shortcut ? ariaKeyShortcut(item.shortcut) : nothing
       }
-      class=${item.danger ? "danger" : nothing}
+      class=${itemClasses(item) || nothing}
+      aria-current=${item.selected ? "true" : nothing}
       ?disabled=${item.disabled}
       data-value=${item.value}
       @click=${() => this.choose(item)}

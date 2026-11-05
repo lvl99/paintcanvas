@@ -62,6 +62,23 @@ describe("pc-menu", () => {
     expect(focused(menu)).toBe(buttons(menu)[0]);
   });
 
+  it("should mark selected items with the selected class and as current", async () => {
+    const menu = await mount<PcMenu>("pc-menu", {
+      items: [
+        { value: "brush", label: "Brush", selected: true },
+        { value: "eraser", label: "Eraser" },
+        { value: "delete", label: "Delete", danger: true, selected: true },
+      ],
+    });
+    expect(
+      buttons(menu).map((b) => [b.className, b.getAttribute("aria-current")]),
+    ).toEqual([
+      ["selected", "true"],
+      ["", null],
+      ["danger selected", "true"],
+    ]);
+  });
+
   it("should move focus with the arrow keys, Home and End, skipping disabled items", async () => {
     const menu = await mount<PcMenu>("pc-menu", {
       items,

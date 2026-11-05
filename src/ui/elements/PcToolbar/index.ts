@@ -213,6 +213,7 @@ export class PcToolbar extends PcPane {
         label: this.t(name),
         icon,
         shortcut: app.shortcuts.combo(shortcutId) ?? undefined,
+        selected: tool === app.tool,
       })),
     ];
     const label = this.toolLabel(app, current.name, current.shortcutId);

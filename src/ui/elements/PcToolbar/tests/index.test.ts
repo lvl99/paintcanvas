@@ -253,9 +253,16 @@ describe("pc-toolbar", () => {
     );
     expect(zoom).toMatchObject({ label: "Zoom", shortcut: undefined });
     expect(toggle.items[1]).toMatchObject({ shortcut: { key: "b" } });
+    const selected = () =>
+      toggle.items
+        .filter((item) => "selected" in item && item.selected)
+        .map((item) => "value" in item && item.value);
+    expect(selected()).toEqual([app.tool]);
     toggle.dispatchEvent(
       new CustomEvent("pc-select", { detail: { value: Tool.Pan } }),
     );
     expect([app.tool, app.panel]).toEqual([Tool.Pan, null]);
+    await element.updateComplete;
+    expect(selected()).toEqual([Tool.Pan]);
   });
 });
