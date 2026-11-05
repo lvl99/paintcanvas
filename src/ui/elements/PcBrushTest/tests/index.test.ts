@@ -6,6 +6,7 @@ import {
   TEST_COLOUR,
   POINT_COLOUR,
   STAMP_COLOUR,
+  STROKE_POINTS_MS,
   type PcBrushTest,
 } from "..";
 import StrokeEngine from "../../../../lib/brushes/StrokeEngine";
@@ -199,6 +200,50 @@ describe("pc-brush-test stroke points", () => {
     calls.length = 0;
     draw();
     expect(calls.some(([name]) => name === "arc")).toBe(false);
+  });
+
+  it("should clear a finished stroke's points after 3 seconds, or on Clear", async () => {
+    const { element, canvas } = await setup();
+    const { ctx, calls } = createRecordingContext();
+    Object.defineProperty(canvas, "getContext", {
+      value: () => ctx,
+      configurable: true,
+    });
+    const arcs = () => calls.filter(([name]) => name === "arc").length;
+    const draw = () => {
+      canvas.dispatchEvent(pointer("pointerdown", 10, 10));
+      canvas.dispatchEvent(pointer("pointermove", 40, 20));
+      canvas.dispatchEvent(pointer("pointerup", 60, 30));
+    };
+    element.setShowPoints(true);
+    vi.useFakeTimers();
+    try {
+      draw();
+      vi.advanceTimersByTime(STROKE_POINTS_MS - 1);
+      calls.length = 0;
+      element.setShowPoints(true);
+      expect(arcs()).toBeGreaterThan(0);
+      // Starting another stroke keeps them until it's finished
+      canvas.dispatchEvent(pointer("pointerdown", 10, 10));
+      vi.advanceTimersByTime(STROKE_POINTS_MS);
+      canvas.dispatchEvent(pointer("pointerup", 60, 30));
+      vi.advanceTimersByTime(STROKE_POINTS_MS);
+      calls.length = 0;
+      element.setShowPoints(true);
+      expect(arcs()).toBe(0);
+      // "Clear" clears them straight away
+      draw();
+      query(element, "button.clear").click();
+      calls.length = 0;
+      element.setShowPoints(true);
+      expect(arcs()).toBe(0);
+      // Removing the area stops the wait
+      draw();
+      element.remove();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("should record points from the start when shown before the first stroke", async () => {
