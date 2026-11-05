@@ -68,7 +68,8 @@ export const DARK_TOKENS: TokenValues = {
   "text-muted": "#b0b0b0",
   shadow: "0 4px 16px rgb(0 0 0 / 60%)",
   backdrop: "rgb(0 0 0 / 60%)",
-  accent: "#a463f0",
+  // White text on it has at least 4.5:1 contrast (WCAG 2.2 AA), and it has 3:1 against the dark surfaces
+  accent: "#9449ed",
   "dismiss-text": "#ff5cb8",
   disabled: "#6b6b6b",
   // Icons show as drawn (black lines, white fills), as in the light theme
