@@ -158,11 +158,11 @@ export const zoomPercent = (zoom: number): string => {
  * slots add your own items to each. (Cut, copy and paste are `<pc-clipboard-tools>`.)
  *
  * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`), the
- *   size settings (a cog button that shows or hides a popover under it with the width, constrain proportions and
- *   height), pressure, tilt, opacity and "Configure" (fires `pc-configure-brush` with the tool, "brush" or "eraser").
- *   The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or up to raise them, left or
- *   down to lower them, or tapped to type a value. Focus pen mode (only pens draw, and touches are ignored while a pen
- *   is down or just lifted) follows tilt.
+ *   size settings (a cog button that shows or hides a popover under it with pressure, tilt and focus pen mode above the
+ *   width, constrain proportions and height), opacity and "Configure" (fires `pc-configure-brush` with the tool,
+ *   "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or up
+ *   to raise them, left or down to lower them, or tapped to type a value. Focus pen mode: only pens draw, and touches
+ *   are ignored while a pen is down or just lifted.
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
  *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform). The width, height
@@ -409,47 +409,7 @@ export class PcToolSettings extends PcElement {
         >
           <img src=${this.iconUrl("cog")} alt="" />
         </button>
-        <label
-          class="icon-toggle"
-          title=${this.t("paintCanvas.toolSettings.pressure")}
-        >
-          <input
-            type="checkbox"
-            class="pressure"
-            .checked=${pressure}
-            @change=${(e: Event) =>
-              settings.update(
-                withSource(
-                  preset,
-                  PRESSURE_PARAMS,
-                  "usePressure",
-                  (e.target as HTMLInputElement).checked,
-                ),
-              )}
-          />
-          ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
-        </label>
-        <label
-          class="icon-toggle"
-          title=${this.t("paintCanvas.toolSettings.tilt")}
-        >
-          <input
-            type="checkbox"
-            class="tilt"
-            .checked=${tilt}
-            @change=${(e: Event) =>
-              settings.update(
-                withSource(
-                  preset,
-                  TILT_PARAMS,
-                  "useTilt",
-                  (e.target as HTMLInputElement).checked,
-                ),
-              )}
-          />
-          ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
-        </label>
-        ${this.renderFocusPen(app)}
+
         ${this.renderNumberField(
           "opacity",
           this.t("paintCanvas.common.opacity"),
@@ -471,6 +431,49 @@ export class PcToolSettings extends PcElement {
         ?open=${this.sizeOpen}
         @pc-close=${this.closeSizeSettings}
       >
+        <div class="size-toggles">
+          <label
+            class="icon-toggle"
+            title=${this.t("paintCanvas.toolSettings.pressure")}
+          >
+            <input
+              type="checkbox"
+              class="pressure"
+              .checked=${pressure}
+              @change=${(e: Event) =>
+                settings.update(
+                  withSource(
+                    preset,
+                    PRESSURE_PARAMS,
+                    "usePressure",
+                    (e.target as HTMLInputElement).checked,
+                  ),
+                )}
+            />
+            ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
+          </label>
+          <label
+            class="icon-toggle"
+            title=${this.t("paintCanvas.toolSettings.tilt")}
+          >
+            <input
+              type="checkbox"
+              class="tilt"
+              .checked=${tilt}
+              @change=${(e: Event) =>
+                settings.update(
+                  withSource(
+                    preset,
+                    TILT_PARAMS,
+                    "useTilt",
+                    (e.target as HTMLInputElement).checked,
+                  ),
+                )}
+            />
+            ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
+          </label>
+          ${this.renderFocusPen(app)}
+        </div>
         <div class="size-fields">
           ${this.renderNumberField(
             "width",

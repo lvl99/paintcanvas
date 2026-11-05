@@ -127,7 +127,7 @@ describe("pc-tool-settings", () => {
     );
   });
 
-  it("should show and hide the width, constrain proportions and height in a popover from the cog button", async () => {
+  it("should show and hide pressure, tilt, focus pen mode, width, constrain proportions and height in a popover from the cog button", async () => {
     const { app, element } = await setup();
     const button = query<HTMLButtonElement>(element, "button.size-settings");
     const popover = query<PcPopover>(element, "pc-popover.size-popover");
@@ -147,6 +147,18 @@ describe("pc-tool-settings", () => {
           : "constrain",
       ),
     ).toEqual(["width", "constrain", "height"]);
+    // The toggles above the sizes
+    expect(popover.firstElementChild!.classList.contains("size-toggles")).toBe(
+      true,
+    );
+    expect(
+      [...popover.querySelectorAll(".size-toggles > *")].map(
+        (e) => e.querySelector("input")?.className ?? e.classList[0],
+      ),
+    ).toEqual(["pressure", "tilt", "focus-pen"]);
+    expect(
+      element.shadowRoot!.querySelector(".start input.pressure"),
+    ).toBeNull();
 
     // Opens under the button, pointing at it
     const place = vi.spyOn(popover, "placeBelow");
@@ -308,12 +320,12 @@ describe("pc-tool-settings", () => {
   });
 
   it.each([Tool.Brush, Tool.Eraser])(
-    "should switch focus pen mode on and off, after tilt, for tool %s",
+    "should switch focus pen mode on and off, after tilt in the size settings, for tool %s",
     async (tool) => {
       const { app, element } = await setup(tool);
       const toggle = query<HTMLButtonElement>(
         element,
-        ".start > button.focus-pen",
+        ".size-toggles > button.focus-pen",
       );
       expect(
         toggle.previousElementSibling!.querySelector("input.tilt"),
