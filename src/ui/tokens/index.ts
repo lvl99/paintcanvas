@@ -45,6 +45,9 @@ export const LIGHT_TOKENS: TokenValues = {
   "radius-pill": "999px",
   "control-size": "32px",
   "icon-size": "24px",
+  // Buttons in the layout's sides (toolbars and rails) and their icons
+  "side-button-size": "52px",
+  "side-icon-size": "40px",
   font: "Arial, Helvetica, sans-serif",
   "font-size": "14px",
   "font-size-small": "12px",

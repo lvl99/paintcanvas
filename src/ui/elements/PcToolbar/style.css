@@ -1,14 +1,19 @@
 :host {
-  width: 50px;
+  width: var(--pc-side-button-size);
   height: 100%;
   background: var(--pc-bar);
   border-right: 1px solid var(--pc-border);
 }
-button {
-  width: 50px;
-  height: 50px;
+/* Every button the same size (borders included), like the rails' buttons */
+button,
+pc-colour-pair,
+.tool-menu {
+  box-sizing: border-box;
+  width: var(--pc-side-button-size);
+  height: var(--pc-side-button-size);
 }
 pc-colour-pair {
+  --pc-colour-pair-size: var(--pc-side-button-size);
   border-bottom: 1px solid var(--pc-border);
 }
 /* Buttons separated by thin lines, as designed */
@@ -40,8 +45,8 @@ button:focus-visible {
 }
 img {
   display: block;
-  width: 40px;
-  height: 40px;
+  width: var(--pc-side-icon-size);
+  height: var(--pc-side-icon-size);
   margin: auto;
 }
 /* All the buttons in one column, so they shrink together when the toolbar is short */
@@ -57,8 +62,6 @@ img {
 }
 /* The tools as one button (while minimised), showing the current tool, selected like a tool button */
 .tool-menu {
-  width: 50px;
-  height: 50px;
   border-bottom: 1px solid var(--pc-border);
 }
 .tool-menu::part(button) {

@@ -105,10 +105,16 @@ export class PcPane extends PcElement {
         border-inline: 1px solid var(--pc-border);
         background: var(--pc-bar);
       }
+      /* The same size as the toolbars' buttons (borders included) */
       .rail button {
         position: relative;
         display: inline-flex;
-        padding: var(--pc-space-1);
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        width: var(--pc-side-button-size);
+        height: var(--pc-side-button-size);
+        padding: 0;
         border: 1px solid transparent;
         border-radius: var(--pc-radius-small);
         background: transparent;
@@ -125,8 +131,8 @@ export class PcPane extends PcElement {
         outline: var(--pc-focus-width) solid var(--pc-focus);
       }
       .rail img {
-        width: var(--pc-icon-size);
-        height: var(--pc-icon-size);
+        width: var(--pc-side-icon-size);
+        height: var(--pc-side-icon-size);
         filter: var(--pc-icon-filter);
       }
       .rail .badge {
