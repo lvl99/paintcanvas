@@ -1,8 +1,10 @@
 import { css, html, nothing } from "lit";
 import { PcElement, defineElement } from "../../base";
 import ChangeController from "../../ChangeController";
-import { PointerDrag } from "../../drag";
+import { live } from "lit/directives/live.js";
+import "../PcNumberSlider";
 import {
+  BRUSH_SIZE_STEP,
   MAX_BRUSH_SIZE,
   MIN_BRUSH_SIZE,
   type default as BrushSettings,
@@ -24,9 +26,9 @@ export const sizeText = ({
 }): string => (width === height ? String(width) : `${width} × ${height}`);
 
 /**
- * A brush or eraser's size, which changes it when pressed and dragged: right or up makes it bigger, left or down
- * smaller, keeping its proportions (see `BrushSettings.resize`). With keyboard focus, the arrow keys change it by a
- * pixel and Page Up and Page Down by a step.
+ * A brush or eraser's size, as a `pc-number-slider`: pressed and dragged right or up it gets bigger, left or down
+ * smaller, keeping its proportions (see `BrushSettings.resize`). Tapping it lets you type the larger side's size. With
+ * keyboard focus, the arrow keys change it by a pixel and Page Up and Page Down by a step (like `]` and `[`).
  *
  * @example
  * html`<pc-brush-size .settings=${app.brush} label="Brush size"></pc-brush-size>`
@@ -43,32 +45,9 @@ export class PcBrushSize extends PcElement {
     css`
       :host {
         display: inline-flex;
-        user-select: none;
-        -webkit-user-select: none;
       }
-      [role="slider"] {
-        display: flex;
+      pc-number-slider {
         flex: 1;
-        align-items: center;
-        justify-content: center;
-        min-width: 44px;
-        min-height: 30px;
-        padding: 0 var(--pc-space-2);
-        border-radius: var(--pc-radius);
-        color: var(--pc-text);
-        font-family: var(--pc-font);
-        font-size: var(--pc-font-size);
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-        cursor: ew-resize;
-        touch-action: none;
-      }
-      [role="slider"]:hover {
-        background: var(--pc-surface-hover);
-      }
-      [role="slider"]:focus-visible {
-        outline: var(--pc-focus-width) solid var(--pc-focus);
-        outline-offset: -2px;
       }
     `,
   ];
@@ -81,56 +60,33 @@ export class PcBrushSize extends PcElement {
 
   private changes = new ChangeController(this, () => [this.settings]);
 
-  private readonly drag = new PointerDrag((delta) =>
-    this.settings?.resize(delta),
-  );
-
   constructor() {
     super();
     this.label = "";
   }
 
-  /**
-   * Change the size with the arrow keys (a pixel) and Page Up and Page Down (a step).
-   */
-  private onKeyDown(event: KeyboardEvent): void {
+  /** Resize to the slider's value (the larger side), keeping the proportions */
+  private onChange(event: CustomEvent<{ value: number }>): void {
     const settings = this.settings as BrushSettings;
-    const actions: Record<string, () => void> = {
-      ArrowUp: () => settings.resize(1),
-      ArrowRight: () => settings.resize(1),
-      ArrowDown: () => settings.resize(-1),
-      ArrowLeft: () => settings.resize(-1),
-      PageUp: () => settings.grow(),
-      PageDown: () => settings.shrink(),
-    };
-    const action = actions[event.key];
-    if (!action) return;
-    event.preventDefault();
-    action();
+    settings.resize(event.detail.value - settings.largerSide);
+    // Show the size it got, which can differ (e.g. the smaller side can't go below 1 pixel)
+    this.requestUpdate();
   }
 
   override render() {
     const settings = this.settings;
     if (!settings) return nothing;
-    const text = sizeText(settings);
-    return html`<div
-      part="control"
-      role="slider"
-      tabindex="0"
-      aria-label=${this.label}
-      aria-valuemin=${MIN_BRUSH_SIZE}
-      aria-valuemax=${MAX_BRUSH_SIZE}
-      aria-valuenow=${Math.max(settings.width, settings.height)}
-      aria-valuetext=${text}
-      title=${this.t("paintCanvas.brushMenu.dragToResize")}
-      @pointerdown=${this.drag.start}
-      @pointermove=${this.drag.move}
-      @pointerup=${this.drag.end}
-      @pointercancel=${this.drag.end}
-      @keydown=${this.onKeyDown}
-    >
-      ${text}
-    </div>`;
+    const larger = settings.largerSide;
+    return html`<pc-number-slider
+      exportparts="control, field"
+      min=${MIN_BRUSH_SIZE}
+      max=${MAX_BRUSH_SIZE}
+      page-step=${Math.max(1, Math.round(larger * BRUSH_SIZE_STEP))}
+      label=${this.label}
+      .value=${live(larger)}
+      .text=${sizeText(settings)}
+      @pc-change=${this.onChange}
+    ></pc-number-slider>`;
   }
 }
 

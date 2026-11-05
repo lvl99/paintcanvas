@@ -199,8 +199,8 @@ export default class BrushSettings extends EventTarget {
     this.setProportionalSize(this.aspect >= 1 ? larger : larger * this.aspect);
   }
 
-  /** The larger side, which `grow` and `shrink` step from */
-  private get largerSide(): number {
+  /** The larger side (what `resize` changes), which `grow` and `shrink` step from */
+  get largerSide(): number {
     return Math.max(this.width, this.height);
   }
 
