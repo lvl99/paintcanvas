@@ -44,7 +44,8 @@ export class PcPanel extends PcElement {
         font-family: var(--pc-font);
         font-size: var(--pc-font-size);
       }
-      /* In a pane's rail (set by the pane): hidden until opened from its button, then over the canvas beside the pane */
+      /* In a pane's rail (set by the pane): hidden until opened from its button, then over the canvas beside the pane,
+         as tall as its content needs (at most 90% of the window's height, and never taller than the pane) */
       :host([data-pc-rail]:not([data-pc-open])) {
         display: none;
       }
@@ -52,10 +53,9 @@ export class PcPanel extends PcElement {
         position: absolute;
         z-index: 5;
         top: 0;
-        bottom: 0;
         width: var(--pc-floating-panel-width, min(360px, 85vw));
         max-width: none;
-        max-height: none;
+        max-height: min(90vh, 100%);
       }
       :host([data-pc-open="left"]) {
         left: 100%;
