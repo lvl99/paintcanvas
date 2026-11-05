@@ -63,8 +63,8 @@ export class PcElement extends LitElement {
   /** The icons the element shows */
   declare icons: IconRegistry;
 
-  /** "light" (default), "dark", or "auto" to follow the device (see the design tokens) */
-  declare theme?: "light" | "dark" | "auto";
+  /** "light", "dark", or "system" to follow the device (see the design tokens). Without one, it has its ancestors' theme. */
+  declare theme?: "light" | "dark" | "system";
 
   /** The translations and icons being listened to */
   private watched: EventTarget[] = [];

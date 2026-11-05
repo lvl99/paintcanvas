@@ -13,7 +13,7 @@ import { DELETE_CURSOR } from "../../../lib/rendering/cursors";
 afterEach(() => document.getElementById(TOKENS_STYLE_ID)?.remove());
 
 describe("design tokens", () => {
-  it("should set light tokens on the page, and dark ones for dark and automatic themes", () => {
+  it("should set light tokens on the page, and dark ones for the dark theme and for the system theme (and pages without a theme) on dark devices", () => {
     expect(PAGE_TOKENS_CSS).toContain(
       ':root, [data-pc-theme="light"] { --pc-blue: #2c6bff;',
     );
@@ -21,7 +21,7 @@ describe("design tokens", () => {
       `[data-pc-theme="dark"] { --pc-surface: ${DARK_TOKENS.surface};`,
     );
     expect(PAGE_TOKENS_CSS).toContain(
-      '@media (prefers-color-scheme: dark) { [data-pc-theme="auto"]',
+      '@media (prefers-color-scheme: dark) { :root:not([data-pc-theme="light"]), [data-pc-theme="system"] {',
     );
     expect(TOKENS_CSS).toBe(PAGE_TOKENS_CSS);
   });
@@ -47,7 +47,7 @@ describe("design tokens", () => {
 
   it("should let one element choose its theme", () => {
     expect(tokens.cssText).toContain(':host([theme="dark"]) {');
-    expect(tokens.cssText).toContain(':host([theme="auto"])');
+    expect(tokens.cssText).toContain(':host([theme="system"])');
     expect(tokens.cssText).toContain(".pc-visually-hidden");
     expect(tokens.cssText).toContain(
       ":host { color: var(--pc-text); color-scheme: var(--pc-color-scheme); }",

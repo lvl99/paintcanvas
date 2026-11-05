@@ -4,8 +4,8 @@ import { PcElement, defineElement, emit } from "../../base";
 import type { IconName } from "../../icons";
 import "../PcButtonGroup";
 
-/** The themes to pick from: light, dark, or following the device (auto) */
-export const THEMES = ["light", "dark", "auto"] as const;
+/** The themes to pick from: light, dark, or following the device's (system) */
+export const THEMES = ["light", "dark", "system"] as const;
 
 export type Theme = (typeof THEMES)[number];
 
@@ -13,7 +13,7 @@ export type Theme = (typeof THEMES)[number];
 export const THEME_ICONS: Readonly<Record<Theme, IconName>> = {
   light: "sun",
   dark: "moon",
-  auto: "star",
+  system: "star",
 };
 
 /**
@@ -27,9 +27,9 @@ export const isTheme = (value: unknown): value is Theme =>
   THEMES.includes(value as Theme);
 
 /**
- * Picks the light, dark or automatic theme (which follows the device), as a labelled group of three radios joined into
+ * Picks the light, dark or system theme (which follows the device's), as a labelled group of three radios joined into
  * one pill (a joined `<pc-button-group>`), each with its icon (sun, moon and star) and name; the picked one is purple.
- * Shows the theme of its `target` (the page's root element by default; light unless it has another), and sets the
+ * Shows the theme of its `target` (the page's root element by default; system unless it has another), and sets the
  * target's `data-pc-theme` when the user picks one, firing `change` (detail: the theme).
  *
  * @example
@@ -96,7 +96,7 @@ export class PcThemePicker extends PcElement {
 
   constructor() {
     super();
-    this.theme = "light";
+    this.theme = "system";
   }
 
   override connectedCallback(): void {
@@ -114,7 +114,7 @@ export class PcThemePicker extends PcElement {
    * Pick a theme: show it, set it on the target and tell listeners.
    *
    * @example
-   * picker.pick("auto");
+   * picker.pick("system");
    */
   pick(theme: Theme): void {
     this.theme = theme;

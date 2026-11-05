@@ -261,5 +261,5 @@
   "paintCanvas.theme.label": "主題",
   "paintCanvas.theme.light": "淺色",
   "paintCanvas.theme.dark": "深色",
-  "paintCanvas.theme.auto": "自動"
+  "paintCanvas.theme.system": "跟隨系統"
 }

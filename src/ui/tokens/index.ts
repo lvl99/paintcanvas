@@ -89,20 +89,21 @@ const declarations = (values: TokenValues): string =>
     .join(" ");
 
 /**
- * The page-level stylesheet: light tokens on the page, so every element inherits them and the implementer can override
- * any token on `:root` or any ancestor. `data-pc-theme="dark"` on an ancestor switches what's inside it to the dark
- * theme, and `data-pc-theme="auto"` follows the device.
+ * The page-level stylesheet: tokens on the page, so every element inherits them and the implementer can override any
+ * token on `:root` or any ancestor. The page follows the device's theme (light or dark) unless its root element's
+ * `data-pc-theme` is `"light"` or `"dark"`; on an ancestor, `data-pc-theme` switches what's inside it to that theme
+ * (`"system"` follows the device).
  */
 export const PAGE_TOKENS_CSS = `:root, [data-pc-theme="light"] { ${declarations(LIGHT_TOKENS)} }
 [data-pc-theme="dark"] { ${declarations(DARK_TOKENS)} }
-@media (prefers-color-scheme: dark) { [data-pc-theme="auto"] { ${declarations(DARK_TOKENS)} } }`;
+@media (prefers-color-scheme: dark) { :root:not([data-pc-theme="light"]), [data-pc-theme="system"] { ${declarations(DARK_TOKENS)} } }`;
 
 /** The design tokens as text: the page-level stylesheet (kept for including in the implementer's own stylesheets) */
 export const TOKENS_CSS: string = PAGE_TOKENS_CSS;
 
 /**
  * Elements' shared styles: a `theme` attribute switches one element (and what's inside it) to the light, dark or
- * automatic theme, and `.pc-visually-hidden` hides text from view but not from screen readers.
+ * system theme, and `.pc-visually-hidden` hides text from view but not from screen readers.
  *
  * @example
  * static styles = [tokens, css`button { color: var(--pc-text); }`];
@@ -110,7 +111,7 @@ export const TOKENS_CSS: string = PAGE_TOKENS_CSS;
 export const tokens =
   unsafeCSS(`:host([theme="light"]) { ${declarations(LIGHT_TOKENS)} }
 :host([theme="dark"]) { ${declarations({ ...LIGHT_TOKENS, ...DARK_TOKENS })} }
-@media (prefers-color-scheme: dark) { :host([theme="auto"]) { ${declarations({ ...LIGHT_TOKENS, ...DARK_TOKENS })} } }
+@media (prefers-color-scheme: dark) { :host([theme="system"]) { ${declarations({ ...LIGHT_TOKENS, ...DARK_TOKENS })} } }
 :host { color: var(--pc-text); color-scheme: var(--pc-color-scheme); }
 .pc-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }`);
 

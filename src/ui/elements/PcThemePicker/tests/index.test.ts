@@ -22,7 +22,7 @@ describe("isTheme", () => {
 });
 
 describe("pc-theme-picker", () => {
-  it("should offer light, dark and auto as labelled radios with their icons, light picked by default", async () => {
+  it("should offer light, dark and system as labelled radios with their icons, system picked by default", async () => {
     const element = await mount<PcThemePicker>("pc-theme-picker");
     expect(query(element, "legend").textContent).toBe("Theme");
     expect(
@@ -34,17 +34,17 @@ describe("pc-theme-picker", () => {
     ).toEqual([
       ["Light", DEFAULT_ICONS.sun, "radio"],
       ["Dark", DEFAULT_ICONS.moon, "radio"],
-      ["Auto", DEFAULT_ICONS.star, "radio"],
+      ["System", DEFAULT_ICONS.star, "radio"],
     ]);
-    expect(radio(element, "light").checked).toBe(true);
+    expect(radio(element, "system").checked).toBe(true);
     expect(document.documentElement.dataset.pcTheme).toBeUndefined();
   });
 
   it("should show the page's theme, and set it when picked", async () => {
-    document.documentElement.dataset.pcTheme = "auto";
+    document.documentElement.dataset.pcTheme = "system";
     const element = await mount<PcThemePicker>("pc-theme-picker");
-    expect(element.theme).toBe("auto");
-    expect(radio(element, "auto").checked).toBe(true);
+    expect(element.theme).toBe("system");
+    expect(radio(element, "system").checked).toBe(true);
     const changes = events(element, "change");
     radio(element, "dark").click();
     await element.updateComplete;
@@ -61,7 +61,7 @@ describe("pc-theme-picker", () => {
     element.target = target;
     document.body.append(element);
     await element.updateComplete;
-    expect(element.theme).toBe("light");
+    expect(element.theme).toBe("system");
     element.pick("dark");
     expect(target.dataset.pcTheme).toBe("dark");
     expect(document.documentElement.dataset.pcTheme).toBeUndefined();

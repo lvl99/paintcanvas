@@ -261,5 +261,5 @@
   "paintCanvas.theme.label": "Theme",
   "paintCanvas.theme.light": "Light",
   "paintCanvas.theme.dark": "Dark",
-  "paintCanvas.theme.auto": "Auto"
+  "paintCanvas.theme.system": "System"
 }
