@@ -21,4 +21,4 @@ To let the user choose, add `<pc-theme-picker>`: three radios, light (sun), dark
 picker.settings = canvas.ui;
 ```
 
-`--pc-panel-width` sets how wide panels are (`<pc-panel>` and the panels made from it, e.g. `<pc-panel-layers>`): 290px by default, and 240px for `<pc-panel-brushes>`. Panels are never wider than the space they have.
+`--pc-panel-width` sets how wide panels are (`<pc-panel>` and the panels made from it, e.g. `<pc-panel-layers>`): 290px by default, and 240px for `<pc-panel-brushes>`. In every layout (docked, opened from a rail or overlay, narrow or not), panels are never wider than `--pc-panel-max-width` (290px by default) or the space they have.
