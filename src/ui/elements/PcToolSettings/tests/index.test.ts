@@ -309,15 +309,16 @@ describe("pc-tool-settings", () => {
   });
 
   it.each([Tool.Brush, Tool.Eraser])(
-    "should switch focus pen mode on and off, at the end of the settings for tool %s",
+    "should switch focus pen mode on and off, after tilt, for tool %s",
     async (tool) => {
       const { app, element } = await setup(tool);
-      const end = query(element, "[role=toolbar] > .end");
       const toggle = query<HTMLButtonElement>(
         element,
-        ".end > button.focus-pen",
+        ".start > button.focus-pen",
       );
-      expect(toggle.parentElement).toBe(end);
+      expect(
+        toggle.previousElementSibling!.querySelector("input.tilt"),
+      ).not.toBeNull();
       expect(toggle.getAttribute("aria-label")).toBe("Focus pen mode");
       expect(toggle.getAttribute("aria-pressed")).toBe("false");
       expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(
@@ -351,7 +352,13 @@ describe("pc-tool-settings", () => {
     expect(end.lastElementChild!.getAttribute("name")).toBe("end");
   });
 
-  it.each([Tool.RectangleLasso, Tool.CircleLasso, Tool.Move])(
+  it.each([
+    Tool.Brush,
+    Tool.Eraser,
+    Tool.RectangleLasso,
+    Tool.CircleLasso,
+    Tool.Move,
+  ])(
     "should cut, copy (with a mask) and paste (with copied image data) at the end for tool %s",
     async (tool) => {
       const { app, element } = await setup(tool);
@@ -393,7 +400,7 @@ describe("pc-tool-settings", () => {
     ).toBe(true);
   });
 
-  it("should put several actions in a ⋮ menu while narrow, but not a single one", async () => {
+  it("should put the actions at the end in a ⋮ menu while narrow", async () => {
     const { app, element } = await setup(Tool.RectangleLasso);
     element.narrow = true;
     await element.updateComplete;
@@ -431,13 +438,11 @@ describe("pc-tool-settings", () => {
       new CustomEvent("pc-select", { detail: { value: "unknown" } }),
     );
     expect(paste).toHaveBeenCalledOnce();
-    // The brush's one action (focus pen mode) stays a button
+    // Buttons at the start (e.g. focus pen mode) stay buttons
     app.selectTool(Tool.Brush);
     await element.updateComplete;
-    expect(
-      element.shadowRoot!.querySelector(".end > pc-context-menu"),
-    ).toBeNull();
-    expect(query(element, ".end > button.focus-pen")).not.toBeNull();
+    expect(query(element, ".end > pc-context-menu.more")).not.toBeNull();
+    expect(query(element, ".start > button.focus-pen")).not.toBeNull();
   });
 
   it("should ask to configure the brush or eraser", async () => {

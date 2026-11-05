@@ -44,7 +44,7 @@ const TILT_PARAMS = ["widthConfig", "heightConfig", "rotationConfig"] as const;
 /** A setting's variation config key */
 type ParamKey = (typeof TILT_PARAMS)[number];
 
-/** An action at the end of the bar (a button, or an item of its ⋮ menu while narrow) */
+/** An action in the bar: a button, or at its end an item of its ⋮ menu while narrow */
 interface EndAction {
   /** Its class and menu value, e.g. "copy" */
   name: string;
@@ -181,8 +181,8 @@ export const zoomPercent = (zoom: number): string => {
  *   size settings (a cog button that shows or hides a popover under it with the width, constrain proportions and
  *   height), pressure, tilt, opacity and "Configure" (fires `pc-configure-brush` with the tool, "brush" or "eraser").
  *   The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or up to raise them, left or
- *   down to lower them, or tapped to type a value. At the end: focus pen mode (only pens draw, and touches are ignored
- *   while a pen is down or just lifted).
+ *   down to lower them, or tapped to type a value. Focus pen mode (only pens draw, and touches are ignored while a pen
+ *   is down or just lifted) follows tilt. At the end: cut, copy and paste, as for the lassos.
  * - Lassos: select all, and invert selection and deselect (only while there is a mask). At the end: cut and copy (while
  *   there is a mask) and paste (while there is copied image data).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
@@ -382,26 +382,28 @@ export class PcToolSettings extends PcElement {
         @pc-select=${(event: CustomEvent<{ value: string }>) =>
           actions.find((action) => action.name === event.detail.value)?.run()}
       ></pc-context-menu>`;
-    return actions.map(
-      (action) =>
-        html`<button
-          type="button"
-          class=${action.icon ? `${action.name} icon-button` : `${action.name} pill`}
-          title=${action.title ?? action.label}
-          aria-label=${action.icon ? action.label : nothing}
-          aria-pressed=${
-            action.pressed === undefined ? nothing : String(action.pressed)
-          }
-          ?disabled=${action.disabled}
-          @click=${action.run}
-        >
-          ${
-            action.icon
-              ? html`<img src=${this.iconUrl(action.icon)} alt="" />`
-              : action.label
-          }
-        </button>`,
-    );
+    return actions.map((action) => this.renderActionButton(action));
+  }
+
+  /** Render an action as a button: its icon (named for screen readers) or its label */
+  private renderActionButton(action: EndAction) {
+    return html`<button
+      type="button"
+      class=${action.icon ? `${action.name} icon-button` : `${action.name} pill`}
+      title=${action.title ?? action.label}
+      aria-label=${action.icon ? action.label : nothing}
+      aria-pressed=${
+        action.pressed === undefined ? nothing : String(action.pressed)
+      }
+      ?disabled=${action.disabled}
+      @click=${action.run}
+    >
+      ${
+        action.icon
+          ? html`<img src=${this.iconUrl(action.icon)} alt="" />`
+          : action.label
+      }
+    </button>`;
   }
 
   /**
@@ -462,7 +464,7 @@ export class PcToolSettings extends PcElement {
     const sizeSettings = this.t("paintCanvas.toolSettings.sizeSettings");
     return {
       label: this.t("paintCanvas.toolSettings.settings", { tool: label }),
-      end: [this.focusPenAction(app)],
+      end: this.clipboardActions(app),
       start: html`<button
           type="button"
           class="preset"
@@ -541,6 +543,7 @@ export class PcToolSettings extends PcElement {
           />
           ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
         </label>
+        ${this.renderActionButton(this.focusPenAction(app))}
         ${this.renderNumberField(
           "opacity",
           this.t("paintCanvas.common.opacity"),
