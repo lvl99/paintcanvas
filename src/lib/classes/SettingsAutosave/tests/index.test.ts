@@ -53,6 +53,7 @@ describe("SettingsAutosave", () => {
     app.shortcuts.set("cut", null);
     app.input.update({ focusPen: true });
     app.setColour("#0000ff");
+    app.ui.update({ theme: "dark" });
     await vi.advanceTimersByTimeAsync(SETTINGS_SAVE_DELAY_MS - 1);
     expect(store.save).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);

@@ -98,8 +98,8 @@ const TAKE_OVER_CHOICE = "take-over";
  * reloading the page (see `LayerAutosave`). While another window is drawing on it, the layout is blocked by a message
  * that offers to draw here instead. Fires `pc-toast` when the drawing can't be loaded or saved.
  *
- * With a `settings-store` name, the user's app settings (input settings, keyboard shortcuts, colour palette and
- * colours) are kept in the browser under that name (see `SettingsAutosave`). Fires `pc-toast` when they can't be.
+ * With a `settings-store` name, the user's app settings (input settings, keyboard shortcuts, colour palette, colours,
+ * theme and language) are kept in the browser under that name (see `SettingsAutosave`). Fires `pc-toast` when they can't be.
  *
  * @example
  * html`<paint-canvas style="height: 600px"></paint-canvas>`

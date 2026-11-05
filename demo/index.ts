@@ -1,12 +1,14 @@
 // A full-page PaintCanvas with the layout's layers pane on the right, an app menu with input settings, keyboard shortcuts and
-// settings import/export, a theme picker and a "New drawing" button. The drawing and the app settings are kept in the
-// browser (`store="demo"`, `settings-store="demo"`), so they survive reloading the page.
+// settings import/export, a theme picker and a "New drawing" button. The drawing and the app settings (including the
+// theme and language) are kept in the browser (`store="demo"`, `settings-store="demo"`), so they survive reloading the
+// page.
 // The demo's own text is translated like an app's would be: its locales are added after PaintCanvas's, with `demo.` keys.
 import "../src/ui";
 import { translations } from "../src/lib/i18n";
 import type { PaintCanvasElement } from "../src/ui/elements/PaintCanvas";
 import type { PcInputSettings } from "../src/ui/elements/PcInputSettings";
 import type { PcAppSettings } from "../src/ui/elements/PcAppSettings";
+import type { PcThemePicker } from "../src/ui/elements/PcThemePicker";
 import type { PcCanvasMap } from "../src/ui/elements/PcCanvasMap";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
 import type { PcToast } from "../src/ui/elements/PcToast";
@@ -44,6 +46,9 @@ const app = layout.app as NonNullable<PaintCanvasElement["app"]>;
 find<PcCanvasMap>("#map").app = app;
 find<PcInputSettings>("#settings").settings = app.input;
 find<PcAppSettings>("#app-settings").app = app;
+// The theme and language are kept with the app settings, so they're restored on reload too
+find<PcThemePicker>("pc-theme-picker").settings = app.ui;
+find<PcInputSettings>("#settings").ui = app.ui;
 
 // Start again with one empty layer, after asking (the saved drawing is replaced)
 find("#new-drawing").addEventListener("click", () => {

@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import "..";
 import { THEMES, isTheme, type PcThemePicker } from "..";
 import { DEFAULT_ICONS } from "../../../icons";
+import UiSettings from "../../../../lib/classes/UiSettings";
 import { events, mount, query, queryAll } from "../../../../testing/elements";
 
 afterEach(() => {
@@ -65,5 +66,24 @@ describe("pc-theme-picker", () => {
     element.pick("dark");
     expect(target.dataset.pcTheme).toBe("dark");
     expect(document.documentElement.dataset.pcTheme).toBeUndefined();
+  });
+
+  it("should show and keep the theme in UI settings, setting the page's whenever theirs changes", async () => {
+    const settings = new UiSettings({ theme: "dark" });
+    const element = await mount<PcThemePicker>("pc-theme-picker", {
+      settings,
+    });
+    expect(element.theme).toBe("dark");
+    expect(radio(element, "dark").checked).toBe(true);
+    expect(document.documentElement.dataset.pcTheme).toBe("dark");
+    radio(element, "light").click();
+    expect(settings.data.theme).toBe("light");
+    expect(document.documentElement.dataset.pcTheme).toBe("light");
+    // Restored elsewhere, e.g. from saved settings
+    settings.update({ theme: "system" });
+    await element.updateComplete;
+    expect(element.theme).toBe("system");
+    expect(radio(element, "system").checked).toBe(true);
+    expect(document.documentElement.dataset.pcTheme).toBe("system");
   });
 });

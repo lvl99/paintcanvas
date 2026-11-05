@@ -41,6 +41,7 @@ import {
 import { BRUSH_PRESET_FILE_FORMAT } from "../../presets";
 import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
 import InputSettings from "../InputSettings";
+import UiSettings from "../UiSettings";
 import Palette from "../Palette";
 import ShortcutSettings from "../ShortcutSettings";
 import { PALETTE_FILE_FORMAT } from "../../palette";
@@ -295,6 +296,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** How the user's input devices control the canvas (scrolling, pinching, touch gestures, focus pen mode) */
   readonly input = new InputSettings();
+
+  /** The user's interface choices (theme and language), kept with the other app settings */
+  readonly ui = new UiSettings();
 
   /** The user's saved colours, shown as swatches */
   readonly palette = new Palette();

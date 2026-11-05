@@ -1,6 +1,12 @@
-// JSON schemas for the user's app settings (input settings, keyboard shortcuts, colour palette and colours), as kept in
-// the browser and in exported settings files.
+// JSON schemas for the user's app settings (input settings, keyboard shortcuts, colour palette, colours, theme and
+// language), as kept in the browser and in exported settings files.
 import type { InputSettingsData } from "../classes/InputSettings";
+import {
+  LOCALE_PATTERN,
+  MAX_LOCALE_LENGTH,
+  THEMES,
+  type UiSettingsData,
+} from "../classes/UiSettings/index.ts";
 import type { KeyCombo } from "../utils/shortcuts";
 import {
   HEX_COLOUR_PATTERN,
@@ -33,6 +39,8 @@ export interface AppSettings {
   palette?: string[];
   /** The foreground and background colours, as `#rrggbb` */
   colours?: { foreground: string; background: string };
+  /** The theme and language */
+  ui?: Partial<UiSettingsData>;
 }
 
 /** A settings file: what users export and import */
@@ -101,6 +109,19 @@ export const settingsSchema = {
       additionalProperties: false,
       required: ["foreground", "background"],
       properties: { foreground: hexColour, background: hexColour },
+    },
+    ui: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        theme: { enum: THEMES },
+        locale: {
+          type: "string",
+          minLength: 1,
+          maxLength: MAX_LOCALE_LENGTH,
+          pattern: LOCALE_PATTERN,
+        },
+      },
     },
   },
 } as const;

@@ -1,7 +1,8 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import "..";
 import type { PcInputSettings } from "..";
 import InputSettings from "../../../../lib/classes/InputSettings";
+import UiSettings from "../../../../lib/classes/UiSettings";
 import { DEFAULT_GESTURES } from "../../../../lib/utils/gestures";
 import Translations from "../../../../lib/i18n";
 import { events, mount, query, queryAll } from "../../../../testing/elements";
@@ -93,6 +94,33 @@ describe("pc-input-settings", () => {
     await expect.poll(() => changes).toEqual([{ locale: "ko" }]);
     await element.updateComplete;
     expect(toggleLabels(element)[1]).toBe("핀치로 확대/축소");
+  });
+
+  it("should keep the picked language in UI settings, and use the kept one when it changes", async () => {
+    const translations = new Translations();
+    const ui = new UiSettings({ locale: "fr" });
+    const { element } = await setup({ translations, ui });
+    await expect.poll(() => translations.locale).toBe("fr");
+    const language = query<HTMLSelectElement>(element, "select[name=language]");
+    language.value = "ko";
+    language.dispatchEvent(new Event("change"));
+    expect(ui.data.locale).toBe("ko");
+    await expect.poll(() => translations.locale).toBe("ko");
+    // Restored elsewhere, e.g. from saved settings
+    ui.update({ locale: "ja" });
+    await expect.poll(() => translations.locale).toBe("ja");
+    // Already in use: nothing to switch
+    await element.updateComplete;
+    ui.update({ theme: "dark" });
+    await element.updateComplete;
+    expect(translations.locale).toBe("ja");
+  });
+
+  it("should not switch to a kept language that's already in use", async () => {
+    const translations = new Translations();
+    const setLocale = vi.spyOn(translations, "setLocale");
+    await setup({ translations, ui: new UiSettings({ locale: "en-US" }) });
+    expect(setLocale).not.toHaveBeenCalled();
   });
 
   it("should detect the device by default", async () => {

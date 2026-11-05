@@ -119,11 +119,13 @@ Key presses are matched on keyboards with any layout:
 
 ## Keeping the user's settings
 
-With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette and the foreground and background colours. Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
+With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette, the foreground and background colours, and the theme and language (`canvas.ui`, a `UiSettings`). Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
 
 ```html
 <paint-canvas settings-store="default"></paint-canvas>
 ```
+
+The theme and language are applied by the elements that change them, given the canvas's `ui`: `<pc-theme-picker>` (`picker.settings = canvas.ui`) sets the page's theme, and `<pc-input-settings>` (`inputSettings.ui = canvas.ui`) switches the language. Until the user picks a language, the device's is used.
 
 Without the layout, use `SettingsAutosave` (`@lvl99dotcom/paintcanvas/lib/classes/SettingsAutosave`) with `IndexedDbSettingsStore` (`@lvl99dotcom/paintcanvas/lib/storage`), or your own store with `load` and `save`. Settings are exported and imported as JSON files matching `settingsFileSchema` from `@lvl99dotcom/paintcanvas/lib/settings`:
 
