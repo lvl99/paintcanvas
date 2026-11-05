@@ -382,6 +382,14 @@ describe("pc-brush-config", () => {
     await expect(element.readClipboard()).rejects.toThrow(
       "There is no PNG image to paste",
     );
+    // Image data copied on the canvas is used instead (jsdom can't decode it)
+    element.app = createApp();
+    vi.spyOn(element.app, "copiedPng").mockResolvedValue(
+      new Blob([], { type: "image/png" }),
+    );
+    await expect(element.readClipboard()).rejects.toThrow(
+      "Couldn't read the brush shape image",
+    );
     vi.restoreAllMocks();
   });
 

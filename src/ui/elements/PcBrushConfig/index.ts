@@ -143,8 +143,13 @@ export class PcBrushConfig extends PcElement {
   /** Turns files into brush shapes (replaceable for tests) */
   readShape: (file: File) => Promise<ShapeImage> = readShapeImage;
 
-  /** Reads a brush shape from the clipboard (replaceable for tests) */
-  readClipboard: () => Promise<ShapeImage> = () => readClipboardShape();
+  /**
+   * Reads a brush shape from the clipboard, or else from image data copied on the canvas (replaceable for tests)
+   */
+  readClipboard: () => Promise<ShapeImage> = () =>
+    readClipboardShape(navigator.clipboard, {}, async () =>
+      this.app?.copiedPng(),
+    );
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape") this.close();

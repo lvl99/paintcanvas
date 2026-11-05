@@ -79,20 +79,32 @@ export const readShapeImage = async (
 };
 
 /**
- * Read a brush shape from a PNG image on the clipboard. Throws a `ShapeImageError` if there is none or it can't be
- * used.
+ * Read a brush shape from a PNG image on the clipboard. Without one (or when the browser won't let it be read), the
+ * `fallback` PNG is used if there is one (e.g. image data copied on the canvas, `canvas.copiedPng()`). Throws a
+ * `ShapeImageError` if there is none or it can't be used.
+ *
+ * @example
+ * const shape = await readClipboardShape(navigator.clipboard, {}, () => canvas.copiedPng());
  */
 export const readClipboardShape = async (
   clipboard: Pick<Clipboard, "read"> = navigator.clipboard,
   deps: ShapeImageDependencies = {},
+  fallback: () => Promise<Blob | undefined> = async () => undefined,
 ): Promise<ShapeImage> => {
-  let items: ClipboardItems;
+  const png = (await clipboardPng(clipboard)) ?? (await fallback());
+  if (!png) throw new ShapeImageError(SHAPE_ERRORS.noImage);
+  return readShapeImage(png, deps);
+};
+
+/** The PNG image on the clipboard, if there is one and it can be read */
+const clipboardPng = async (
+  clipboard: Pick<Clipboard, "read">,
+): Promise<Blob | undefined> => {
   try {
-    items = await clipboard.read();
+    const items = await clipboard.read();
+    const item = items.find((entry) => entry.types.includes("image/png"));
+    return await item?.getType("image/png");
   } catch {
-    throw new ShapeImageError(SHAPE_ERRORS.noImage);
+    return undefined;
   }
-  const item = items.find((entry) => entry.types.includes("image/png"));
-  if (!item) throw new ShapeImageError(SHAPE_ERRORS.noImage);
-  return readShapeImage(await item.getType("image/png"), deps);
 };

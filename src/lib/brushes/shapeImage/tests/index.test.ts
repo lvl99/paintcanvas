@@ -105,6 +105,22 @@ describe("readClipboardShape", () => {
       );
   });
 
+  it("should use the fallback PNG (e.g. image data copied on the canvas) when the clipboard has none", async () => {
+    const empty = { read: async () => [] as unknown as ClipboardItems };
+    const denied = {
+      read: async () => {
+        throw new DOMException("Denied", "NotAllowedError");
+      },
+    };
+    for (const clipboard of [empty, denied])
+      expect(
+        (await readClipboardShape(clipboard, deps, async () => png())).width,
+      ).toBe(4);
+    await expect(
+      readClipboardShape(empty, deps, async () => undefined),
+    ).rejects.toEqual(new ShapeImageError(SHAPE_ERRORS.noImage));
+  });
+
   it("should use the browser's clipboard by default", async () => {
     const read = vi.fn(async () => []);
     Object.defineProperty(navigator, "clipboard", {
