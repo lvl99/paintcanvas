@@ -109,6 +109,12 @@ canvas.shortcuts.load(saved); // e.g. from storage; dispatches "change"
 
 Cut, copy and paste (Cmd/Ctrl + X, C, V), undo and redo (Cmd/Ctrl + Z, Shift + Cmd/Ctrl + Z), Tab, Cmd/Ctrl + S, Delete/Backspace, Escape, Enter and 1–0 (layer opacity 10%–100%) are fixed. `cmd` is Command on Apple devices and Ctrl elsewhere; `ctrl` is Control on Apple devices only.
 
+### Copying and pasting
+
+Copying or cutting masked image data also puts it on the system clipboard as a PNG (pass `systemClipboard: null` to `PaintCanvas` to stop this), so it can be pasted into other apps, or as a brush shape with the brush configuration window's Paste button (which uses the canvas's copy if the browser won't let it read the clipboard). Pasting (Cmd/Ctrl + V, or the browser's own paste) pastes an image copied in another app in the middle of the view, to place with the Move tool, unless image data was copied on the canvas since the window last lost focus: that is pasted where it was copied from. Call `canvas.pasteImage(image)` to paste an image yourself.
+
+The tool settings bar (`<pc-tool-settings>`) shows Cut, Copy and Paste at its end for the lassos and the Move tool (Paste only while there's copied image data), and focus pen mode for the brush and eraser. While the layout is narrow, several of them become one ⋮ menu. Add your own buttons to the bar with its `start` and `end` slots.
+
 Key presses are matched on keyboards with any layout:
 
 - Letters follow the key's label, e.g. `a` on a French keyboard.
