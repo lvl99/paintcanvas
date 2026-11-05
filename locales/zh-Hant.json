@@ -103,6 +103,8 @@
   "paintCanvas.brushConfig.eraserTitle": "橡皮擦詳細設定",
   "paintCanvas.brushConfig.presetName": "預設名稱",
   "paintCanvas.brushConfig.shape": "形狀",
+  "paintCanvas.brushConfig.chooseShape": "選擇形狀",
+  "paintCanvas.brushConfig.customShape": "自訂",
   "paintCanvas.brushConfig.upload": "上傳",
   "paintCanvas.brushConfig.paste": "貼上",
   "paintCanvas.brushConfig.rotation": "旋轉",

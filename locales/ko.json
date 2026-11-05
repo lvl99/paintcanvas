@@ -103,6 +103,8 @@
   "paintCanvas.brushConfig.eraserTitle": "지우개 세부 설정",
   "paintCanvas.brushConfig.presetName": "프리셋 이름",
   "paintCanvas.brushConfig.shape": "모양",
+  "paintCanvas.brushConfig.chooseShape": "모양 선택",
+  "paintCanvas.brushConfig.customShape": "사용자 지정",
   "paintCanvas.brushConfig.upload": "업로드",
   "paintCanvas.brushConfig.paste": "붙여넣기",
   "paintCanvas.brushConfig.rotation": "회전",

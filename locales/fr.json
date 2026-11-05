@@ -103,6 +103,8 @@
   "paintCanvas.brushConfig.eraserTitle": "Configuration de la gomme",
   "paintCanvas.brushConfig.presetName": "Nom du préréglage",
   "paintCanvas.brushConfig.shape": "Forme",
+  "paintCanvas.brushConfig.chooseShape": "Choisir une forme",
+  "paintCanvas.brushConfig.customShape": "Personnalisée",
   "paintCanvas.brushConfig.upload": "Téléverser",
   "paintCanvas.brushConfig.paste": "Coller",
   "paintCanvas.brushConfig.rotation": "Rotation",

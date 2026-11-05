@@ -103,6 +103,8 @@
   "paintCanvas.brushConfig.eraserTitle": "消しゴムの詳細設定",
   "paintCanvas.brushConfig.presetName": "プリセット名",
   "paintCanvas.brushConfig.shape": "形状",
+  "paintCanvas.brushConfig.chooseShape": "形を選ぶ",
+  "paintCanvas.brushConfig.customShape": "カスタム",
   "paintCanvas.brushConfig.upload": "アップロード",
   "paintCanvas.brushConfig.paste": "ペースト",
   "paintCanvas.brushConfig.rotation": "回転",

@@ -13,6 +13,7 @@ import {
   toastText,
 } from "../../../../testing/elements";
 import { createApp, TEST_HANDLE } from "../../../../testing/app";
+import { BUILT_IN_SHAPES } from "../../../../lib/brushes/shapes";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -264,6 +265,63 @@ describe("pc-brush-config", () => {
       ["pc-toast", "error: There is no PNG image to paste"],
       ["pc-toast", "error: Couldn't use the brush shape"],
     ]);
+  });
+
+  it("should pick a built-in shape from a list over the shape, saying Custom for the user's own", async () => {
+    const { element } = await setup();
+    const select = () =>
+      query<HTMLSelectElement>(element, "select.shape-select");
+    const options = () =>
+      [...select().options].map((option) => [
+        option.value,
+        option.textContent!.trim(),
+      ]);
+    // Round 20 uses the round shape
+    expect(select().value).toBe("round");
+    expect(select().getAttribute("aria-label")).toBe("Shape");
+    expect(select().title).toBe("Choose a shape");
+    expect(options()).toEqual(
+      BUILT_IN_SHAPES.map((shape) => [shape.id, shape.name]),
+    );
+    expect(select().parentElement!.classList.contains("shape-picker")).toBe(
+      true,
+    );
+
+    // Picking one uses its image, square at the current width
+    await enter(element, "input[type=number].height", "5");
+    select().value = "splatter";
+    select().dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    const splatter = BUILT_IN_SHAPES.find((s) => s.id === "splatter")!;
+    expect(draft(element)).toMatchObject({
+      image: splatter.image,
+      width: 20,
+      height: 20,
+    });
+    expect(select().value).toBe("splatter");
+
+    // An uploaded or pasted shape is "Custom"
+    await click(element, "button.paste");
+    expect(options()[0]).toEqual(["custom", "Custom"]);
+    expect(select().value).toBe("custom");
+    // Picking "Custom" (or anything unknown) changes nothing
+    select().dispatchEvent(new Event("change"));
+    expect(draft(element).image).toBe(shape.image);
+    select().value = "round";
+    select().dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    expect(options()[0]![0]).toBe("round");
+  });
+
+  it("should pick a built-in shape at width 1 when the settings have no width", async () => {
+    const { element } = await setup({ config: { id: "a" } });
+    const select = query<HTMLSelectElement>(element, "select.shape-select");
+    // No image: drawn round
+    expect(select.value).toBe("round");
+    select.value = "square";
+    select.dispatchEvent(new Event("change"));
+    expect(draft(element).width).toBeUndefined();
+    expect(draft(element).height).toBe(1);
   });
 
   it("should size an uploaded shape from its own width when the settings have none", async () => {

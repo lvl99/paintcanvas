@@ -103,6 +103,8 @@
   "paintCanvas.brushConfig.eraserTitle": "Eraser configuration",
   "paintCanvas.brushConfig.presetName": "Name of the preset",
   "paintCanvas.brushConfig.shape": "Shape",
+  "paintCanvas.brushConfig.chooseShape": "Choose a shape",
+  "paintCanvas.brushConfig.customShape": "Custom",
   "paintCanvas.brushConfig.upload": "Upload",
   "paintCanvas.brushConfig.paste": "Paste",
   "paintCanvas.brushConfig.rotation": "Rotation",
