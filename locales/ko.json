@@ -61,6 +61,7 @@
   "paintCanvas.toolSettings.presets": "{tool} 프리셋",
   "paintCanvas.toolSettings.configure": "세부 설정",
   "paintCanvas.toolSettings.constrainProportions": "비율 유지",
+  "paintCanvas.toolSettings.sizeSettings": "크기 설정",
   "paintCanvas.toolSettings.pressure": "필압",
   "paintCanvas.toolSettings.tilt": "기울기",
   "paintCanvas.toolSettings.focusPen": "펜 전용 모드",

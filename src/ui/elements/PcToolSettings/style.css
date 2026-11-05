@@ -9,6 +9,12 @@
 button[aria-expanded="true"] {
   background: var(--pc-surface-active);
 }
+/* The size settings' button while they're shown: purple, like a toggle that's on */
+.size-settings[aria-expanded="true"] {
+  border-color: var(--pc-accent);
+  background: var(--pc-accent);
+  color: var(--pc-accent-text);
+}
 /* Toggles that are on, and the selected option: purple, so it's obvious (the icon stays the same) */
 button[aria-pressed="true"],
 .icon-toggle:has(input:checked),
@@ -56,7 +62,7 @@ button img {
 }
 /* Fields' names small and in capitals above them, as designed */
 [role="toolbar"] > label:not(.icon-toggle),
-[role="toolbar"] > .field {
+.field {
   display: inline-flex;
   flex-direction: column;
   gap: 1px;
@@ -82,6 +88,12 @@ button img {
 .size {
   align-self: stretch;
   min-width: 56px;
+}
+/* The size settings: width, constrain proportions and height, in a row */
+.size-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 /* Brush width, height and opacity: dragged or typed, 24px tall (WCAG 2.2's smallest target) under their names */
 .field {

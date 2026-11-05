@@ -61,6 +61,7 @@
   "paintCanvas.toolSettings.presets": "Préréglages : {tool}",
   "paintCanvas.toolSettings.configure": "Configurer",
   "paintCanvas.toolSettings.constrainProportions": "Conserver les proportions",
+  "paintCanvas.toolSettings.sizeSettings": "Réglages de taille",
   "paintCanvas.toolSettings.pressure": "Pression",
   "paintCanvas.toolSettings.tilt": "Inclinaison",
   "paintCanvas.toolSettings.focusPen": "Mode stylet seul",

@@ -11,6 +11,8 @@ import {
 } from "..";
 import type { PcBrushSize } from "../../PcBrushSize";
 import type { PcNumberSlider } from "../../PcNumberSlider";
+import type { PcPopover } from "../../PcPopover";
+import { icons } from "../../../icons";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../../lib/classes/Viewport";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import type { TransformBox } from "../../../../lib/transform/geometry";
@@ -115,7 +117,7 @@ describe("pc-tool-settings", () => {
     expect(queryAll(element, "[role=toolbar]")).toHaveLength(0);
   });
 
-  it("should show the brush size control between the preset and the width", async () => {
+  it("should show the brush size control between the preset and the size settings button", async () => {
     const { app, element } = await setup(Tool.Eraser);
     const size = query<PcBrushSize>(element, "pc-brush-size");
     expect(size.settings).toBe(app.eraser);
@@ -123,9 +125,93 @@ describe("pc-tool-settings", () => {
     expect(size.previousElementSibling!.classList.contains("preset")).toBe(
       true,
     );
+    expect(size.nextElementSibling!.classList.contains("size-settings")).toBe(
+      true,
+    );
+  });
+
+  it("should show and hide the width, constrain proportions and height in a popover from the cog button", async () => {
+    const { app, element } = await setup();
+    const button = query<HTMLButtonElement>(element, "button.size-settings");
+    const popover = query<PcPopover>(element, "pc-popover.size-popover");
+    expect(button.getAttribute("aria-label")).toBe("Size settings");
+    expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.querySelector("img")!.getAttribute("src")).toBe(
+      icons.get("cog"),
+    );
+    expect(popover.open).toBe(false);
+    expect(popover.arrow).toBe(true);
+    expect(popover.label).toBe("Size settings");
     expect(
-      size.nextElementSibling!.querySelector("pc-number-slider.width"),
-    ).not.toBeNull();
+      [...popover.querySelectorAll(".size-fields > *")].map((e) =>
+        e.matches(".field")
+          ? e.querySelector("pc-number-slider")!.className
+          : "constrain",
+      ),
+    ).toEqual(["width", "constrain", "height"]);
+
+    // Opens under the button, pointing at it
+    const place = vi.spyOn(popover, "placeBelow");
+    button.click();
+    await element.updateComplete;
+    await popover.updateComplete;
+    await Promise.resolve();
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(popover.open).toBe(true);
+    expect(popover.anchor).toBe(button);
+    expect(place).toHaveBeenCalledTimes(1);
+    // Follows the button when the bar scrolls or the window resizes
+    query(element, "[role=toolbar]").dispatchEvent(new Event("scroll"));
+    window.dispatchEvent(new Event("resize"));
+    expect(place).toHaveBeenCalledTimes(3);
+
+    // Closing with focus inside returns focus to the button
+    popover.focus();
+    popover.dispatchEvent(new CustomEvent("pc-close"));
+    await element.updateComplete;
+    expect(popover.open).toBe(false);
+    expect(element.shadowRoot!.activeElement).toBe(button);
+    window.dispatchEvent(new Event("resize"));
+    expect(place).toHaveBeenCalledTimes(3);
+
+    // Closing with focus elsewhere leaves it there
+    button.click();
+    await element.updateComplete;
+    const configure = query<HTMLButtonElement>(element, "button.configure");
+    configure.focus();
+    popover.dispatchEvent(new CustomEvent("pc-close"));
+    await element.updateComplete;
+    expect(element.shadowRoot!.activeElement).toBe(configure);
+
+    // The button closes it too
+    button.click();
+    await element.updateComplete;
+    button.click();
+    await element.updateComplete;
+    expect(popover.open).toBe(false);
+
+    // Switching to a tool without size settings hides them
+    button.click();
+    await element.updateComplete;
+    app.selectTool(Tool.Pan);
+    await element.updateComplete;
+    app.selectTool(Tool.Brush);
+    await element.updateComplete;
+    expect(query<PcPopover>(element, "pc-popover.size-popover").open).toBe(
+      false,
+    );
+  });
+
+  it("should stop following the window once removed", async () => {
+    const { element } = await setup();
+    query<HTMLButtonElement>(element, "button.size-settings").click();
+    await element.updateComplete;
+    const popover = query<PcPopover>(element, "pc-popover.size-popover");
+    const place = vi.spyOn(popover, "placeBelow");
+    element.remove();
+    window.dispatchEvent(new Event("resize"));
+    expect(place).not.toHaveBeenCalled();
   });
 
   it("should change the width and height when pressed and dragged", async () => {

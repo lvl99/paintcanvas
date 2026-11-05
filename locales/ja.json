@@ -61,6 +61,7 @@
   "paintCanvas.toolSettings.presets": "{tool}のプリセット",
   "paintCanvas.toolSettings.configure": "詳細設定",
   "paintCanvas.toolSettings.constrainProportions": "縦横比を固定",
+  "paintCanvas.toolSettings.sizeSettings": "サイズ設定",
   "paintCanvas.toolSettings.pressure": "筆圧",
   "paintCanvas.toolSettings.tilt": "傾き",
   "paintCanvas.toolSettings.focusPen": "ペン専用モード",

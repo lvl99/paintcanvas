@@ -61,6 +61,7 @@
   "paintCanvas.toolSettings.presets": "{tool}预设",
   "paintCanvas.toolSettings.configure": "详细设置",
   "paintCanvas.toolSettings.constrainProportions": "保持比例",
+  "paintCanvas.toolSettings.sizeSettings": "尺寸设置",
   "paintCanvas.toolSettings.pressure": "压感",
   "paintCanvas.toolSettings.tilt": "倾斜",
   "paintCanvas.toolSettings.focusPen": "仅限触控笔模式",

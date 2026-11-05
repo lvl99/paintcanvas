@@ -1,4 +1,4 @@
-import { html, nothing, svg, unsafeCSS } from "lit";
+import { html, nothing, svg, unsafeCSS, type PropertyValues } from "lit";
 import styles from "./style.css?inline";
 import { PILLS_CSS as pill } from "../../styles";
 import { ICON_CONTROLS_CSS as iconToggle } from "../../styles";
@@ -22,6 +22,8 @@ import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/classes/Viewport";
 import { iconLabel } from "../../icons";
 import "../PcBrushSize";
 import "../PcNumberSlider";
+import "../PcPopover";
+import type { PcPopover } from "../PcPopover";
 
 /** The lasso tools, which share the mask settings */
 const MASK_TOOLS: readonly Tool[] = [
@@ -131,10 +133,11 @@ const numberValue = (event: Event): number | undefined => {
 /**
  * The bar of settings for the current tool, shown at the top of the canvas when the tool has any:
  *
- * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`),
- *   width, height, constrain proportions, pressure, tilt, opacity and "Configure" (fires `pc-configure-brush` with the
- *   tool, "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or
- *   up to raise them, left or down to lower them, or tapped to type a value.
+ * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`), the
+ *   size settings (a cog button that shows or hides a popover under it with the width, constrain proportions and
+ *   height), pressure, tilt, opacity and "Configure" (fires `pc-configure-brush` with the tool, "brush" or "eraser").
+ *   The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or up to raise them, left or
+ *   down to lower them, or tapped to type a value.
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
  *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform).
@@ -152,6 +155,7 @@ export class PcToolSettings extends PcElement {
     ...PcElement.properties,
     app: { attribute: false },
     percent: { state: true },
+    sizeOpen: { state: true },
   };
 
   static override styles = [
@@ -166,6 +170,12 @@ export class PcToolSettings extends PcElement {
 
   /** Whether the move tool's width and height are in percent (of the original size) instead of pixels */
   declare percent: boolean;
+
+  /** Whether the brush or eraser's size settings (width, height, constrain proportions) are shown */
+  declare sizeOpen: boolean;
+
+  // The size settings follow their button when the bar or page scrolls, or the window resizes
+  private readonly placeSizeSettings = () => this.sizePopover?.placeBelow();
 
   private changes = new ChangeController(this, () => {
     const app = this.app;
@@ -185,6 +195,58 @@ export class PcToolSettings extends PcElement {
   constructor() {
     super();
     this.percent = false;
+    this.sizeOpen = false;
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.listenWhileSizeOpen(false);
+  }
+
+  /** The size settings' popover, while a brush or eraser's settings are shown */
+  private get sizePopover(): PcPopover | null {
+    return this.renderRoot.querySelector<PcPopover>("pc-popover.size-popover");
+  }
+
+  /** Follow the window's scrolling and resizing (or stop) */
+  private listenWhileSizeOpen(open: boolean): void {
+    const method = open ? "addEventListener" : "removeEventListener";
+    window[method]("scroll", this.placeSizeSettings, true);
+    window[method]("resize", this.placeSizeSettings);
+  }
+
+  /**
+   * Hide the size settings (e.g. on Escape or a press outside them), returning focus to their button if it was in them.
+   */
+  private closeSizeSettings(): void {
+    const popover = this.sizePopover as PcPopover;
+    const focusWasInside = popover.matches(":focus-within");
+    this.sizeOpen = false;
+    if (focusWasInside)
+      this.renderRoot.querySelector<HTMLElement>(".size-settings")?.focus();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    const tool = this.app?.tool;
+    // Only the brush and eraser have size settings
+    if (tool !== Tool.Brush && tool !== Tool.Eraser) this.sizeOpen = false;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (!changed.has("sizeOpen")) return;
+    this.listenWhileSizeOpen(this.sizeOpen);
+    if (this.sizeOpen) void this.showSizeSettings();
+  }
+
+  /** Put the opened size settings under their button, once they can be measured */
+  private async showSizeSettings(): Promise<void> {
+    const popover = this.sizePopover as PcPopover;
+    // Pressing the button isn't pressing outside the popover
+    popover.anchor = this.renderRoot.querySelector(".size-settings") as Element;
+    await popover.updateComplete;
+    popover.placeBelow();
   }
 
   /** Fire an event that crosses shadow DOM boundaries */
@@ -270,123 +332,147 @@ export class PcToolSettings extends PcElement {
       kind === "eraser" ? "paintCanvas.tool.eraser" : "paintCanvas.tool.brush",
     );
     const panel = kind === "eraser" ? Panel.Eraser : Panel.Brush;
+    const sizeSettings = this.t("paintCanvas.toolSettings.sizeSettings");
     return html`<div
-      role="toolbar"
-      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: label })}
-    >
-      <button
-        type="button"
-        class="preset"
-        data-panel=${panel}
-        title=${this.t("paintCanvas.toolSettings.presets", { tool: label })}
-        aria-expanded=${app.panel === panel ? "true" : "false"}
-        @click=${() => app.togglePanel(panel)}
+        role="toolbar"
+        aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: label })}
+        @scroll=${this.placeSizeSettings}
       >
-        <span
-          class=${preset.image ? "shape-preview image" : "shape-preview"}
-          style=${styleMap({
-            maskImage:
-              typeof preset.image === "string"
-                ? `url("${preset.image}")`
-                : undefined,
-          })}
-        ></span>
-        ${preset.name ?? preset.id}
-      </button>
-      <pc-brush-size
-        class="size"
-        .settings=${settings}
-        label=${this.t("paintCanvas.brushMenu.size", { tool: label })}
-      ></pc-brush-size>
-      ${this.renderNumberField(
-        "width",
-        this.t("paintCanvas.common.width"),
-        settings.width,
-        (value) => settings.setSize(value, settings.height),
-      )}
-      <label
-        class="icon-toggle"
-        title=${this.t("paintCanvas.toolSettings.constrainProportions")}
-      >
-        <input
-          type="checkbox"
-          class="constrain"
-          .checked=${preset.constrainProportions ?? false}
-          @change=${(e: Event) =>
-            settings.update({
-              constrainProportions: (e.target as HTMLInputElement).checked,
+        <button
+          type="button"
+          class="preset"
+          data-panel=${panel}
+          title=${this.t("paintCanvas.toolSettings.presets", { tool: label })}
+          aria-expanded=${app.panel === panel ? "true" : "false"}
+          @click=${() => app.togglePanel(panel)}
+        >
+          <span
+            class=${preset.image ? "shape-preview image" : "shape-preview"}
+            style=${styleMap({
+              maskImage:
+                typeof preset.image === "string"
+                  ? `url("${preset.image}")`
+                  : undefined,
             })}
-        />
-        ${iconLabel(this.iconUrl(preset.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
-      </label>
-      ${this.renderNumberField(
-        "height",
-        this.t("paintCanvas.common.height"),
-        settings.height,
-        (value) => settings.setHeight(value),
-      )}
-      <label
-        class="icon-toggle"
-        title=${this.t("paintCanvas.toolSettings.pressure")}
+          ></span>
+          ${preset.name ?? preset.id}
+        </button>
+        <pc-brush-size
+          class="size"
+          .settings=${settings}
+          label=${this.t("paintCanvas.brushMenu.size", { tool: label })}
+        ></pc-brush-size>
+        <button
+          type="button"
+          class="size-settings"
+          title=${sizeSettings}
+          aria-label=${sizeSettings}
+          aria-haspopup="dialog"
+          aria-expanded=${this.sizeOpen ? "true" : "false"}
+          @click=${() => (this.sizeOpen = !this.sizeOpen)}
+        >
+          <img src=${this.iconUrl("cog")} alt="" />
+        </button>
+        <label
+          class="icon-toggle"
+          title=${this.t("paintCanvas.toolSettings.pressure")}
+        >
+          <input
+            type="checkbox"
+            class="pressure"
+            .checked=${pressure}
+            @change=${(e: Event) =>
+              settings.update(
+                withSource(
+                  preset,
+                  PRESSURE_PARAMS,
+                  "usePressure",
+                  (e.target as HTMLInputElement).checked,
+                ),
+              )}
+          />
+          ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
+        </label>
+        <label
+          class="icon-toggle"
+          title=${this.t("paintCanvas.toolSettings.tilt")}
+        >
+          <input
+            type="checkbox"
+            class="tilt"
+            .checked=${tilt}
+            @change=${(e: Event) =>
+              settings.update(
+                withSource(
+                  preset,
+                  TILT_PARAMS,
+                  "useTilt",
+                  (e.target as HTMLInputElement).checked,
+                ),
+              )}
+          />
+          ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
+        </label>
+        ${this.renderNumberField(
+          "opacity",
+          this.t("paintCanvas.common.opacity"),
+          Math.round((preset.alpha ?? 1) * 100),
+          (value) => settings.update({ alpha: value / 100 }),
+          { min: 0, max: 100, unit: "%" },
+        )}
+        <button
+          type="button"
+          class="configure"
+          @click=${() => this.emit("pc-configure-brush", kind)}
+        >
+          ${this.t("paintCanvas.toolSettings.configure")}
+        </button>
+        ${this.renderFocusPen(app)}
+      </div>
+      <pc-popover
+        class="size-popover"
+        arrow
+        label=${sizeSettings}
+        ?open=${this.sizeOpen}
+        @pc-close=${this.closeSizeSettings}
       >
-        <input
-          type="checkbox"
-          class="pressure"
-          .checked=${pressure}
-          @change=${(e: Event) =>
-            settings.update(
-              withSource(
-                preset,
-                PRESSURE_PARAMS,
-                "usePressure",
-                (e.target as HTMLInputElement).checked,
-              ),
-            )}
-        />
-        ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
-      </label>
-      <label
-        class="icon-toggle"
-        title=${this.t("paintCanvas.toolSettings.tilt")}
-      >
-        <input
-          type="checkbox"
-          class="tilt"
-          .checked=${tilt}
-          @change=${(e: Event) =>
-            settings.update(
-              withSource(
-                preset,
-                TILT_PARAMS,
-                "useTilt",
-                (e.target as HTMLInputElement).checked,
-              ),
-            )}
-        />
-        ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
-      </label>
-      ${this.renderNumberField(
-        "opacity",
-        this.t("paintCanvas.common.opacity"),
-        Math.round((preset.alpha ?? 1) * 100),
-        (value) => settings.update({ alpha: value / 100 }),
-        { min: 0, max: 100, unit: "%" },
-      )}
-      <button
-        type="button"
-        class="configure"
-        @click=${() => this.emit("pc-configure-brush", kind)}
-      >
-        ${this.t("paintCanvas.toolSettings.configure")}
-      </button>
-      ${this.renderFocusPen(app)}
-    </div>`;
+        <div class="size-fields">
+          ${this.renderNumberField(
+            "width",
+            this.t("paintCanvas.common.width"),
+            settings.width,
+            (value) => settings.setSize(value, settings.height),
+          )}
+          <label
+            class="icon-toggle"
+            title=${this.t("paintCanvas.toolSettings.constrainProportions")}
+          >
+            <input
+              type="checkbox"
+              class="constrain"
+              .checked=${preset.constrainProportions ?? false}
+              @change=${(e: Event) =>
+                settings.update({
+                  constrainProportions: (e.target as HTMLInputElement).checked,
+                })}
+            />
+            ${iconLabel(this.iconUrl(preset.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
+          </label>
+          ${this.renderNumberField(
+            "height",
+            this.t("paintCanvas.common.height"),
+            settings.height,
+            (value) => settings.setHeight(value),
+          )}
+        </div>
+      </pc-popover>`;
   }
 
   /** Render the mask settings */
   private renderMask(app: PaintCanvas) {
     return html`<div
       role="toolbar"
+      @scroll=${this.placeSizeSettings}
       aria-label=${this.t("paintCanvas.toolSettings.maskSettings")}
     >
       <button
