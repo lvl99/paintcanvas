@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { DEFAULT_ICONS, IconRegistry, icons } from "..";
+import { iconSvgs } from "../../../../scripts/build-icons";
 
 describe("IconRegistry", () => {
   it("should start with the icons that come with PaintCanvas", () => {
@@ -25,6 +26,18 @@ describe("IconRegistry", () => {
       undefined,
     ]);
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it("should have every icon that comes with PaintCanvas, as its PNG", () => {
+    const camel = (name: string) =>
+      name.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+    expect(Object.keys(DEFAULT_ICONS).sort()).toEqual(
+      iconSvgs()
+        .map((name) => camel(name.replace(/^icon-|\.svg$/g, "")))
+        .sort(),
+    );
+    for (const url of Object.values(DEFAULT_ICONS))
+      expect(url).toMatch(/\/icon-[a-z0-9-]+@2x\.png$/);
   });
 
   it("should start with the given icons", () => {

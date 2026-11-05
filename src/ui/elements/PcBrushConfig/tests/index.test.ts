@@ -129,11 +129,11 @@ describe("pc-brush-config", () => {
         .getAttribute("src")
         ?.split("/")
         .pop();
-    expect(icon()).toBe("linked.png");
+    expect(icon()).toBe("icon-linked@2x.png");
     constrain.checked = false;
     constrain.dispatchEvent(new Event("change"));
     await element.updateComplete;
-    expect(icon()).toBe("unlinked.png");
+    expect(icon()).toBe("icon-unlinked@2x.png");
     await enter(element, "input[type=range].width", "10", "input");
     await enter(element, "input[type=number].height", "30");
     expect([draft(element).width, draft(element).height]).toEqual([10, 30]);
@@ -173,9 +173,9 @@ describe("pc-brush-config", () => {
         toggle.querySelector("input")?.getAttribute("aria-label"),
       ]),
     ).toEqual([
-      ["Pressure", "pressure.png", "Width: Pressure"],
-      ["Tilt", "tilt.png", "Width: Tilt"],
-      ["Randomize", "randomise.png", "Width: Randomize"],
+      ["Pressure", "icon-pressure@2x.png", "Width: Pressure"],
+      ["Tilt", "icon-tilt@2x.png", "Width: Tilt"],
+      ["Randomize", "icon-randomise@2x.png", "Width: Randomize"],
     ]);
   });
 
@@ -204,9 +204,9 @@ describe("pc-brush-config", () => {
         label.querySelector("img")?.getAttribute("src")?.split("/").pop(),
       ]),
     ).toEqual([
-      ["Linear", "smoothing-linear.png"],
-      ["Quadratic curve", "smoothing-bezier-quad.png"],
-      ["Cubic curve", "smoothing-bezier-cubic.png"],
+      ["Linear", "icon-smoothing-linear@2x.png"],
+      ["Quadratic curve", "icon-smoothing-bezier-quad@2x.png"],
+      ["Cubic curve", "icon-smoothing-bezier-cubic@2x.png"],
     ]);
   });
 

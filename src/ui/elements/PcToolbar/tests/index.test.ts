@@ -122,10 +122,10 @@ describe("pc-toolbar", () => {
     const element = await mount<PcToolbar>("pc-toolbar", { app });
     expect(
       query(element, `[data-tool="${Tool.Brush}"] img`).getAttribute("src"),
-    ).toMatch(/brush\.png$/);
+    ).toMatch(/icon-brush@2x\.png$/);
     expect(
       query(element, `[data-tool="${Tool.Pan}"] img`).getAttribute("src"),
-    ).toMatch(/pan\.png$/);
+    ).toMatch(/icon-pan@2x\.png$/);
     expect(queryAll(element, "button[data-tool] img")).toHaveLength(
       TOOLBAR_TOOLS.length,
     );
@@ -137,7 +137,7 @@ describe("pc-toolbar", () => {
       expect(
         query(element, `${selector} img`).getAttribute("src"),
         selector,
-      ).toMatch(new RegExp(`${icon}\\.png$`));
+      ).toMatch(new RegExp(`icon-${icon}@2x\\.png$`));
     }
   });
 
@@ -221,7 +221,7 @@ describe("pc-toolbar", () => {
     const toggle = query<PcContextMenu>(element, "pc-context-menu.tool-menu");
     expect(toggle.dataset.tool).toBe(Tool.Brush);
     expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(
-      /brush\.png$/,
+      /icon-brush@2x\.png$/,
     );
     expect(toggle.label).toBe("Brush (B)");
     expect(toggle.placement).toBe("beside");
@@ -229,7 +229,7 @@ describe("pc-toolbar", () => {
     await element.updateComplete;
     expect(toggle.dataset.tool).toBe(Tool.Eraser);
     expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(
-      /eraser\.png$/,
+      /icon-eraser@2x\.png$/,
     );
   });
 

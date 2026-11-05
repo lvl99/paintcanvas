@@ -126,13 +126,13 @@ describe("pc-layer-item", () => {
     const { element } = await mountItem();
     const icon = (selector: string) =>
       query(element, `${selector} img`).getAttribute("src");
-    expect(icon(".alpha-lock")).toMatch(/unlocked\.png$/);
-    expect(icon(".visibility")).toMatch(/visible\.png$/);
+    expect(icon(".alpha-lock")).toMatch(/icon-unlocked@2x\.png$/);
+    expect(icon(".visibility")).toMatch(/icon-visible@2x\.png$/);
     query(element, ".alpha-lock").click();
     query(element, ".visibility").click();
     await element.updateComplete;
-    expect(icon(".alpha-lock")).toMatch(/\/locked\.png$/);
-    expect(icon(".visibility")).toMatch(/hidden\.png$/);
+    expect(icon(".alpha-lock")).toMatch(/\/icon-locked@2x\.png$/);
+    expect(icon(".visibility")).toMatch(/icon-hidden@2x\.png$/);
   });
 
   it("should open the context menu on right-click with every action", async () => {

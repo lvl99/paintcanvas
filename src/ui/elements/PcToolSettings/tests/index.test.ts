@@ -228,7 +228,7 @@ describe("pc-tool-settings", () => {
       const toggle = query<HTMLInputElement>(element, ".focus-pen input");
       expect(toggle.checked).toBe(false);
       expect(query(element, ".focus-pen img").getAttribute("src")).toMatch(
-        /focus-pen\.png$/,
+        /icon-focus-pen@2x\.png$/,
       );
       toggle.checked = true;
       toggle.dispatchEvent(new Event("change"));
@@ -426,7 +426,7 @@ describe("pc-tool-settings", () => {
       expect(
         query(element, `button.${button} img`).getAttribute("src"),
         button,
-      ).toMatch(new RegExp(`/${icon}\\.png$`));
+      ).toMatch(new RegExp(`/icon-${icon}@2x\\.png$`));
     }
   });
 
@@ -507,7 +507,7 @@ describe("pc-tool-settings zoom", () => {
       ),
     ).toEqual(["Zoom in", "Zoom out", "Zoom 100%", "Reset", "Focus pen mode"]);
     expect(toolbar.querySelector(".zoom-in img")?.getAttribute("src")).toMatch(
-      /zoom-in\.png$/,
+      /icon-zoom-in@2x\.png$/,
     );
     const zoomAt = vi.spyOn(view, "zoomAt");
 
