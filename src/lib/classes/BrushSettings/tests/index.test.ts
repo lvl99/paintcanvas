@@ -3,6 +3,7 @@ import BrushSettings, {
   MAX_BRUSH_SIZE,
   MIN_BRUSH_SIZE,
   clamp,
+  proportionalSize,
   stepOpacity,
 } from "..";
 import { round } from "../../../brushes/presets/round";
@@ -29,6 +30,19 @@ describe("stepOpacity", () => {
     [1, -1, 1],
   ] as const)("should step %d%% by %d to %d%%", (percent, direction, next) => {
     expect(stepOpacity(percent, direction)).toBe(next);
+  });
+});
+
+describe("proportionalSize", () => {
+  it.each([
+    [10, 2, { width: 10, height: 5 }],
+    [0, 3, { width: 3, height: 1 }],
+    [1000, 3, { width: 256, height: 85 }],
+    [0, 0.5, { width: 1, height: 2 }],
+    [1000, 0.5, { width: 128, height: 256 }],
+    [300, 1, { width: 256, height: 256 }],
+  ])("should size width %d with proportions %d", (width, aspect, size) => {
+    expect(proportionalSize(width, aspect)).toEqual(size);
   });
 });
 
@@ -145,5 +159,47 @@ describe("BrushSettings", () => {
     brush.update({ constrainProportions: false });
     brush.setHeight(10);
     expect([brush.width, brush.height]).toEqual([40, 10]);
+  });
+
+  it("should keep constrained proportions when resizing to either end and back", () => {
+    const brush = new BrushSettings({
+      oval: { id: "oval", width: 30, height: 10, constrainProportions: true },
+    });
+    brush.resize(-100);
+    expect([brush.width, brush.height]).toEqual([3, 1]);
+    brush.resize(27);
+    expect([brush.width, brush.height]).toEqual([30, 10]);
+    brush.resize(1000);
+    expect([brush.width, brush.height]).toEqual([256, 85]);
+    brush.resize(-226);
+    expect([brush.width, brush.height]).toEqual([30, 10]);
+  });
+
+  it("should resize from the larger side when the brush is taller than wide", () => {
+    const brush = new BrushSettings({
+      tall: { id: "tall", width: 10, height: 40, constrainProportions: true },
+    });
+    brush.resize(-100);
+    expect([brush.width, brush.height]).toEqual([1, 4]);
+    brush.resize(36);
+    expect([brush.width, brush.height]).toEqual([10, 40]);
+    brush.grow();
+    expect([brush.width, brush.height]).toEqual([11, 44]);
+    brush.setHeight(1000);
+    expect([brush.width, brush.height]).toEqual([64, 256]);
+    brush.setSize(0);
+    expect([brush.width, brush.height]).toEqual([1, 4]);
+  });
+
+  it("should keep the proportions last set while unconstrained, when constraining", () => {
+    const brush = new BrushSettings(round);
+    brush.select("round20");
+    brush.update({ constrainProportions: false });
+    brush.setSize(20, 5);
+    brush.resize(-100);
+    expect([brush.width, brush.height]).toEqual([4, 1]);
+    brush.update({ constrainProportions: true });
+    brush.resize(16);
+    expect([brush.width, brush.height]).toEqual([20, 5]);
   });
 });
