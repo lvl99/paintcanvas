@@ -5,6 +5,9 @@ import { markDismissingPress } from "../../dismiss";
 /** Height of a popover's arrow (pixels) */
 export const POPOVER_ARROW_SIZE = 8;
 
+/** Side of the square turned 45° that makes the arrow (its diagonal is about twice the arrow's height) */
+const ARROW_SQUARE = Math.round(POPOVER_ARROW_SIZE * Math.SQRT2);
+
 /** Space kept between a placed popover and the window's edges (pixels) */
 export const POPOVER_MARGIN = 8;
 
@@ -67,6 +70,7 @@ export class PcPopover extends PcElement {
         max-height: inherit;
         overflow: auto;
         padding: var(--pc-space-2);
+        border: 1px solid var(--pc-border);
         border-radius: var(--pc-radius);
         background: var(--pc-surface-raised);
         color: var(--pc-text);
@@ -74,15 +78,21 @@ export class PcPopover extends PcElement {
         font-family: var(--pc-font);
         font-size: var(--pc-font-size);
       }
+      /* A square turned 45° with its top corner showing, outlined like the popover */
       :host([arrow])::before {
         content: "";
         position: absolute;
-        top: -${POPOVER_ARROW_SIZE}px;
+        z-index: 1;
+        top: -${ARROW_SQUARE / 2}px;
         left: var(--pc-popover-arrow-x, 50%);
-        border: ${POPOVER_ARROW_SIZE}px solid transparent;
-        border-top: 0;
-        border-bottom-color: var(--pc-surface-raised);
-        transform: translateX(-50%);
+        width: ${ARROW_SQUARE}px;
+        height: ${ARROW_SQUARE}px;
+        box-sizing: border-box;
+        border: 1px solid var(--pc-border);
+        border-right-color: transparent;
+        border-bottom-color: transparent;
+        background: var(--pc-surface-raised);
+        transform: translateX(-50%) rotate(45deg);
       }
       [role="dialog"]:focus-visible {
         outline: var(--pc-focus-width) solid var(--pc-focus);
