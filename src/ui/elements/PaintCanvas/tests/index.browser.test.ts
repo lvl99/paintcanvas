@@ -23,6 +23,25 @@ describe("paint-canvas menu in a real browser", () => {
   });
 });
 
+describe("paint-canvas tool settings in a real browser", () => {
+  it("should scroll the tool settings bar sideways when it's wider than the layout", async () => {
+    const layout = document.createElement("paint-canvas") as PaintCanvasElement;
+    layout.app = new PaintCanvas({ width: 20, height: 10 });
+    layout.style.cssText = "display: grid; width: 320px; height: 400px";
+    document.body.append(layout);
+    await layout.updateComplete;
+    const settings = layout.shadowRoot!.querySelector(".top pc-tool-settings")!;
+    await (settings as PaintCanvasElement).updateComplete;
+    const bar =
+      settings.shadowRoot!.querySelector<HTMLElement>("[role=toolbar]")!;
+    expect(settings.getBoundingClientRect().width).toBeLessThanOrEqual(320);
+    expect(bar.scrollWidth).toBeGreaterThan(bar.clientWidth);
+    bar.scrollLeft = bar.scrollWidth;
+    expect(bar.scrollLeft).toBeGreaterThan(0);
+    layout.remove();
+  });
+});
+
 describe("paint-canvas screenshots", () => {
   it("should save the drawing as a PNG named with the app's file prefix", async () => {
     const layout = document.createElement("paint-canvas") as PaintCanvasElement;

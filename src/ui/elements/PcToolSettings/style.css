@@ -1,5 +1,7 @@
 :host {
   display: block;
+  /* No wider than the space it has (e.g. as a flex item), so its bar scrolls sideways when its content is wider */
+  min-width: 0;
   background: var(--pc-bar);
   border-bottom: 1px solid var(--pc-surface-active);
 }
