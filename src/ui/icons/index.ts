@@ -43,6 +43,7 @@ import smoothingBezierCubic from "./images/icon-smoothing-bezier-cubic@2x.png?ur
 import sun from "./images/icon-sun@2x.png?url";
 import moon from "./images/icon-moon@2x.png?url";
 import star from "./images/icon-star@2x.png?url";
+import cog from "./images/icon-cog@2x.png?url";
 
 /** Names of the icons that come with PaintCanvas */
 export type IconName =
@@ -86,7 +87,8 @@ export type IconName =
   | "smoothingBezierCubic"
   | "sun"
   | "moon"
-  | "star";
+  | "star"
+  | "cog";
 
 /** The icons that come with PaintCanvas, as URLs */
 export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
@@ -131,6 +133,7 @@ export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
   sun,
   moon,
   star,
+  cog,
 };
 
 /**
