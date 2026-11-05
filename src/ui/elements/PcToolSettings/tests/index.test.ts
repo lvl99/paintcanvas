@@ -9,6 +9,7 @@ import {
   zoomToSlider,
   type PcToolSettings,
 } from "..";
+import type { PcBrushSize } from "../../PcBrushSize";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../../lib/classes/Viewport";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import type { TransformBox } from "../../../../lib/transform/geometry";
@@ -88,6 +89,19 @@ describe("pc-tool-settings", () => {
     expect(queryAll(empty, "[role=toolbar]")).toHaveLength(0);
     const { element } = await setup(Tool.Pan);
     expect(queryAll(element, "[role=toolbar]")).toHaveLength(0);
+  });
+
+  it("should show the brush size control between the preset and the width", async () => {
+    const { app, element } = await setup(Tool.Eraser);
+    const size = query<PcBrushSize>(element, "pc-brush-size");
+    expect(size.settings).toBe(app.eraser);
+    expect(size.label).toBe("Eraser size");
+    expect(size.previousElementSibling!.classList.contains("preset")).toBe(
+      true,
+    );
+    expect(
+      size.nextElementSibling!.querySelector("input.width"),
+    ).not.toBeNull();
   });
 
   it("should change the brush's size, proportions and opacity", async () => {

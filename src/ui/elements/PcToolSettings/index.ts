@@ -20,6 +20,7 @@ import {
 import type { TransformBox } from "../../../lib/transform/geometry";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/classes/Viewport";
 import { iconLabel } from "../../icons";
+import "../PcBrushSize";
 
 /** The lasso tools, which share the mask settings */
 const MASK_TOOLS: readonly Tool[] = [
@@ -129,7 +130,8 @@ const numberValue = (event: Event): number | undefined => {
 /**
  * The bar of settings for the current tool, shown at the top of the canvas when the tool has any:
  *
- * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), width, height, constrain proportions, pressure, tilt, opacity and "Configure" (fires
+ * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`, drag to
+ *   resize), width, height, constrain proportions, pressure, tilt, opacity and "Configure" (fires
  *   `pc-configure-brush` with the tool, "brush" or "eraser").
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
@@ -259,6 +261,11 @@ export class PcToolSettings extends PcElement {
         ></span>
         ${preset.name ?? preset.id}
       </button>
+      <pc-brush-size
+        class="size"
+        .settings=${settings}
+        label=${this.t("paintCanvas.brushMenu.size", { tool: label })}
+      ></pc-brush-size>
       <label>
         ${this.t("paintCanvas.common.width")}
         <input

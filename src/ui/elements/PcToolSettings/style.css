@@ -75,3 +75,8 @@ button img {
 .focus-pen {
   margin-left: auto;
 }
+/* The brush size, dragged to resize */
+.size {
+  align-self: stretch;
+  min-width: 56px;
+}

@@ -34,12 +34,8 @@
 .size {
   flex: none;
   align-self: stretch;
-  display: flex;
-  align-items: center;
-  padding: 0 0 0 8px;
+  margin: -4px -8px -4px 0;
   border-left: 1px solid var(--pc-border);
-  cursor: ew-resize;
-  touch-action: none;
 }
 /* The presets scroll, at most 400px tall, or less so the whole menu fits under the settings bar in a shorter window */
 .presets {

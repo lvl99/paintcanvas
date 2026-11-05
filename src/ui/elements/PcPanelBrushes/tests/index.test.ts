@@ -1,7 +1,8 @@
-import { describe, it, expect, afterEach, beforeAll, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import { PresetFileError } from "../../../../lib/brushes/presetFile";
 import { previewSizes, type PcPanelBrushes } from "..";
+import type { PcBrushSize } from "../../PcBrushSize";
 import { PRESET_FILE_ERRORS } from "../../../../lib/brushes/presetFile";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import {
@@ -12,16 +13,7 @@ import {
 } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 
-// jsdom does not implement pointer capture, which all supported browsers have
-beforeAll(() => {
-  Element.prototype.setPointerCapture ??= () => undefined;
-});
-
 afterEach(() => document.body.replaceChildren());
-
-/** Create a pointer-like event (jsdom has no PointerEvent) */
-const pointer = (type: string, clientX: number, clientY: number) =>
-  new MouseEvent(type, { clientX, clientY, bubbles: true });
 
 describe("pc-panel-brushes", () => {
   it("should render nothing without an app", async () => {
@@ -58,11 +50,20 @@ describe("pc-panel-brushes", () => {
     expect(query(element, ".current .name").textContent).toBe(
       app.brush.preset.name,
     );
-    expect(query(element, ".size").textContent?.trim()).toBe("20");
+    expect(
+      query(element, ".size")
+        .shadowRoot!.querySelector("[role=slider]")!
+        .textContent?.trim(),
+    ).toBe("20");
     app.brush.update({ constrainProportions: false });
     app.brush.setSize(20, 10);
     await element.updateComplete;
-    expect(query(element, ".size").textContent?.trim()).toBe("20 × 10");
+    await query<PcBrushSize>(element, ".size").updateComplete;
+    expect(
+      query(element, ".size")
+        .shadowRoot!.querySelector("[role=slider]")!
+        .textContent?.trim(),
+    ).toBe("20 × 10");
   });
 
   it("should show the current preset's shape image, or a round shape without one", async () => {
@@ -86,37 +87,15 @@ describe("pc-panel-brushes", () => {
     );
   });
 
-  it("should resize when dragging the size control", async () => {
+  it("should show the size control for its settings", async () => {
     const app = createApp();
-    app.brush.select("round20");
-    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
-    const size = query(element, ".size");
-
-    // Moving without pressing does nothing
-    size.dispatchEvent(pointer("pointermove", 50, 0));
-    expect(app.brush.width).toBe(20);
-
-    size.dispatchEvent(pointer("pointerdown", 0, 0));
-    size.dispatchEvent(pointer("pointermove", 5, -5)); // right and up: +10
-    expect(app.brush.width).toBe(30);
-    size.dispatchEvent(pointer("pointermove", 5, -5)); // no movement
-    size.dispatchEvent(pointer("pointermove", 0, 0)); // left and down: -10
-    expect(app.brush.width).toBe(20);
-    size.dispatchEvent(pointer("pointerup", 0, 0));
-    size.dispatchEvent(pointer("pointermove", 50, 0));
-    expect(app.brush.width).toBe(20);
-  });
-
-  it("should capture the pointer while dragging when supported", async () => {
-    const app = createApp();
-    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
-    const size = query(element, ".size");
-    const capture = vi.fn();
-    Object.assign(size, { setPointerCapture: capture });
-    size.dispatchEvent(
-      Object.assign(pointer("pointerdown", 0, 0), { pointerId: 7 }),
-    );
-    expect(capture).toHaveBeenCalledWith(7);
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", {
+      app,
+      kind: "eraser",
+    });
+    const size = query(element, "pc-brush-size") as PcBrushSize;
+    expect(size.settings).toBe(app.eraser);
+    expect(size.label).toBe("Eraser size");
   });
 
   it("should name presets by their ID when they have no name", async () => {
