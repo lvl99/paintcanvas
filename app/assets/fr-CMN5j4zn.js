@@ -1,0 +1,1 @@
+var e={"demo.newDrawing":`Nouveau dessin`,"demo.newDrawingMessage":`Commencer un nouveau dessin ? Ce dessin sera supprimé.`};export{e as default};

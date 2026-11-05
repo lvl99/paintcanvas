@@ -1,1 +1,0 @@
-var e={"demo.newDrawing":`새 그림`,"demo.newDrawingMessage":`새 그림을 시작할까요? 이 그림은 삭제됩니다.`,"demo.narrowLayout":`좁은 레이아웃`};export{e as default};

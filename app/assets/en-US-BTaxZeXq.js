@@ -1,0 +1,1 @@
+var e={"demo.newDrawing":`New drawing`,"demo.newDrawingMessage":`Start a new drawing? This drawing will be deleted.`};export{e as default};

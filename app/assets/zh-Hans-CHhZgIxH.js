@@ -1,1 +1,0 @@
-var e={"demo.newDrawing":`新画作`,"demo.newDrawingMessage":`要开始新画作吗？此画作将被删除。`,"demo.narrowLayout":`窄布局`};export{e as default};

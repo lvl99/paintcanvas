@@ -1,1 +1,0 @@
-var e={"demo.newDrawing":`New drawing`,"demo.newDrawingMessage":`Start a new drawing? This drawing will be deleted.`,"demo.narrowLayout":`Narrow layout`};export{e as default};
