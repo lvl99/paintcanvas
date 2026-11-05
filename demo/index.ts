@@ -31,11 +31,6 @@ await translations.useDeviceLocale();
 /** Show the page's own text in the chosen language */
 const showText = () => {
   find("#new-drawing").textContent = translations.t("demo.newDrawing");
-  // The note shown on narrow layouts, and the template it's created from
-  const narrowTemplate = find<HTMLTemplateElement>("pc-match > template");
-  for (const root of [document, narrowTemplate.content])
-    for (const note of root.querySelectorAll(".narrow-note"))
-      note.textContent = translations.t("demo.narrowLayout");
 };
 showText();
 translations.addEventListener("change", showText);

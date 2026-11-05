@@ -38,19 +38,6 @@
       .toasts pc-toast {
         pointer-events: auto;
       }
-      .narrow-note {
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 4px 8px;
-        border-radius: 4px;
-        background: var(--pc-accent);
-        color: white;
-        font:
-          12px Arial,
-          sans-serif;
-      }
     </style>
   </head>
   <body>
@@ -68,9 +55,6 @@
       </div>
       <div slot="overlay">
         <pc-canvas-map id="map"></pc-canvas-map>
-        <pc-match when="narrow">
-          <template><span class="narrow-note">Narrow layout</span></template>
-        </pc-match>
       </div>
     </paint-canvas>
     <div class="toasts" id="toasts"></div>
