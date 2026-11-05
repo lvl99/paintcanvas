@@ -21,6 +21,7 @@ import type { TransformBox } from "../../../lib/transform/geometry";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/classes/Viewport";
 import { iconLabel } from "../../icons";
 import "../PcBrushSize";
+import { DRAG_THRESHOLD, PointerDrag } from "../../drag";
 
 /** The lasso tools, which share the mask settings */
 const MASK_TOOLS: readonly Tool[] = [
@@ -131,7 +132,8 @@ const numberValue = (event: Event): number | undefined => {
  * The bar of settings for the current tool, shown at the top of the canvas when the tool has any:
  *
  * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`, drag to
- *   resize), width, height, constrain proportions, pressure, tilt, opacity and "Configure" (fires
+ *   resize), width, height (pressed and dragged right or up to grow, left or down to shrink; a press that barely moves
+ *   focuses the field), constrain proportions, pressure, tilt, opacity and "Configure" (fires
  *   `pc-configure-brush` with the tool, "brush" or "eraser").
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
@@ -180,9 +182,65 @@ export class PcToolSettings extends PcElement {
       : [];
   });
 
+  /** The brush or eraser settings whose width or height field is being pressed */
+  private pressedSettings?: BrushSettings;
+
+  /** Press-and-drag on the width field: right or up wider, left or down narrower */
+  private readonly widthDrag = new PointerDrag((delta) => {
+    const settings = this.pressedSettings as BrushSettings;
+    settings.setSize(settings.width + delta, settings.height);
+  }, DRAG_THRESHOLD);
+
+  /** Press-and-drag on the height field: right or up taller, left or down shorter */
+  private readonly heightDrag = new PointerDrag((delta) => {
+    const settings = this.pressedSettings as BrushSettings;
+    settings.setHeight(settings.height + delta);
+  }, DRAG_THRESHOLD);
+
   constructor() {
     super();
     this.percent = false;
+  }
+
+  /**
+   * Start pressing a size field. While the field isn't being typed in, the press doesn't focus it straight away: it
+   * becomes a drag if the pointer moves far enough, or focuses the field when released (see `onSizeFieldPointerUp`).
+   */
+  private onSizeFieldPointerDown(
+    drag: PointerDrag,
+    settings: BrushSettings,
+    event: PointerEvent,
+  ): void {
+    const input = event.currentTarget as HTMLInputElement;
+    if (this.shadowRoot?.activeElement === input) return;
+    event.preventDefault();
+    this.pressedSettings = settings;
+    drag.start(event);
+  }
+
+  /**
+   * Finish pressing a size field: a press that didn't become a drag focuses the field for typing.
+   */
+  private onSizeFieldPointerUp(drag: PointerDrag, event: PointerEvent): void {
+    const pressed = this.pressedSettings !== undefined;
+    this.pressedSettings = undefined;
+    if (!pressed || drag.end()) return;
+    const input = event.currentTarget as HTMLInputElement;
+    input.focus();
+    input.select();
+  }
+
+  /** Press-and-drag handlers for a brush size field */
+  private sizeFieldDrag(drag: PointerDrag, settings: BrushSettings) {
+    return {
+      down: (event: PointerEvent) =>
+        this.onSizeFieldPointerDown(drag, settings, event),
+      up: (event: PointerEvent) => this.onSizeFieldPointerUp(drag, event),
+      cancel: () => {
+        this.pressedSettings = undefined;
+        drag.end();
+      },
+    };
   }
 
   /** Fire an event that crosses shadow DOM boundaries */
@@ -239,6 +297,8 @@ export class PcToolSettings extends PcElement {
       kind === "eraser" ? "paintCanvas.tool.eraser" : "paintCanvas.tool.brush",
     );
     const panel = kind === "eraser" ? Panel.Eraser : Panel.Brush;
+    const width = this.sizeFieldDrag(this.widthDrag, settings);
+    const height = this.sizeFieldDrag(this.heightDrag, settings);
     return html`<div
       role="toolbar"
       aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: label })}
@@ -270,10 +330,14 @@ export class PcToolSettings extends PcElement {
         ${this.t("paintCanvas.common.width")}
         <input
           type="number"
-          class="width"
+          class="width drag-field"
           min=${MIN_BRUSH_SIZE}
           max=${MAX_BRUSH_SIZE}
           .value=${String(settings.width)}
+          @pointerdown=${width.down}
+          @pointermove=${this.widthDrag.move}
+          @pointerup=${width.up}
+          @pointercancel=${width.cancel}
           @change=${(e: Event) => {
             const value = numberValue(e);
             if (value !== undefined) settings.setSize(value, settings.height);
@@ -299,10 +363,14 @@ export class PcToolSettings extends PcElement {
         ${this.t("paintCanvas.common.height")}
         <input
           type="number"
-          class="height"
+          class="height drag-field"
           min=${MIN_BRUSH_SIZE}
           max=${MAX_BRUSH_SIZE}
           .value=${String(settings.height)}
+          @pointerdown=${height.down}
+          @pointermove=${this.heightDrag.move}
+          @pointerup=${height.up}
+          @pointercancel=${height.cancel}
           @change=${(e: Event) => {
             const value = numberValue(e);
             if (value !== undefined) settings.setHeight(value);

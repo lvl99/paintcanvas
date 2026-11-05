@@ -66,4 +66,17 @@ describe("PointerDrag", () => {
     new PointerDrag(vi.fn()).start(pointer("pointerdown", 0, 0, element));
     expect(capture).toHaveBeenCalledWith(3);
   });
+
+  it("should give whole pixels, keeping fractions for later moves", () => {
+    const onDelta = vi.fn();
+    const drag = new PointerDrag(onDelta);
+    drag.start(pointer("pointerdown", 0, 0));
+    drag.move(pointer("pointermove", 0.4, 0));
+    drag.move(pointer("pointermove", 0.8, 0));
+    expect(onDelta).not.toHaveBeenCalled();
+    drag.move(pointer("pointermove", 1.2, 0));
+    expect(onDelta).toHaveBeenCalledWith(1);
+    drag.move(pointer("pointermove", -0.5, 0));
+    expect(onDelta).toHaveBeenLastCalledWith(-1);
+  });
 });

@@ -18,7 +18,7 @@ export const dragDelta = (from: Point, to: Point): number =>
 
 /**
  * Turns pressing and dragging on an element into changes of a value: dragging right or up gives positive deltas, left
- * or down negative ones (see `dragDelta`). With a `threshold`, the press only becomes a drag once the pointer has moved
+ * or down negative ones (see `dragDelta`), in whole pixels (keeping any fraction for the next move). With a `threshold`, the press only becomes a drag once the pointer has moved
  * that far from where it was pressed, so a press that barely moves can still be a tap (e.g. to focus a field).
  *
  * The element is given the pointer while dragging, so the drag carries on outside it.
@@ -38,6 +38,9 @@ export class PointerDrag {
   /** The last position a delta was given from, once dragging */
   private last: Point | null = null;
 
+  /** Movement not yet given, under a whole pixel (pens can move by fractions of a pixel) */
+  private remainder = 0;
+
   constructor(onDelta: (delta: number) => void, threshold = 0) {
     this.onDelta = onDelta;
     this.threshold = threshold;
@@ -54,6 +57,7 @@ export class PointerDrag {
   readonly start = (event: PointerEvent): void => {
     this.origin = { x: event.clientX, y: event.clientY };
     this.last = this.threshold > 0 ? null : this.origin;
+    this.remainder = 0;
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
   };
 
@@ -73,7 +77,9 @@ export class PointerDrag {
       // Stop the browser selecting text or focusing while dragging
       event.preventDefault();
     }
-    const delta = dragDelta(this.last, point);
+    const total = this.remainder + dragDelta(this.last, point);
+    const delta = Math.trunc(total);
+    this.remainder = total - delta;
     this.last = point;
     if (delta !== 0) this.onDelta(delta);
   };

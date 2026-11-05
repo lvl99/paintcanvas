@@ -18,6 +18,10 @@ import { createApp } from "../../../../testing/app";
 
 afterEach(() => document.body.replaceChildren());
 
+/** Create a pointer-like event (jsdom has no PointerEvent) */
+const pointer = (type: string, clientX: number, clientY: number) =>
+  new MouseEvent(type, { clientX, clientY, bubbles: true, cancelable: true });
+
 /** Show the bar for a tool */
 const setup = async (tool: Tool = Tool.Brush) => {
   const app = createApp();
@@ -102,6 +106,55 @@ describe("pc-tool-settings", () => {
     expect(
       size.nextElementSibling!.querySelector("input.width"),
     ).not.toBeNull();
+  });
+
+  it("should change the width and height when their fields are pressed and dragged", async () => {
+    const { app, element } = await setup();
+    app.brush.select("round20");
+    await element.updateComplete;
+    const width = query<HTMLInputElement>(element, "input.width");
+    const height = query<HTMLInputElement>(element, "input.height");
+
+    // Right and up wider; the height follows while proportions are constrained
+    const down = pointer("pointerdown", 0, 0);
+    width.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    width.dispatchEvent(pointer("pointermove", 2, 0));
+    expect(app.brush.width).toBe(20);
+    width.dispatchEvent(pointer("pointermove", 5, -5));
+    expect([app.brush.width, app.brush.height]).toEqual([30, 30]);
+    width.dispatchEvent(pointer("pointermove", 0, 0));
+    expect([app.brush.width, app.brush.height]).toEqual([20, 20]);
+    width.dispatchEvent(pointer("pointerup", 0, 0));
+    expect(element.shadowRoot!.activeElement).toBeNull();
+
+    // Left and down shorter, down to 1 pixel; the width stays without constrained proportions
+    app.brush.update({ constrainProportions: false });
+    height.dispatchEvent(pointer("pointerdown", 0, 0));
+    height.dispatchEvent(pointer("pointermove", -100, 100));
+    expect([app.brush.width, app.brush.height]).toEqual([20, 1]);
+    height.dispatchEvent(pointer("pointermove", 0, 0));
+    expect([app.brush.width, app.brush.height]).toEqual([20, 201]);
+    height.dispatchEvent(pointer("pointercancel", 0, 0));
+    height.dispatchEvent(pointer("pointermove", 100, 0));
+    expect(app.brush.height).toBe(201);
+  });
+
+  it("should focus a size field for typing when pressed without dragging", async () => {
+    const { app, element } = await setup(Tool.Eraser);
+    const width = query<HTMLInputElement>(element, "input.width");
+    width.dispatchEvent(pointer("pointerdown", 0, 0));
+    width.dispatchEvent(pointer("pointermove", 1, 1));
+    width.dispatchEvent(pointer("pointerup", 1, 1));
+    expect(element.shadowRoot!.activeElement).toBe(width);
+    // While typing, pressing works as usual: placing the caret, not dragging
+    const down = pointer("pointerdown", 0, 0);
+    width.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(false);
+    const before = app.eraser.width;
+    width.dispatchEvent(pointer("pointermove", 50, 0));
+    width.dispatchEvent(pointer("pointerup", 50, 0));
+    expect(app.eraser.width).toBe(before);
   });
 
   it("should change the brush's size, proportions and opacity", async () => {

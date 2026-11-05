@@ -80,3 +80,8 @@ button img {
   align-self: stretch;
   min-width: 56px;
 }
+/* Width and height change when pressed and dragged, until focused for typing */
+.drag-field:not(:focus) {
+  cursor: ew-resize;
+  touch-action: none;
+}
