@@ -3,6 +3,7 @@ import "..";
 import { PresetFileError } from "../../../../lib/brushes/presetFile";
 import { previewSizes, type PcPanelBrushes } from "..";
 import type { PcBrushSize } from "../../PcBrushSize";
+import type { PcNumberSlider } from "../../PcNumberSlider";
 import { PRESET_FILE_ERRORS } from "../../../../lib/brushes/presetFile";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import {
@@ -50,20 +51,17 @@ describe("pc-panel-brushes", () => {
     expect(query(element, ".current .name").textContent).toBe(
       app.brush.preset.name,
     );
-    expect(
-      query(element, ".size")
-        .shadowRoot!.querySelector("[role=slider]")!
-        .textContent?.trim(),
-    ).toBe("20");
+    const size = query<PcBrushSize>(element, ".size");
+    await size.updateComplete;
+    const slider = query<PcNumberSlider>(size, "pc-number-slider");
+    await slider.updateComplete;
+    expect(query(slider, "[role=slider]").textContent?.trim()).toBe("20");
     app.brush.update({ constrainProportions: false });
     app.brush.setSize(20, 10);
     await element.updateComplete;
-    await query<PcBrushSize>(element, ".size").updateComplete;
-    expect(
-      query(element, ".size")
-        .shadowRoot!.querySelector("[role=slider]")!
-        .textContent?.trim(),
-    ).toBe("20 × 10");
+    await size.updateComplete;
+    await slider.updateComplete;
+    expect(query(slider, "[role=slider]").textContent?.trim()).toBe("20 × 10");
   });
 
   it("should show the current preset's shape image, or a round shape without one", async () => {

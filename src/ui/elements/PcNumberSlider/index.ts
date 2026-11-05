@@ -186,7 +186,6 @@ export class PcNumberSlider extends PcElement {
    * Stop typing, keeping the typed value (if it's a number) unless cancelled.
    */
   private stopEditing(keep: boolean): void {
-    if (!this.editing) return;
     const input = this.renderRoot.querySelector("input") as HTMLInputElement;
     const typed = input.value.trim();
     this.editing = false;
@@ -235,8 +234,12 @@ export class PcNumberSlider extends PcElement {
     this.stopEditing(event.key === "Enter");
   }
 
-  /** Keep the typed value when the field loses focus, leaving focus where it went */
+  /**
+   * Keep the typed value when the field loses focus, leaving focus where it went. Ignored once typing has ended (some
+   * browsers blur the field as it's removed).
+   */
   private onInputBlur(): void {
+    if (!this.editing) return;
     this.refocus = false;
     this.stopEditing(true);
   }
