@@ -44,13 +44,17 @@ describe("presets", () => {
   );
 });
 
-describe("square presets", () => {
-  it("should be the only built-in presets that snap to the pixel grid", () => {
+describe("pixel grid presets", () => {
+  it("should be the square presets and the 1 pixel round preset", () => {
     const snapping = Object.values(allPresets)
       .filter((preset) => preset.snapToPixelGrid)
-      .map((preset) => preset.group);
-    expect(snapping).toHaveLength(7);
-    expect(new Set(snapping)).toEqual(new Set(["Square"]));
+      .map((preset) => preset.id);
+    expect(snapping.sort()).toEqual(
+      [
+        "round1",
+        ...[1, 5, 10, 20, 30, 40, 50, 100, 150].map((size) => `square${size}`),
+      ].sort(),
+    );
   });
 });
 

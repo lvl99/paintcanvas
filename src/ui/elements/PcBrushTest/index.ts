@@ -18,9 +18,24 @@ export const TEST_AREA_HEIGHT = 320;
 /** The colour test strokes are drawn in, whatever the current colour */
 export const TEST_COLOUR = "#000000";
 
+/** The colour of the circles showing a stroke's sampled points, while stroke points are shown */
+export const POINT_COLOUR = "#e8175d";
+
+/** The colour of the dots showing where a stroke placed its stamps, while stroke points are shown */
+export const STAMP_COLOUR = "#1e88e5";
+
+/** How long a finished stroke's points stay shown (milliseconds) */
+export const STROKE_POINTS_MS = 3000;
+
+/** Radius of the circles showing a stroke's sampled points (test area pixels) */
+const POINT_RADIUS = 8;
+
 /**
  * A small area to try brush settings before saving them: strokes are drawn in black, at the settings' own size, on a
  * white background at double resolution (800 × 320 pixels shown in the window's width). "Clear" (a red pill) empties it.
+ * "Show stroke points" draws the stroke's sampled points (pink circles) and where it placed stamps (blue dots) over it,
+ * like the canvas's debug overlay, to see how sampling and smoothing work. They go 3 seconds after the stroke ends, or
+ * on "Clear".
  *
  * @example
  * html`<pc-brush-test .config=${config} .tips=${app.tips}></pc-brush-test>`
@@ -30,6 +45,7 @@ export class PcBrushTest extends PcElement {
     ...PcElement.properties,
     config: { attribute: false },
     tips: { attribute: false },
+    showPoints: { type: Boolean, attribute: "show-points" },
   };
 
   static override styles = [PcElement.styles, unsafeCSS(styles)];
@@ -39,6 +55,14 @@ export class PcBrushTest extends PcElement {
 
   /** Brush shapes */
   declare tips?: BrushTipCache;
+
+  /** Whether the last stroke's sampled points and stamps are drawn over it */
+  declare showPoints: boolean;
+
+  constructor() {
+    super();
+    this.showPoints = false;
+  }
 
   /** Creates the layer and stroke canvases (replaceable for tests) */
   createCanvas: CanvasFactory = createOffscreenCanvas;
@@ -52,8 +76,12 @@ export class PcBrushTest extends PcElement {
 
   private readonly onEngineChange = () => this.paint();
 
+  /** Clears the finished stroke's points once they've been shown long enough */
+  private pointsTimer?: ReturnType<typeof setTimeout>;
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    clearTimeout(this.pointsTimer);
     this.engine?.removeEventListener("change", this.onEngineChange);
   }
 
@@ -77,6 +105,7 @@ export class PcBrushTest extends PcElement {
         this.createCanvas,
       );
       this.engine.addEventListener("change", this.onEngineChange);
+      this.engine.setDebug(this.showPoints);
     }
     return { layer: this.layer, engine: this.engine };
   }
@@ -105,6 +134,7 @@ export class PcBrushTest extends PcElement {
     const config = this.config;
     if (!config || !this.tips || event.button !== 0) return;
     const { layer, engine } = this.drawing;
+    clearTimeout(this.pointsTimer);
     this.pointerId = event.pointerId;
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     engine.begin(
@@ -134,6 +164,24 @@ export class PcBrushTest extends PcElement {
     this.pointerId = undefined;
     this.engine?.end(this.point(event), event.timeStamp);
     this.paint();
+    clearTimeout(this.pointsTimer);
+    this.pointsTimer = setTimeout(() => this.clearPoints(), STROKE_POINTS_MS);
+  }
+
+  /** Stop showing the last stroke's points and stamps (still recording the next stroke's while shown) */
+  private clearPoints(): void {
+    clearTimeout(this.pointsTimer);
+    this.engine?.setDebug(this.showPoints);
+  }
+
+  /**
+   * Show or hide the last stroke's sampled points and stamps. They're recorded from the next stroke.
+   */
+  setShowPoints(shown: boolean): void {
+    const changed = shown !== this.showPoints;
+    this.showPoints = shown;
+    if (changed) this.engine?.setDebug(shown);
+    this.paint();
   }
 
   /**
@@ -141,6 +189,7 @@ export class PcBrushTest extends PcElement {
    */
   clear(): void {
     this.engine?.cancel();
+    this.clearPoints();
     this.layer?.context.clearRect(0, 0, TEST_AREA_WIDTH, TEST_AREA_HEIGHT);
     this.paint();
   }
@@ -152,6 +201,27 @@ export class PcBrushTest extends PcElement {
     ctx.clearRect(0, 0, TEST_AREA_WIDTH, TEST_AREA_HEIGHT);
     const image = this.engine?.preview?.image ?? this.layer?.canvas;
     if (image) ctx.drawImage(image, 0, 0);
+    if (this.showPoints && this.engine) this.paintPoints(ctx, this.engine);
+  }
+
+  /** Draw the last stroke's sampled points (circles) and stamp positions (dots) */
+  private paintPoints(
+    ctx: CanvasRenderingContext2D,
+    engine: StrokeEngine,
+  ): void {
+    const { points, stamps } = engine.debugTrace;
+    ctx.save();
+    ctx.fillStyle = STAMP_COLOUR;
+    for (const { x, y } of stamps) ctx.fillRect(x - 2, y - 2, 4, 4);
+    ctx.strokeStyle = POINT_COLOUR;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (const { x, y } of points) {
+      ctx.moveTo(x + POINT_RADIUS, y);
+      ctx.arc(x, y, POINT_RADIUS, 0, Math.PI * 2);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   override render() {
@@ -165,9 +235,20 @@ export class PcBrushTest extends PcElement {
         @pointerup=${this.onPointerUp}
         @pointercancel=${this.onPointerUp}
       ></canvas>
-      <button type="button" class="clear" @click=${() => this.clear()}>
-        ${this.t("paintCanvas.common.clear")}
-      </button>
+      <div class="actions">
+        <button type="button" class="clear" @click=${() => this.clear()}>
+          ${this.t("paintCanvas.common.clear")}
+        </button>
+        <label class="show-points">
+          <input
+            type="checkbox"
+            .checked=${this.showPoints}
+            @change=${(e: Event) =>
+              this.setShowPoints((e.target as HTMLInputElement).checked)}
+          />
+          ${this.t("paintCanvas.brushConfig.showStrokePoints")}
+        </label>
+      </div>
     `;
   }
 }

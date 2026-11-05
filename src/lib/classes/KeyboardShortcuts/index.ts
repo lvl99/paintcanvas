@@ -13,6 +13,21 @@ import {
 const inOpenDialog = (path: EventTarget[]): boolean =>
   path.some((target) => target instanceof HTMLDialogElement && target.open);
 
+/**
+ * How long (milliseconds) the paste shortcut waits for the browser's `paste` event (which carries other apps' images)
+ * before pasting the image data copied here
+ */
+export const PASTE_EVENT_WAIT_MS = 50;
+
+/**
+ * The first image in a paste's clipboard data (e.g. copied in another app), if any.
+ *
+ * @example
+ * pastedImage(event.clipboardData); // File of type "image/png", or undefined
+ */
+export const pastedImage = (data: DataTransfer | null): File | undefined =>
+  [...(data?.files ?? [])].find((file) => file.type.startsWith("image/"));
+
 /** Event dispatched on the window for shortcut actions handled elsewhere (e.g. saving) */
 export const SHORTCUT_EVENT = "pc-shortcut";
 
@@ -23,7 +38,10 @@ export const SHORTCUT_EVENT = "pc-shortcut";
  *
  * Tool selection, brush/eraser size and opacity, interface visibility, select all/invert/deselect, undo/redo,
  * cut/copy/paste, deleting the masked image data (Delete or Backspace), fills, swapping colours, zooming, layer opacity
- * and finishing or cancelling a lasso shape are handled here; other actions (and Escape/Enter for later features)
+ * and finishing or cancelling a lasso shape are handled here. Pasting (the shortcut, or the browser's own paste, e.g. from
+ * its Edit menu) pastes the image data copied here, unless the window has lost focus since it was copied and the
+ * clipboard has an image (e.g. copied in another app): that image is pasted instead (see `PaintCanvas.pasteImage`).
+ * Other actions other actions (and Escape/Enter for later features)
  * dispatch an `pc-shortcut` event with the action as `detail`. Holding the hold-to-pan key (Space by default) pans
  * temporarily; releasing it returns to the selected tool.
  *
@@ -45,11 +63,32 @@ export default class KeyboardShortcuts {
   private readonly onKeyUp = (event: Event) =>
     this.handleKeyUp(event as KeyboardEvent);
 
-  // Releasing keys outside the window (e.g. switching apps) must not leave a tool held
-  private readonly onBlur = () => this.release();
+  /** Turns pasted image files into images (replaceable for tests) */
+  private readonly decodeImage: (blob: Blob) => Promise<ImageBitmap>;
 
-  constructor(app: PaintCanvas) {
+  /** `app.copyCount` when the window last lost focus: copies since then were made here */
+  private copiesBeforeBlur = 0;
+
+  /** Pastes the image data copied here if the browser doesn't fire `paste` soon after the shortcut */
+  private pasteTimer?: ReturnType<typeof setTimeout>;
+
+  // Releasing keys outside the window (e.g. switching apps) must not leave a tool held. Something may be copied
+  // elsewhere while away.
+  private readonly onBlur = () => {
+    this.release();
+    this.copiesBeforeBlur = this.app.copyCount;
+  };
+
+  private readonly onPaste = (event: Event) =>
+    void this.handlePaste(event as ClipboardEvent);
+
+  constructor(
+    app: PaintCanvas,
+    decodeImage: (blob: Blob) => Promise<ImageBitmap> = (blob) =>
+      createImageBitmap(blob),
+  ) {
     this.app = app;
+    this.decodeImage = decodeImage;
   }
 
   /**
@@ -61,6 +100,7 @@ export default class KeyboardShortcuts {
     target.addEventListener("keydown", this.onKeyDown);
     target.addEventListener("keyup", this.onKeyUp);
     target.addEventListener("blur", this.onBlur);
+    target.addEventListener("paste", this.onPaste);
   }
 
   /**
@@ -70,7 +110,9 @@ export default class KeyboardShortcuts {
     this.target?.removeEventListener("keydown", this.onKeyDown);
     this.target?.removeEventListener("keyup", this.onKeyUp);
     this.target?.removeEventListener("blur", this.onBlur);
+    this.target?.removeEventListener("paste", this.onPaste);
     this.target = null;
+    this.cancelPasteTimer();
   }
 
   /**
@@ -95,9 +137,47 @@ export default class KeyboardShortcuts {
       sameCombo(shortcut, combo),
     )?.action;
     if (!action) return undefined;
+    if (action.type === "paste") {
+      // Let the browser fire `paste`, which carries other apps' images; paste what was copied here if it doesn't
+      this.cancelPasteTimer();
+      this.pasteTimer = setTimeout(() => {
+        this.pasteTimer = undefined;
+        this.app.paste();
+      }, PASTE_EVENT_WAIT_MS);
+      return action;
+    }
     event.preventDefault();
     this.run(action);
     return action;
+  }
+
+  /**
+   * Paste from the browser's `paste` event: the image data copied here if it was copied since the window last lost
+   * focus (or the clipboard has no image), otherwise the clipboard's image. Ignored in text fields and open dialogs.
+   */
+  async handlePaste(event: ClipboardEvent): Promise<void> {
+    const path = event.composedPath();
+    if (isTypingTarget(path[0] ?? event.target) || inOpenDialog(path)) return;
+    this.cancelPasteTimer();
+    event.preventDefault();
+    const app = this.app;
+    const image = pastedImage(event.clipboardData);
+    const copiedHere = app.copyCount > this.copiesBeforeBlur;
+    if (!image || (copiedHere && app.hasClipboard)) {
+      app.paste();
+      return;
+    }
+    try {
+      app.pasteImage(await this.decodeImage(image));
+    } catch {
+      // An image the browser can't read: nothing to paste
+    }
+  }
+
+  /** Stop waiting for the browser's `paste` event */
+  private cancelPasteTimer(): void {
+    clearTimeout(this.pasteTimer);
+    this.pasteTimer = undefined;
   }
 
   /**

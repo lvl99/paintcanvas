@@ -15,7 +15,19 @@ export { PcButtonGroup } from "./elements/PcButtonGroup";
 export { PcIconToggle } from "./elements/PcIconToggle";
 export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
-export { PcMenu, type MenuItem } from "./elements/PcMenu";
+export { PcNumberSlider, fitNumber } from "./elements/PcNumberSlider";
+export { PcBrushSize, sizeText } from "./elements/PcBrushSize";
+export { PointerDrag, DRAG_THRESHOLD, dragDelta } from "./drag";
+export { markDismissingPress, isDismissingPress } from "./dismiss";
+export {
+  PcMenu,
+  isMenuItem,
+  menuSections,
+  type MenuItem,
+  type MenuLabel,
+  type MenuDivider,
+  type MenuEntry,
+} from "./elements/PcMenu";
 export {
   PcContextMenu,
   CONTEXT_MENU_TOGGLE_EVENT,
@@ -45,6 +57,7 @@ export {
 } from "./elements/PcInputSettings";
 export { PcMatch } from "./elements/PcMatch";
 export { PcColourPair, COLOUR_CLICK_EVENT } from "./elements/PcColourPair";
+export { PcClipboardTools, CLIPBOARD_TOOLS } from "./elements/PcClipboardTools";
 export {
   PcShortcutSettings,
   type ShortcutSettingsLike,
@@ -71,6 +84,7 @@ export {
   STATE_EVENT,
   matchesState,
   parseSideModes,
+  showsRail,
   sideModeFor,
   type InputKind,
   type LayoutState,

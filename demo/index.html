@@ -38,25 +38,14 @@
       .toasts pc-toast {
         pointer-events: auto;
       }
-      .narrow-note {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        background: var(--pc-accent);
-        color: white;
-        font:
-          12px Arial,
-          sans-serif;
-      }
     </style>
   </head>
   <body>
     <paint-canvas
       store="demo"
       settings-store="demo"
-      right-modes="docked, rail@800, floating@400"
+      left-modes="docked, overlay@600"
+      right-modes="docked, rail@800, overlay@600"
     >
       <div slot="menu" class="menu">
         <pc-input-settings id="settings"></pc-input-settings>
@@ -66,9 +55,6 @@
       </div>
       <div slot="overlay">
         <pc-canvas-map id="map"></pc-canvas-map>
-        <pc-match when="narrow">
-          <template><span class="narrow-note">Narrow layout</span></template>
-        </pc-match>
       </div>
     </paint-canvas>
     <div class="toasts" id="toasts"></div>

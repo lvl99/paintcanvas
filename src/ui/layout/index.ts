@@ -1,10 +1,25 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 /** How a side of the `<paint-canvas>` layout shows its content */
-export type SideMode = "docked" | "rail" | "floating";
+export type SideMode = "docked" | "rail" | "floating" | "overlay";
 
 /** All side modes */
-export const SIDE_MODES: readonly SideMode[] = ["docked", "rail", "floating"];
+export const SIDE_MODES: readonly SideMode[] = [
+  "docked",
+  "rail",
+  "floating",
+  "overlay",
+];
+
+/**
+ * Whether a side mode shows its panels from a rail of buttons: `rail`, and `overlay` (a rail over the canvas).
+ *
+ * @example
+ * showsRail("overlay"); // true
+ * showsRail("docked"); // false
+ */
+export const showsRail = (mode: SideMode): boolean =>
+  mode === "rail" || mode === "overlay";
 
 /** A side mode, and the layout width below which it applies (none for the mode used otherwise) */
 export interface SideModeRule {

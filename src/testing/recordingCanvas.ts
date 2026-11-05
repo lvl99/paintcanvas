@@ -29,6 +29,9 @@ export const createRecordingCanvasFactory = () => {
       width,
       height,
       getContext: () => ctx,
+      // An empty image of the asked-for type
+      convertToBlob: async ({ type = "image/png" }: ImageEncodeOptions = {}) =>
+        new Blob([], { type }),
     } as unknown as OffscreenCanvas;
     created.push({ canvas, calls });
     return canvas;

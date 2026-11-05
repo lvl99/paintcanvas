@@ -5,6 +5,7 @@ import type { PaintCanvasElement } from "..";
 import PaintCanvas, { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import { SHORTCUT_EVENT } from "../../../../lib/classes/KeyboardShortcuts";
 import { STATE_EVENT, type LayoutState } from "../../../layout";
+import { isDismissingPress } from "../../../dismiss";
 import type { PcPanel } from "../../PcPanel";
 import type { PcToolbar } from "../../PcToolbar";
 import type { PcPane } from "../../PcPane";
@@ -45,6 +46,16 @@ const setup = async (content = "", width = 1000, app = createApp()) => {
   // Slot changes render once more
   await layout.updateComplete;
   return { layout, app };
+};
+
+/** Press on an element, returning the press */
+const pressOn = (target: EventTarget) => {
+  const event = new PointerEvent("pointerdown", {
+    bubbles: true,
+    composed: true,
+  });
+  target.dispatchEvent(event);
+  return event;
 };
 
 /** A panel for a side */
@@ -162,12 +173,8 @@ describe("paint-canvas", () => {
 
   it("should close the colour palette on a press outside it and the colours that open it", async () => {
     const { layout, app } = await setup();
-    const pressOn = (target: EventTarget) =>
-      target.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, composed: true }),
-      );
     // Nothing to close
-    pressOn(document.body);
+    expect(isDismissingPress(pressOn(document.body))).toBe(false);
     app.togglePanel(Panel.Palette);
     await layout.updateComplete;
     const palette = query(layout, ".center pc-panel-colours");
@@ -177,8 +184,65 @@ describe("paint-canvas", () => {
     const toolbar = query(layout, "pc-toolbar");
     pressOn(toolbar.shadowRoot!.querySelector("pc-colour-pair")!);
     expect(app.panel).toBe(Panel.Palette);
-    pressOn(document.body);
+    expect(isDismissingPress(pressOn(document.body))).toBe(true);
     expect(app.panel).toBeNull();
+  });
+
+  it("should close every panel on a press outside it and the button that opens it, but not in a dialog", async () => {
+    const { layout, app } = await setup(
+      '<nav slot="menu"><button>In menu</button></nav><pc-pane slot="right"></pc-pane>',
+    );
+    const toolbar = query<PcToolbar>(layout, "pc-toolbar");
+    const toggles = {
+      [Panel.Layers]: () =>
+        toolbar.shadowRoot!.querySelector('[data-panel="layers"]')!,
+      [Panel.Menu]: () =>
+        toolbar.shadowRoot!.querySelector('[data-panel="menu"]')!,
+      [Panel.Brush]: () =>
+        query(layout, "pc-tool-settings").shadowRoot!.querySelector(
+          '[data-panel="brush"]',
+        )!,
+    };
+    const canvas = query(layout, "pc-canvas");
+    for (const [panel, toggle] of Object.entries(toggles)) {
+      app.togglePanel(panel as Panel);
+      await layout.updateComplete;
+      const shown = queryAll(layout, ".panel").find(
+        (element) =>
+          !element.matches(".menu-panel") || element.hasAttribute("open"),
+      )!;
+      pressOn(shown);
+      pressOn(toggle());
+      expect(app.panel, panel).toBe(panel);
+      expect(isDismissingPress(pressOn(canvas)), panel).toBe(true);
+      expect(app.panel, panel).toBeNull();
+    }
+    // Slotted menu content is in the menu's panel
+    app.togglePanel(Panel.Menu);
+    await layout.updateComplete;
+    pressOn(layout.querySelector("nav button")!);
+    expect(app.panel).toBe(Panel.Menu);
+    // Another panel's button closes it (and then opens its own)
+    pressOn(toggles[Panel.Layers]());
+    expect(app.panel).toBeNull();
+    // Dialogs (e.g. opened from a panel) are left open over it
+    app.togglePanel(Panel.Brush);
+    const dialog = document.createElement("dialog");
+    document.body.append(dialog);
+    pressOn(dialog);
+    expect(app.panel).toBe(Panel.Brush);
+  });
+
+  it("should minimise its toolbars while narrow", async () => {
+    const { layout } = await setup("", 1000);
+    const toolbar = layout.shadowRoot!.querySelector<PcToolbar>("pc-toolbar")!;
+    expect(toolbar.minimised).toBe(false);
+    layout.width = 599;
+    await layout.updateComplete;
+    expect(toolbar.minimised).toBe(true);
+    layout.width = 600;
+    await layout.updateComplete;
+    expect(toolbar.minimised).toBe(false);
   });
 
   it("should report its state as attributes and events", async () => {
@@ -291,6 +355,29 @@ describe("paint-canvas", () => {
     await layout.updateComplete;
     await layout.updateComplete;
     expect(insets()).toEqual({ top: 0, right: 240, bottom: 0, left: 0 });
+  });
+
+  it("should keep the canvas clear of overlay sides, and open the toolbar's panels beside a left one", async () => {
+    const { layout } = await setup();
+    layout.leftModes = "overlay";
+    await layout.updateComplete;
+    const toolbar = query<PcToolbar>(layout, ".side.left pc-toolbar");
+    expect(toolbar.mode).toBe("overlay");
+    expect(layout.getAttribute("left-mode")).toBe("overlay");
+    vi.spyOn(toolbar, "getBoundingClientRect").mockReturnValue({
+      width: 50,
+    } as DOMRect);
+    layout.requestUpdate();
+    await layout.updateComplete;
+    await layout.updateComplete;
+    expect(
+      query<HTMLElement & { insets: unknown }>(layout, "pc-canvas").insets,
+    ).toEqual({ top: 0, right: 0, bottom: 0, left: 50 });
+    expect(
+      query<HTMLElement>(layout, ".center").style.getPropertyValue(
+        "--pc-left-inset",
+      ),
+    ).toBe("50px");
   });
 
   it("should handle keyboard shortcuts unless asked not to, saving a screenshot on Cmd/Ctrl + S", async () => {

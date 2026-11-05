@@ -93,6 +93,17 @@ describe("isValidSettings", () => {
       { shortcuts: { cut: "x" } },
       "must be null",
     ],
+    ["an unknown theme", { ui: { theme: "auto" } }, "/ui/theme must be equal"],
+    [
+      "a locale that isn't a tag",
+      { ui: { locale: "en US" } },
+      "/ui/locale must match",
+    ],
+    [
+      "an unknown UI setting",
+      { ui: { fontSize: 20 } },
+      "additional properties",
+    ],
     [
       "a palette colour that isn't #rrggbb",
       { palette: ["#fff"] },
@@ -116,13 +127,14 @@ describe("isValidSettings", () => {
 });
 
 describe("collectSettings and applySettings", () => {
-  it("should collect a canvas's input settings, shortcuts, palette and colours", () => {
+  it("should collect a canvas's input settings, shortcuts, palette, colours, theme and language", () => {
     const app = createApp();
     expect(collectSettings(app)).toEqual({
       input: app.input.data,
       shortcuts: defaultShortcutBindings(),
       palette: DEFAULT_PALETTE,
       colours: { foreground: "#000000", background: "#ffffff" },
+      ui: { theme: "system" },
     });
   });
 
@@ -142,6 +154,7 @@ describe("collectSettings and applySettings", () => {
     source.palette.set(["#123456"]);
     source.setColour("#ff0000");
     source.setColour("#00ff00", "background");
+    source.ui.update({ theme: "dark", locale: "fr" });
     const target = createApp();
     applySettings(target, collectSettings(source));
     expect(collectSettings(target)).toEqual(collectSettings(source));

@@ -1,4 +1,4 @@
-import { html, nothing, svg, unsafeCSS } from "lit";
+import { html, nothing, svg, unsafeCSS, type PropertyValues } from "lit";
 import styles from "./style.css?inline";
 import { PILLS_CSS as pill } from "../../styles";
 import { ICON_CONTROLS_CSS as iconToggle } from "../../styles";
@@ -20,6 +20,10 @@ import {
 import type { TransformBox } from "../../../lib/transform/geometry";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/classes/Viewport";
 import { iconLabel } from "../../icons";
+import "../PcBrushSize";
+import "../PcNumberSlider";
+import "../PcPopover";
+import type { PcPopover } from "../PcPopover";
 
 /** The lasso tools, which share the mask settings */
 const MASK_TOOLS: readonly Tool[] = [
@@ -37,6 +41,28 @@ const TILT_PARAMS = ["widthConfig", "heightConfig", "rotationConfig"] as const;
 
 /** A setting's variation config key */
 type ParamKey = (typeof TILT_PARAMS)[number];
+
+/** How a setting's `pc-number-slider` works (see `renderNumberField`) */
+interface NumberFieldOptions {
+  min?: number;
+  max?: number;
+  unit?: string;
+  step?: number;
+  dragStep?: number;
+  /** Shown instead of the value */
+  text?: string;
+  disabled?: boolean;
+}
+
+/** A tool's settings in the bar */
+interface ToolView {
+  /** Names the bar for screen readers */
+  label: string;
+  /** The settings at the start of the bar */
+  start: unknown;
+  /** Shown after the bar (e.g. a popover) */
+  after?: unknown;
+}
 
 /**
  * Whether a tool has settings to show in the bar.
@@ -81,6 +107,12 @@ export const withSource = (
 export const roundAngle = (degrees: number): number =>
   Math.round(degrees * 100) / 100;
 
+/** Largest width or height the move tool's fields go to (pixels or percent) */
+export const MAX_MOVE_SIZE = 10000;
+
+/** Shown in a move tool field while there's nothing to move */
+const NO_VALUE = "–";
+
 /** Steps of the zoom slider, across the whole zoom range */
 export const ZOOM_SLIDER_STEPS = 1000;
 
@@ -120,20 +152,21 @@ export const zoomPercent = (zoom: number): string => {
   return `${percent < 10 ? Math.round(percent * 10) / 10 : Math.round(percent)}%`;
 };
 
-/** Read a number input, or undefined if it isn't a number */
-const numberValue = (event: Event): number | undefined => {
-  const value = (event.target as HTMLInputElement).valueAsNumber;
-  return Number.isFinite(value) ? value : undefined;
-};
-
 /**
- * The bar of settings for the current tool, shown at the top of the canvas when the tool has any:
+ * The bar of settings for the current tool, shown at the top of the canvas when the tool has any. The tool's settings
+ * are at the start (part `start`); the end, on the right (part `end`), is for your own items. The `start` and `end`
+ * slots add your own items to each. (Cut, copy and paste are `<pc-clipboard-tools>`.)
  *
- * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), width, height, constrain proportions, pressure, tilt, opacity and "Configure" (fires
- *   `pc-configure-brush` with the tool, "brush" or "eraser").
+ * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`), the
+ *   size settings (a cog button that shows or hides a popover under it with pressure, tilt and focus pen mode above the
+ *   width, constrain proportions and height), opacity and "Configure" (fires `pc-configure-brush` with the tool,
+ *   "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or up
+ *   to raise them, left or down to lower them, or tapped to type a value. Focus pen mode: only pens draw, and touches
+ *   are ignored while a pen is down or just lifted.
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
- *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform).
+ *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform). The width, height
+ *   and angle are `pc-number-slider`s.
  * - Colour sample: point sample (the pixel under the pointer) or area sample (the average of a dragged rectangle).
  * - Zoom: zoom in and out, a slider across the zoom range (logarithmic) with the zoom as a percentage, and reset (100%),
  *   all around the centre of the view.
@@ -141,13 +174,16 @@ const numberValue = (event: Event): number | undefined => {
  * Changes to the brush or eraser apply to the current settings only, not the preset. Styling is structural only.
  *
  * @example
- * html`<pc-tool-settings .app=${app}></pc-tool-settings>`
+ * html`<pc-tool-settings .app=${app}>
+ *   <button slot="end" @click=${share}>Share</button>
+ * </pc-tool-settings>`
  */
 export class PcToolSettings extends PcElement {
   static override properties = {
     ...PcElement.properties,
     app: { attribute: false },
     percent: { state: true },
+    sizeOpen: { state: true },
   };
 
   static override styles = [
@@ -162,6 +198,12 @@ export class PcToolSettings extends PcElement {
 
   /** Whether the move tool's width and height are in percent (of the original size) instead of pixels */
   declare percent: boolean;
+
+  /** Whether the brush or eraser's size settings (width, height, constrain proportions) are shown */
+  declare sizeOpen: boolean;
+
+  // The size settings follow their button when the bar or page scrolls, or the window resizes
+  private readonly placeSizeSettings = () => this.sizePopover?.placeBelow();
 
   private changes = new ChangeController(this, () => {
     const app = this.app;
@@ -181,6 +223,58 @@ export class PcToolSettings extends PcElement {
   constructor() {
     super();
     this.percent = false;
+    this.sizeOpen = false;
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.listenWhileSizeOpen(false);
+  }
+
+  /** The size settings' popover, while a brush or eraser's settings are shown */
+  private get sizePopover(): PcPopover | null {
+    return this.renderRoot.querySelector<PcPopover>("pc-popover.size-popover");
+  }
+
+  /** Follow the window's scrolling and resizing (or stop) */
+  private listenWhileSizeOpen(open: boolean): void {
+    const method = open ? "addEventListener" : "removeEventListener";
+    window[method]("scroll", this.placeSizeSettings, true);
+    window[method]("resize", this.placeSizeSettings);
+  }
+
+  /**
+   * Hide the size settings (e.g. on Escape or a press outside them), returning focus to their button if it was in them.
+   */
+  private closeSizeSettings(): void {
+    const popover = this.sizePopover as PcPopover;
+    const focusWasInside = popover.matches(":focus-within");
+    this.sizeOpen = false;
+    if (focusWasInside)
+      this.renderRoot.querySelector<HTMLElement>(".size-settings")?.focus();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    const tool = this.app?.tool;
+    // Only the brush and eraser have size settings
+    if (tool !== Tool.Brush && tool !== Tool.Eraser) this.sizeOpen = false;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (!changed.has("sizeOpen")) return;
+    this.listenWhileSizeOpen(this.sizeOpen);
+    if (this.sizeOpen) void this.showSizeSettings();
+  }
+
+  /** Put the opened size settings under their button, once they can be measured */
+  private async showSizeSettings(): Promise<void> {
+    const popover = this.sizePopover as PcPopover;
+    // Pressing the button isn't pressing outside the popover
+    popover.anchor = this.renderRoot.querySelector(".size-settings") as Element;
+    await popover.updateComplete;
+    popover.placeBelow();
   }
 
   /** Fire an event that crosses shadow DOM boundaries */
@@ -202,24 +296,61 @@ export class PcToolSettings extends PcElement {
   }
 
   /**
-   * Render the focus pen mode toggle, on the right of every tool's settings: while on, only pens draw, and touches are
-   * ignored while a pen is down or just lifted.
+   * Render the focus pen mode toggle, for the brush and eraser: while on, only pens draw, and touches are ignored while a
+   * pen is down or just lifted.
    */
   private renderFocusPen(app: PaintCanvas) {
-    return html`<label
-      class="icon-toggle focus-pen"
+    const on = app.input.data.focusPen;
+    return html`<button
+      type="button"
+      class="focus-pen icon-button"
       title=${this.t("paintCanvas.toolSettings.focusPenHint")}
+      aria-label=${this.t("paintCanvas.toolSettings.focusPen")}
+      aria-pressed=${String(on)}
+      @click=${() => app.input.update({ focusPen: !on })}
     >
-      <input
-        type="checkbox"
-        .checked=${live(app.input.data.focusPen)}
-        @change=${(e: Event) =>
-          app.input.update({
-            focusPen: (e.target as HTMLInputElement).checked,
-          })}
-      />
-      ${iconLabel(this.iconUrl("focusPen"), this.t("paintCanvas.toolSettings.focusPen"))}
-    </label>`;
+      <img src=${this.iconUrl("focusPen")} alt="" />
+    </button>`;
+  }
+
+  /**
+   * Render a setting as a named `pc-number-slider` (dragged or typed), from 1 to 256 pixels unless given another range.
+   */
+  private renderNumberField(
+    name: string,
+    label: string,
+    value: number,
+    change: (value: number) => void,
+    {
+      min = MIN_BRUSH_SIZE,
+      max = MAX_BRUSH_SIZE,
+      unit = "",
+      step = 1,
+      dragStep = step,
+      text = "",
+      disabled = false,
+    }: NumberFieldOptions = {},
+  ) {
+    return html`<div class="field">
+      <span aria-hidden="true">${label}</span>
+      <pc-number-slider
+        class=${name}
+        min=${min}
+        max=${max}
+        step=${step}
+        drag-step=${dragStep}
+        unit=${unit}
+        label=${label}
+        .text=${text}
+        ?disabled=${disabled}
+        .value=${live(value)}
+        @pc-change=${(e: CustomEvent<{ value: number }>) => {
+          change(e.detail.value);
+          // Show the value it got, which can differ (e.g. the other side reached a limit)
+          this.requestUpdate();
+        }}
+      ></pc-number-slider>
+    </div>`;
   }
 
   /** Render the brush or eraser settings */
@@ -227,7 +358,7 @@ export class PcToolSettings extends PcElement {
     app: PaintCanvas,
     settings: BrushSettings,
     kind: "brush" | "eraser",
-  ) {
+  ): ToolView {
     const preset = settings.preset;
     const pressure = PRESSURE_PARAMS.some(
       (param) => preset[param]?.usePressure,
@@ -237,171 +368,173 @@ export class PcToolSettings extends PcElement {
       kind === "eraser" ? "paintCanvas.tool.eraser" : "paintCanvas.tool.brush",
     );
     const panel = kind === "eraser" ? Panel.Eraser : Panel.Brush;
-    return html`<div
-      role="toolbar"
-      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: label })}
-    >
-      <button
-        type="button"
-        class="preset"
-        title=${this.t("paintCanvas.toolSettings.presets", { tool: label })}
-        aria-expanded=${app.panel === panel ? "true" : "false"}
-        @click=${() => app.togglePanel(panel)}
-      >
-        <span
-          class=${preset.image ? "shape-preview image" : "shape-preview"}
-          style=${styleMap({
-            maskImage:
-              typeof preset.image === "string"
-                ? `url("${preset.image}")`
-                : undefined,
-          })}
-        ></span>
-        ${preset.name ?? preset.id}
-      </button>
-      <label>
-        ${this.t("paintCanvas.common.width")}
-        <input
-          type="number"
-          class="width"
-          min=${MIN_BRUSH_SIZE}
-          max=${MAX_BRUSH_SIZE}
-          .value=${String(settings.width)}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined) settings.setSize(value, settings.height);
-          }}
-        />
-      </label>
-      <label
-        class="icon-toggle"
-        title=${this.t("paintCanvas.toolSettings.constrainProportions")}
-      >
-        <input
-          type="checkbox"
-          class="constrain"
-          .checked=${preset.constrainProportions ?? false}
-          @change=${(e: Event) =>
-            settings.update({
-              constrainProportions: (e.target as HTMLInputElement).checked,
+    const sizeSettings = this.t("paintCanvas.toolSettings.sizeSettings");
+    return {
+      label: this.t("paintCanvas.toolSettings.settings", { tool: label }),
+      start: html`<button
+          type="button"
+          class="preset"
+          data-panel=${panel}
+          title=${this.t("paintCanvas.toolSettings.presets", { tool: label })}
+          aria-expanded=${app.panel === panel ? "true" : "false"}
+          @click=${() => app.togglePanel(panel)}
+        >
+          <span
+            class=${preset.image ? "shape-preview image" : "shape-preview"}
+            style=${styleMap({
+              maskImage:
+                typeof preset.image === "string"
+                  ? `url("${preset.image}")`
+                  : undefined,
             })}
-        />
-        ${iconLabel(this.iconUrl(preset.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
-      </label>
-      <label>
-        ${this.t("paintCanvas.common.height")}
-        <input
-          type="number"
-          class="height"
-          min=${MIN_BRUSH_SIZE}
-          max=${MAX_BRUSH_SIZE}
-          .value=${String(settings.height)}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined) settings.setHeight(value);
-          }}
-        />
-      </label>
-      <label
-        class="icon-toggle"
-        title=${this.t("paintCanvas.toolSettings.pressure")}
+          ></span>
+          ${preset.name ?? preset.id}
+        </button>
+        <div class="field">
+          <span aria-hidden="true">${this.t("paintCanvas.common.size")}</span>
+          <pc-brush-size
+            class="size"
+            .settings=${settings}
+            label=${this.t("paintCanvas.brushMenu.size", { tool: label })}
+          ></pc-brush-size>
+        </div>
+        <button
+          type="button"
+          class="size-settings"
+          title=${sizeSettings}
+          aria-label=${sizeSettings}
+          aria-haspopup="dialog"
+          aria-expanded=${this.sizeOpen ? "true" : "false"}
+          @click=${() => (this.sizeOpen = !this.sizeOpen)}
+        >
+          <img src=${this.iconUrl("cog")} alt="" />
+        </button>
+
+        ${this.renderNumberField(
+          "opacity",
+          this.t("paintCanvas.common.opacity"),
+          Math.round((preset.alpha ?? 1) * 100),
+          (value) => settings.update({ alpha: value / 100 }),
+          { min: 0, max: 100, unit: "%" },
+        )}
+        <button
+          type="button"
+          class="configure"
+          @click=${() => this.emit("pc-configure-brush", kind)}
+        >
+          ${this.t("paintCanvas.toolSettings.configure")}
+        </button>`,
+      after: html`<pc-popover
+        class="size-popover"
+        arrow
+        label=${sizeSettings}
+        ?open=${this.sizeOpen}
+        @pc-close=${this.closeSizeSettings}
       >
-        <input
-          type="checkbox"
-          class="pressure"
-          .checked=${pressure}
-          @change=${(e: Event) =>
-            settings.update(
-              withSource(
-                preset,
-                PRESSURE_PARAMS,
-                "usePressure",
-                (e.target as HTMLInputElement).checked,
-              ),
-            )}
-        />
-        ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
-      </label>
-      <label
-        class="icon-toggle"
-        title=${this.t("paintCanvas.toolSettings.tilt")}
-      >
-        <input
-          type="checkbox"
-          class="tilt"
-          .checked=${tilt}
-          @change=${(e: Event) =>
-            settings.update(
-              withSource(
-                preset,
-                TILT_PARAMS,
-                "useTilt",
-                (e.target as HTMLInputElement).checked,
-              ),
-            )}
-        />
-        ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
-      </label>
-      <label>
-        ${this.t("paintCanvas.common.opacity")}
-        <input
-          type="number"
-          class="opacity"
-          min="0"
-          max="100"
-          .value=${String(Math.round((preset.alpha ?? 1) * 100))}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined)
-              settings.update({
-                alpha: Math.max(0, Math.min(100, value)) / 100,
-              });
-          }}
-        />
-        <span class="unit">%</span>
-      </label>
-      <button
-        type="button"
-        class="configure"
-        @click=${() => this.emit("pc-configure-brush", kind)}
-      >
-        ${this.t("paintCanvas.toolSettings.configure")}
-      </button>
-      ${this.renderFocusPen(app)}
-    </div>`;
+        <div class="size-toggles">
+          <label
+            class="icon-toggle"
+            title=${this.t("paintCanvas.toolSettings.pressure")}
+          >
+            <input
+              type="checkbox"
+              class="pressure"
+              .checked=${pressure}
+              @change=${(e: Event) =>
+                settings.update(
+                  withSource(
+                    preset,
+                    PRESSURE_PARAMS,
+                    "usePressure",
+                    (e.target as HTMLInputElement).checked,
+                  ),
+                )}
+            />
+            ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
+          </label>
+          <label
+            class="icon-toggle"
+            title=${this.t("paintCanvas.toolSettings.tilt")}
+          >
+            <input
+              type="checkbox"
+              class="tilt"
+              .checked=${tilt}
+              @change=${(e: Event) =>
+                settings.update(
+                  withSource(
+                    preset,
+                    TILT_PARAMS,
+                    "useTilt",
+                    (e.target as HTMLInputElement).checked,
+                  ),
+                )}
+            />
+            ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
+          </label>
+          ${this.renderFocusPen(app)}
+        </div>
+        <div class="size-fields">
+          ${this.renderNumberField(
+            "width",
+            this.t("paintCanvas.common.width"),
+            settings.width,
+            (value) => settings.setSize(value, settings.height),
+          )}
+          <label
+            class="icon-toggle"
+            title=${this.t("paintCanvas.toolSettings.constrainProportions")}
+          >
+            <input
+              type="checkbox"
+              class="constrain"
+              .checked=${preset.constrainProportions ?? false}
+              @change=${(e: Event) =>
+                settings.update({
+                  constrainProportions: (e.target as HTMLInputElement).checked,
+                })}
+            />
+            ${iconLabel(this.iconUrl(preset.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
+          </label>
+          ${this.renderNumberField(
+            "height",
+            this.t("paintCanvas.common.height"),
+            settings.height,
+            (value) => settings.setHeight(value),
+          )}
+        </div>
+      </pc-popover>`,
+    };
   }
 
   /** Render the mask settings */
-  private renderMask(app: PaintCanvas) {
-    return html`<div
-      role="toolbar"
-      aria-label=${this.t("paintCanvas.toolSettings.maskSettings")}
-    >
-      <button
-        type="button"
-        class="pill select-all"
-        @click=${() => app.selection.selectAll()}
-      >
-        ${this.t("paintCanvas.toolSettings.selectAll")}
-      </button>
-      <button
-        type="button"
-        class="pill invert"
-        ?disabled=${!app.selection.active}
-        @click=${() => app.selection.invert()}
-      >
-        ${this.t("paintCanvas.toolSettings.invertSelection")}
-      </button>
-      <button
-        type="button"
-        class="pill deselect"
-        ?disabled=${!app.selection.active}
-        @click=${() => app.selection.clear()}
-      >
-        ${this.t("paintCanvas.toolSettings.deselect")}
-      </button>
-      ${this.renderFocusPen(app)}
-    </div>`;
+  private renderMask(app: PaintCanvas): ToolView {
+    return {
+      label: this.t("paintCanvas.toolSettings.maskSettings"),
+      start: html`<button
+          type="button"
+          class="pill select-all"
+          @click=${() => app.selection.selectAll()}
+        >
+          ${this.t("paintCanvas.toolSettings.selectAll")}
+        </button>
+        <button
+          type="button"
+          class="pill invert"
+          ?disabled=${!app.selection.active}
+          @click=${() => app.selection.invert()}
+        >
+          ${this.t("paintCanvas.toolSettings.invertSelection")}
+        </button>
+        <button
+          type="button"
+          class="pill deselect"
+          ?disabled=${!app.selection.active}
+          @click=${() => app.selection.clear()}
+        >
+          ${this.t("paintCanvas.toolSettings.deselect")}
+        </button>`,
+    };
   }
 
   /**
@@ -411,8 +544,8 @@ export class PcToolSettings extends PcElement {
   private resizeBox(app: PaintCanvas, side: "width" | "height", value: number) {
     const { box, source } = app.transform;
     if (!box || !source) return;
+    // At least 1 (the fields' smallest value)
     const pixels = this.percent ? (source[side] * value) / 100 : value;
-    if (pixels <= 0) return;
     const other = side === "width" ? "height" : "width";
     const ratio = Math.abs(box[other] / box[side]);
     app.transform.setBox({
@@ -424,193 +557,189 @@ export class PcToolSettings extends PcElement {
     });
   }
 
-  /** A box side in the current unit, for an input */
+  /** A box side in the current unit (pixels or percent) */
   private sideValue(
     box: TransformBox,
     source: { width: number; height: number },
     side: "width" | "height",
-  ) {
+  ): number {
     const pixels = Math.abs(box[side]);
-    return String(
-      Math.round(this.percent ? (pixels / source[side]) * 100 : pixels),
-    );
+    return Math.round(this.percent ? (pixels / source[side]) * 100 : pixels);
   }
 
   /** Render the move, scale and rotate settings */
-  private renderMove(app: PaintCanvas) {
+  private renderMove(app: PaintCanvas): ToolView {
     const { box, source } = app.transform;
     const disabled = !box || !source;
     const side = (name: "width" | "height", label: string) =>
-      html`<label>
-        ${label}
-        <input
-          type="number"
-          class=${name}
-          min="1"
-          ?disabled=${disabled}
-          .value=${box && source ? this.sideValue(box, source, name) : ""}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined) this.resizeBox(app, name, value);
-          }}
-        />
-      </label>`;
+      this.renderNumberField(
+        name,
+        label,
+        box && source ? this.sideValue(box, source, name) : 0,
+        (value) => this.resizeBox(app, name, value),
+        {
+          max: MAX_MOVE_SIZE,
+          unit: this.percent ? "%" : "",
+          text: disabled ? NO_VALUE : "",
+          disabled,
+        },
+      );
     const rotate = (by: (rotation: number) => number) =>
       this.changeBox(app, (current) => ({
         rotation: by(current.rotation) % 360,
       }));
-    return html`<div
-      role="toolbar"
-      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: this.t("paintCanvas.tool.move") })}
-    >
-      ${side("width", this.t("paintCanvas.common.width"))}
-      <label
-        class="icon-toggle"
-        title=${this.t("paintCanvas.toolSettings.constrainProportions")}
-      >
-        <input
-          type="checkbox"
-          class="constrain"
-          .checked=${live(app.constrainProportions)}
-          @change=${(e: Event) =>
-            app.setConstrainProportions((e.target as HTMLInputElement).checked)}
-        />
-        ${iconLabel(this.iconUrl(app.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
-      </label>
-      ${side("height", this.t("paintCanvas.common.height"))}
-      <label>
-        <input
-          type="checkbox"
-          class="percent"
-          .checked=${this.percent}
-          @change=${(e: Event) =>
-            (this.percent = (e.target as HTMLInputElement).checked)}
-        />
-        ${this.t("paintCanvas.toolSettings.percent")}
-      </label>
-      <button
-        type="button"
-        class="icon-button flip-horizontal"
-        title=${this.t("paintCanvas.toolSettings.flipHorizontal")}
-        ?disabled=${disabled}
-        @click=${() =>
-          this.changeBox(app, (current) => ({ width: -current.width }))}
-      >
-        ${iconLabel(this.iconUrl("flipHorizontal"), this.t("paintCanvas.toolSettings.flipHorizontal"))}
-      </button>
-      <button
-        type="button"
-        class="icon-button flip-vertical"
-        title=${this.t("paintCanvas.toolSettings.flipVertical")}
-        ?disabled=${disabled}
-        @click=${() =>
-          this.changeBox(app, (current) => ({ height: -current.height }))}
-      >
-        ${iconLabel(this.iconUrl("flipVertical"), this.t("paintCanvas.toolSettings.flipVertical"))}
-      </button>
-      <label>
-        ${this.t("paintCanvas.toolSettings.angle")}
-        <input
-          type="number"
-          class="angle"
-          step="0.01"
+    return {
+      label: this.t("paintCanvas.toolSettings.settings", {
+        tool: this.t("paintCanvas.tool.move"),
+      }),
+      start: html`${side("width", this.t("paintCanvas.common.width"))}
+        <label
+          class="icon-toggle"
+          title=${this.t("paintCanvas.toolSettings.constrainProportions")}
+        >
+          <input
+            type="checkbox"
+            class="constrain"
+            .checked=${live(app.constrainProportions)}
+            @change=${(e: Event) =>
+              app.setConstrainProportions(
+                (e.target as HTMLInputElement).checked,
+              )}
+          />
+          ${iconLabel(this.iconUrl(app.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
+        </label>
+        ${side("height", this.t("paintCanvas.common.height"))}
+        <label>
+          <input
+            type="checkbox"
+            class="percent"
+            .checked=${this.percent}
+            @change=${(e: Event) =>
+              (this.percent = (e.target as HTMLInputElement).checked)}
+          />
+          ${this.t("paintCanvas.toolSettings.percent")}
+        </label>
+        <button
+          type="button"
+          class="icon-button flip-horizontal"
+          title=${this.t("paintCanvas.toolSettings.flipHorizontal")}
           ?disabled=${disabled}
-          .value=${box ? String(roundAngle(box.rotation)) : ""}
-          @change=${(e: Event) => {
-            const value = numberValue(e);
-            if (value !== undefined) rotate(() => roundAngle(value));
-          }}
-        />
-        <span class="unit">°</span>
-      </label>
-      <button
-        type="button"
-        class="icon-button rotate-left"
-        title=${this.t("paintCanvas.toolSettings.rotateLeft")}
-        ?disabled=${disabled}
-        @click=${() => rotate((rotation) => rotation - 90)}
-      >
-        ${iconLabel(this.iconUrl("rotate90Left"), this.t("paintCanvas.toolSettings.rotateLeft"))}
-      </button>
-      <button
-        type="button"
-        class="icon-button rotate-right"
-        title=${this.t("paintCanvas.toolSettings.rotateRight")}
-        ?disabled=${disabled}
-        @click=${() => rotate((rotation) => rotation + 90)}
-      >
-        ${iconLabel(this.iconUrl("rotate90Right"), this.t("paintCanvas.toolSettings.rotateRight"))}
-      </button>
-      <button
-        type="button"
-        class="pill reset"
-        ?disabled=${disabled}
-        @click=${() => app.cancelTransform()}
-      >
-        ${this.t("paintCanvas.toolSettings.reset")}
-      </button>
-      ${this.renderFocusPen(app)}
-    </div>`;
+          @click=${() =>
+            this.changeBox(app, (current) => ({ width: -current.width }))}
+        >
+          ${iconLabel(this.iconUrl("flipHorizontal"), this.t("paintCanvas.toolSettings.flipHorizontal"))}
+        </button>
+        <button
+          type="button"
+          class="icon-button flip-vertical"
+          title=${this.t("paintCanvas.toolSettings.flipVertical")}
+          ?disabled=${disabled}
+          @click=${() =>
+            this.changeBox(app, (current) => ({ height: -current.height }))}
+        >
+          ${iconLabel(this.iconUrl("flipVertical"), this.t("paintCanvas.toolSettings.flipVertical"))}
+        </button>
+        ${this.renderNumberField(
+          "angle",
+          this.t("paintCanvas.toolSettings.angle"),
+          box ? roundAngle(box.rotation) : 0,
+          (value) => rotate(() => roundAngle(value)),
+          {
+            min: -360,
+            max: 360,
+            step: 0.01,
+            dragStep: 1,
+            unit: "°",
+            text: disabled ? NO_VALUE : "",
+            disabled,
+          },
+        )}
+        <button
+          type="button"
+          class="icon-button rotate-left"
+          title=${this.t("paintCanvas.toolSettings.rotateLeft")}
+          ?disabled=${disabled}
+          @click=${() => rotate((rotation) => rotation - 90)}
+        >
+          ${iconLabel(this.iconUrl("rotate90Left"), this.t("paintCanvas.toolSettings.rotateLeft"))}
+        </button>
+        <button
+          type="button"
+          class="icon-button rotate-right"
+          title=${this.t("paintCanvas.toolSettings.rotateRight")}
+          ?disabled=${disabled}
+          @click=${() => rotate((rotation) => rotation + 90)}
+        >
+          ${iconLabel(this.iconUrl("rotate90Right"), this.t("paintCanvas.toolSettings.rotateRight"))}
+        </button>
+        <button
+          type="button"
+          class="pill reset"
+          ?disabled=${disabled}
+          @click=${() => app.cancelTransform()}
+        >
+          ${this.t("paintCanvas.toolSettings.reset")}
+        </button>`,
+    };
   }
 
   /** Render the zoom settings */
-  private renderZoom(app: PaintCanvas) {
+  private renderZoom(app: PaintCanvas): ToolView {
     const view = app.viewport;
     const centre = { x: view.width / 2, y: view.height / 2 };
-    return html`<div
-      role="toolbar"
-      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: this.t("paintCanvas.tool.zoom") })}
-    >
-      <button
-        type="button"
-        class="zoom-in"
-        title=${this.t("paintCanvas.toolSettings.zoomIn")}
-        aria-label=${this.t("paintCanvas.toolSettings.zoomIn")}
-        ?disabled=${view.zoom >= MAX_ZOOM}
-        @click=${() => view.zoomIn(centre)}
-      >
-        <img src=${this.iconUrl("zoomIn")} alt="" />
-      </button>
-      <button
-        type="button"
-        class="zoom-out"
-        title=${this.t("paintCanvas.toolSettings.zoomOut")}
-        aria-label=${this.t("paintCanvas.toolSettings.zoomOut")}
-        ?disabled=${view.zoom <= MIN_ZOOM}
-        @click=${() => view.zoomOut(centre)}
-      >
-        <img src=${this.iconUrl("zoomOut")} alt="" />
-      </button>
-      <label>
-        ${this.t("paintCanvas.tool.zoom")}
-        <input
-          type="range"
-          class="zoom"
-          min="0"
-          max=${ZOOM_SLIDER_STEPS}
-          step="1"
-          .value=${String(zoomToSlider(view.zoom))}
-          @input=${(e: Event) =>
-            view.zoomAt(
-              centre,
-              sliderToZoom((e.target as HTMLInputElement).valueAsNumber),
-            )}
-        />
-        <output>${zoomPercent(view.zoom)}</output>
-      </label>
-      <button
-        type="button"
-        class="pill reset"
-        @click=${() => view.zoomAt(centre, 1)}
-      >
-        ${this.t("paintCanvas.toolSettings.reset")}
-      </button>
-      ${this.renderFocusPen(app)}
-    </div>`;
+    return {
+      label: this.t("paintCanvas.toolSettings.settings", {
+        tool: this.t("paintCanvas.tool.zoom"),
+      }),
+      start: html`<button
+          type="button"
+          class="zoom-in"
+          title=${this.t("paintCanvas.toolSettings.zoomIn")}
+          aria-label=${this.t("paintCanvas.toolSettings.zoomIn")}
+          ?disabled=${view.zoom >= MAX_ZOOM}
+          @click=${() => view.zoomIn(centre)}
+        >
+          <img src=${this.iconUrl("zoomIn")} alt="" />
+        </button>
+        <button
+          type="button"
+          class="zoom-out"
+          title=${this.t("paintCanvas.toolSettings.zoomOut")}
+          aria-label=${this.t("paintCanvas.toolSettings.zoomOut")}
+          ?disabled=${view.zoom <= MIN_ZOOM}
+          @click=${() => view.zoomOut(centre)}
+        >
+          <img src=${this.iconUrl("zoomOut")} alt="" />
+        </button>
+        <label>
+          ${this.t("paintCanvas.tool.zoom")}
+          <input
+            type="range"
+            class="zoom"
+            min="0"
+            max=${ZOOM_SLIDER_STEPS}
+            step="1"
+            .value=${String(zoomToSlider(view.zoom))}
+            @input=${(e: Event) =>
+              view.zoomAt(
+                centre,
+                sliderToZoom((e.target as HTMLInputElement).valueAsNumber),
+              )}
+          />
+          <output>${zoomPercent(view.zoom)}</output>
+        </label>
+        <button
+          type="button"
+          class="pill reset"
+          @click=${() => view.zoomAt(centre, 1)}
+        >
+          ${this.t("paintCanvas.toolSettings.reset")}
+        </button>`,
+    };
   }
 
   /** Render the colour sample tool's settings: point or area sampling */
-  private renderColourSample(app: PaintCanvas) {
+  private renderColourSample(app: PaintCanvas): ToolView {
     const modes: [SampleMode, string, unknown][] = [
       [
         "point",
@@ -625,11 +754,11 @@ export class PcToolSettings extends PcElement {
         svg`<defs><linearGradient id="area-gradient"><stop offset="0" stop-color="currentColor" stop-opacity="0" /><stop offset="1" stop-color="currentColor" /></linearGradient></defs><rect x="2" y="4" width="16" height="12" fill="url(#area-gradient)" />`,
       ],
     ];
-    return html`<div
-      role="toolbar"
-      aria-label=${this.t("paintCanvas.toolSettings.settings", { tool: this.t("paintCanvas.tool.colourSample") })}
-    >
-      ${modes.map(
+    return {
+      label: this.t("paintCanvas.toolSettings.settings", {
+        tool: this.t("paintCanvas.tool.colourSample"),
+      }),
+      start: html`${modes.map(
         ([mode, label, icon]) =>
           html`<button
             type="button"
@@ -651,14 +780,12 @@ export class PcToolSettings extends PcElement {
               ${icon}
             </svg>
           </button>`,
-      )}
-      ${this.renderFocusPen(app)}
-    </div>`;
+      )}`,
+    };
   }
 
-  override render() {
-    const app = this.app;
-    if (!app) return nothing;
+  /** The current tool's settings, if it has any */
+  private toolView(app: PaintCanvas): ToolView | undefined {
     switch (app.tool) {
       case Tool.Brush:
         return this.renderBrush(app, app.brush, "brush");
@@ -671,8 +798,27 @@ export class PcToolSettings extends PcElement {
       case Tool.ColourSample:
         return this.renderColourSample(app);
       default:
-        return MASK_TOOLS.includes(app.tool) ? this.renderMask(app) : nothing;
+        return MASK_TOOLS.includes(app.tool) ? this.renderMask(app) : undefined;
     }
+  }
+
+  override render() {
+    const app = this.app;
+    const view = app && this.toolView(app);
+    if (!view) return nothing;
+    return html`<div
+        role="toolbar"
+        aria-label=${view.label}
+        @scroll=${this.placeSizeSettings}
+      >
+        <div class="start" part="start">
+          ${view.start}<slot name="start"></slot>
+        </div>
+        <div class="end" part="end">
+          <slot name="end"></slot>
+        </div>
+      </div>
+      ${view.after ?? nothing}`;
   }
 }
 

@@ -7,6 +7,7 @@ import {
   zoomModifierName,
   type InputSettingsData,
 } from "../../../lib/classes/InputSettings";
+import type { UiSettingsLike } from "../../../lib/classes/UiSettings";
 import {
   GESTURE_ACTIONS,
   TOUCH_GESTURES,
@@ -39,6 +40,9 @@ const ACTION_KEYS: Record<GestureAction, string> = {
  * and the language. Changes apply straight away. Hide focus pen mode or the language with `focusPen` and `languages`
  * set to false. Fires `pc-language-change` (with the locale) when the user picks a language.
  *
+ * With `ui` (e.g. the canvas's `ui`), the picked language is kept there, and used whenever it changes (e.g. when
+ * restored), so it's kept with the other app settings.
+ *
  * @example
  * html`<pc-input-settings .settings=${canvas.input}></pc-input-settings>`
  */
@@ -46,6 +50,7 @@ export class PcInputSettings extends PcElement {
   static override properties = {
     ...PcElement.properties,
     settings: { attribute: false },
+    ui: { attribute: false },
     focusPen: { type: Boolean },
     languages: { type: Boolean },
     touch: { type: Boolean },
@@ -96,6 +101,9 @@ export class PcInputSettings extends PcElement {
   /** The settings shown and changed */
   declare settings?: InputSettingsLike;
 
+  /** Where the language is kept, if anywhere (e.g. the canvas's `ui`) */
+  declare ui?: UiSettingsLike;
+
   /** Whether to show focus pen mode (default true) */
   declare focusPen: boolean;
 
@@ -108,7 +116,10 @@ export class PcInputSettings extends PcElement {
   /** Name of the zoom modifier key ("Cmd" or "Ctrl", detected by default) */
   declare modifier: string;
 
-  private changes = new ChangeController(this, () => [this.settings]);
+  private changes = new ChangeController(this, () => [this.settings, this.ui]);
+
+  /** The kept language last used, so it's only switched to once */
+  private usedLocale?: string;
 
   constructor() {
     super();
@@ -116,6 +127,15 @@ export class PcInputSettings extends PcElement {
     this.languages = true;
     this.touch = isTouchDevice();
     this.modifier = zoomModifierName();
+  }
+
+  /** Use the kept language when it changes */
+  protected override willUpdate(): void {
+    const locale = this.ui?.data.locale;
+    if (locale === undefined || locale === this.usedLocale) return;
+    this.usedLocale = locale;
+    if (locale !== this.translations.locale)
+      void this.translations.setLocale(locale);
   }
 
   /** A checkbox for an on/off setting */
@@ -189,6 +209,8 @@ export class PcInputSettings extends PcElement {
         name="language"
         @change=${(e: Event) => {
           const locale = (e.target as HTMLSelectElement).value;
+          this.usedLocale = locale;
+          this.ui?.update({ locale });
           void translations
             .setLocale(locale)
             .then(() => emit(this, "pc-language-change", { locale }));

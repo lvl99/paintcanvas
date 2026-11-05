@@ -6,6 +6,7 @@ import {
   findLayout,
   matchesState,
   parseSideModes,
+  showsRail,
   sideModeFor,
   type LayoutState,
 } from "..";
@@ -31,6 +32,24 @@ describe("parseSideModes", () => {
     expect(parseSideModes("sideways, rail@wide, floating@300, ")).toEqual([
       { mode: "floating", below: 300 },
     ]);
+  });
+
+  it("should read the overlay mode", () => {
+    expect(parseSideModes("docked, overlay@600")).toEqual([
+      { mode: "docked" },
+      { mode: "overlay", below: 600 },
+    ]);
+  });
+});
+
+describe("showsRail", () => {
+  it.each([
+    ["docked", false],
+    ["rail", true],
+    ["floating", false],
+    ["overlay", true],
+  ] as const)("should tell whether %s shows a rail", (mode, rail) => {
+    expect(showsRail(mode)).toBe(rail);
   });
 });
 

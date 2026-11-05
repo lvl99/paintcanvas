@@ -1,5 +1,6 @@
 import { css, html, nothing, type PropertyValues } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
+import { markDismissingPress } from "../../dismiss";
 import {
   ariaKeyShortcut,
   shortcutLabel,
@@ -10,8 +11,10 @@ import "../PcIcon";
 /** Longest shortcut label shown on a menu item (characters); longer ones are left out */
 export const MAX_SHORTCUT_LABEL_LENGTH = 3;
 
-/** An item in a context menu */
+/** An item in a menu that can be chosen */
 export interface MenuItem {
+  /** Optional; items are the default kind of menu entry */
+  type?: "item";
   /** What `pc-select` gives when it's chosen */
   value: string;
   label: string;
@@ -24,7 +27,41 @@ export interface MenuItem {
   icon?: string;
   /** The action's keyboard shortcut, shown on its right as symbols (e.g. ⌘S) when 3 characters or fewer */
   shortcut?: KeyCombo;
+  /** Marks the current choice (e.g. the selected tool) with the `selected` class and a purple background */
+  selected?: boolean;
 }
+
+/** A non-interactive label naming the items after it (up to the next label or divider), e.g. "Tools" */
+export interface MenuLabel {
+  type: "label";
+  label: string;
+}
+
+/** A non-interactive line between items */
+export interface MenuDivider {
+  type: "divider";
+}
+
+/** Anything a menu can show: an item, a label or a divider */
+export type MenuEntry = MenuItem | MenuLabel | MenuDivider;
+
+/** A run of items, with the label before them if there is one */
+interface MenuSection {
+  label?: string;
+  items: MenuItem[];
+  /** Whether a divider comes before it */
+  divided: boolean;
+}
+
+/**
+ * Whether a menu entry is an item that can be chosen.
+ *
+ * @example
+ * isMenuItem({ value: "grid", label: "Grid" }); // true
+ * isMenuItem({ type: "divider" }); // false
+ */
+export const isMenuItem = (entry: MenuEntry): entry is MenuItem =>
+  entry.type === undefined || entry.type === "item";
 
 /**
  * Whether a menu item has something to show on its left: a checkmark or an icon.
@@ -36,10 +73,47 @@ const hasStart = (item: MenuItem): boolean =>
   item.checked !== undefined || item.icon !== undefined;
 
 /**
+ * A menu item's classes: `danger` and `selected`, when it is.
+ *
+ * @example
+ * itemClasses({ value: "brush", label: "Brush", selected: true }); // "selected"
+ */
+const itemClasses = (item: MenuItem): string =>
+  [item.danger && "danger", item.selected && "selected"]
+    .filter(Boolean)
+    .join(" ");
+
+/**
+ * Split menu entries into sections: a label or divider starts a new one.
+ *
+ * @example
+ * menuSections([{ type: "label", label: "Tools" }, { value: "brush", label: "Brush" }]);
+ * // [{ label: "Tools", items: [{ value: "brush", label: "Brush" }], divided: false }]
+ */
+export const menuSections = (entries: readonly MenuEntry[]): MenuSection[] => {
+  const sections: MenuSection[] = [{ items: [], divided: false }];
+  for (const entry of entries) {
+    const current = sections[sections.length - 1] as MenuSection;
+    if (isMenuItem(entry)) current.items.push(entry);
+    else if (entry.type === "divider")
+      sections.push({ items: [], divided: true });
+    // A label after a divider (or at the start) names the section the divider began
+    else if (current.items.length === 0 && current.label === undefined)
+      current.label = entry.label;
+    else sections.push({ label: entry.label, items: [], divided: false });
+  }
+  return sections.filter(
+    (section) =>
+      section.divided || section.label !== undefined || section.items.length,
+  );
+};
+
+/**
  * A list of menu items, e.g. a layer's actions (see `pc-context-menu` for a button that opens one). While `open`, it shows its items at `x`, `y` (in the page's viewport) and takes
  * keyboard focus: arrow keys, Home and End move between items, Enter or Space chooses one, and Escape or Tab closes it.
  * Items can show a checkmark (toggles) or an icon on their left, and their keyboard shortcut on their right; long
- * labels wrap.
+ * labels wrap. Non-interactive labels (`{ type: "label", label }`, small bold text naming the items after them) and
+ * dividers (`{ type: "divider" }`) can go between items; keyboard focus skips them.
  * Fires `pc-select` with the chosen item's value, and `pc-close` when it should close (after choosing, Escape, Tab, or a
  * press outside it and its `anchor`). The implementer sets `open` to false in response.
  *
@@ -65,6 +139,8 @@ export class PcMenu extends PcElement {
         position: fixed;
         z-index: 10;
         display: none;
+        user-select: none;
+        -webkit-user-select: none;
       }
       :host([open]) {
         display: block;
@@ -103,6 +179,16 @@ export class PcMenu extends PcElement {
       button.danger {
         color: var(--pc-dismiss-text);
       }
+      /* The current choice, e.g. the selected tool, like other selected buttons */
+      button.selected,
+      button.selected:hover:not(:disabled),
+      button.selected:focus-visible {
+        background: var(--pc-accent);
+        color: var(--pc-accent-text);
+      }
+      button.selected .end {
+        color: inherit;
+      }
       .start {
         /* Icons as tall as the text, so items with icons are no taller */
         --pc-icon-size: 1.2em;
@@ -125,12 +211,30 @@ export class PcMenu extends PcElement {
         color: var(--pc-text-muted);
         cursor: default;
       }
+      [role="group"] {
+        display: flex;
+        flex-direction: column;
+      }
+      .heading {
+        padding: var(--pc-space-2) var(--pc-space-3) var(--pc-space-1);
+        color: var(--pc-text-muted);
+        font-family: var(--pc-font);
+        font-size: var(--pc-font-size-small);
+        font-weight: bold;
+        cursor: default;
+      }
+      [role="separator"] {
+        height: 1px;
+        margin: var(--pc-space-1) 0;
+        background: var(--pc-border);
+      }
     `,
   ];
 
   declare open: boolean;
 
-  declare items: readonly MenuItem[];
+  /** Items, labels and dividers, in order */
+  declare items: readonly MenuEntry[];
 
   /** Names the menu for screen readers */
   declare label: string;
@@ -146,11 +250,13 @@ export class PcMenu extends PcElement {
   private readonly onPointerDown = (event: PointerEvent) => {
     const path = event.composedPath();
     if (
-      this.open &&
-      !path.includes(this) &&
-      !(this.anchor && path.includes(this.anchor))
+      !this.open ||
+      path.includes(this) ||
+      (this.anchor && path.includes(this.anchor))
     )
-      this.close();
+      return;
+    markDismissingPress(event);
+    this.close();
   };
 
   constructor() {
@@ -243,36 +349,65 @@ export class PcMenu extends PcElement {
       : nothing;
   }
 
+  /** An item's button */
+  private renderItem(item: MenuItem, showStart: boolean) {
+    return html`<button
+      part="item"
+      type="button"
+      role=${item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
+      aria-checked=${item.checked === undefined ? nothing : String(item.checked)}
+      aria-keyshortcuts=${
+        item.shortcut ? ariaKeyShortcut(item.shortcut) : nothing
+      }
+      class=${itemClasses(item) || nothing}
+      aria-current=${item.selected ? "true" : nothing}
+      ?disabled=${item.disabled}
+      data-value=${item.value}
+      @click=${() => this.choose(item)}
+    >
+      ${showStart ? this.renderStart(item) : nothing}<span class="label"
+        >${item.label}</span
+      >${this.renderEnd(item)}
+    </button>`;
+  }
+
+  /** A section: its divider and label, if any, and its items (grouped under the label for screen readers) */
+  private renderSection(
+    section: MenuSection,
+    index: number,
+    showStart: boolean,
+  ) {
+    const items = section.items.map((item) => this.renderItem(item, showStart));
+    const id = `menu-label-${index}`;
+    return html`${
+      section.divided
+        ? html`<div part="divider" role="separator"></div>`
+        : nothing
+    }${
+      section.label === undefined
+        ? items
+        : html`<div role="group" aria-labelledby=${id}>
+            <div part="label" class="heading" id=${id} role="presentation">
+              ${section.label}
+            </div>
+            ${items}
+          </div>`
+    }`;
+  }
+
   override render() {
     // Every item keeps the left space when any has something there, so labels line up
-    const showStart = this.items.some(hasStart);
+    const showStart = this.items.some(
+      (entry) => isMenuItem(entry) && hasStart(entry),
+    );
     return html`<div
       part="menu"
       role="menu"
       aria-label=${this.label}
       @keydown=${this.onKeyDown}
     >
-      ${this.items.map(
-        (item) =>
-          html`<button
-            part="item"
-            type="button"
-            role=${item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
-            aria-checked=${
-              item.checked === undefined ? nothing : String(item.checked)
-            }
-            aria-keyshortcuts=${
-              item.shortcut ? ariaKeyShortcut(item.shortcut) : nothing
-            }
-            class=${item.danger ? "danger" : nothing}
-            ?disabled=${item.disabled}
-            data-value=${item.value}
-            @click=${() => this.choose(item)}
-          >
-            ${showStart ? this.renderStart(item) : nothing}<span class="label"
-              >${item.label}</span
-            >${this.renderEnd(item)}
-          </button>`,
+      ${menuSections(this.items).map((section, index) =>
+        this.renderSection(section, index, showStart),
       )}
     </div>`;
   }

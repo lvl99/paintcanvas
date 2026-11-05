@@ -1,11 +1,19 @@
 :host {
   display: block;
+  /* No wider than the space it has (e.g. as a flex item), so its bar scrolls sideways when its content is wider */
+  min-width: 0;
   background: var(--pc-bar);
   border-bottom: 1px solid var(--pc-surface-active);
 }
 /* An open menu's button */
 button[aria-expanded="true"] {
   background: var(--pc-surface-active);
+}
+/* The size settings' button while they're shown: purple, like a toggle that's on */
+.size-settings[aria-expanded="true"] {
+  border-color: var(--pc-accent);
+  background: var(--pc-accent);
+  color: var(--pc-accent-text);
 }
 /* Toggles that are on, and the selected option: purple, so it's obvious (the icon stays the same) */
 button[aria-pressed="true"],
@@ -53,7 +61,8 @@ button img {
   height: 24px;
 }
 /* Fields' names small and in capitals above them, as designed */
-[role="toolbar"] > label:not(.icon-toggle) {
+[role="toolbar"] > label:not(.icon-toggle),
+.field {
   display: inline-flex;
   flex-direction: column;
   gap: 1px;
@@ -71,7 +80,47 @@ button img {
   bottom: 3px;
   font-size: 13px;
 }
-/* Focus pen mode sits on the right of every tool's settings */
-.focus-pen {
+/* The tool's settings at the start; actions (e.g. cut, copy and paste, focus pen mode) at the end, on the right */
+.start,
+.end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.end {
   margin-left: auto;
+}
+/* The brush size, dragged to resize */
+.size {
+  min-width: 56px;
+}
+/* The size settings, with room around them */
+.size-popover::part(popover) {
+  padding: 15px;
+}
+/* The size settings: pressure, tilt and focus pen mode in a row above the width, constrain proportions and height */
+.size-toggles {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.size-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+/* Brush size, width, height and opacity: dragged or typed, 24px tall (WCAG 2.2's smallest target) under their names */
+.field {
+  line-height: 1;
+}
+.field pc-number-slider {
+  min-width: 4.5em;
+}
+.field pc-number-slider::part(control),
+.field pc-number-slider::part(field),
+.field pc-brush-size::part(control),
+.field pc-brush-size::part(field) {
+  box-sizing: border-box;
+  min-height: 24px;
 }

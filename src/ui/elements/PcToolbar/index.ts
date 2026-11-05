@@ -11,7 +11,10 @@ import {
   type default as PaintCanvas,
 } from "../../../lib/classes/PaintCanvas";
 import { cmdSymbol, shortcutLabel } from "../../../lib/utils/shortcuts";
+import type { MenuEntry } from "../PcMenu";
 import "../PcColourPair";
+import "../PcContextMenu";
+import "../PcIcon";
 
 /** Toolbar buttons in display order: tool, icon name, translation key of its name, and its keyboard shortcut action */
 export const TOOLBAR_TOOLS: readonly {
@@ -92,6 +95,9 @@ export const TOOLBAR_TOOLS: readonly {
  * their icons; tools have the user's keyboard shortcuts in their tooltips, and undo and redo theirs (⌘ on Apple
  * devices, ^ elsewhere). The app menu button shows `menuText` and is named `menuLabel` for screen readers.
  *
+ * While `minimised` (set by `<paint-canvas>` when its layout is narrow, below 600px by default), the tools are one button
+ * showing the current tool's icon, which opens a menu (`pc-menu`) of the tools.
+ *
  * It's a `PcPane`: the colours and tools are at its start, and undo, redo, the layers toggle and the app menu toggle at
  * its end, after anything slotted there.
  *
@@ -106,6 +112,7 @@ export class PcToolbar extends PcPane {
     menuLabel: { type: String },
     menu: { type: Boolean },
     layers: { type: Boolean },
+    minimised: { type: Boolean, reflect: true },
   };
 
   static override styles = [
@@ -122,6 +129,9 @@ export class PcToolbar extends PcPane {
   /** Whether to show the layers menu button (default true; e.g. false when the layers are shown elsewhere) */
   declare layers: boolean;
 
+  /** Whether the tools are one button that opens a menu of them, to save space (default false) */
+  declare minimised: boolean;
+
   /** What the app menu button shows (default ☰) */
   declare menuText: string;
 
@@ -133,6 +143,7 @@ export class PcToolbar extends PcPane {
     this.menuText = "☰";
     this.menu = true;
     this.layers = true;
+    this.minimised = false;
   }
 
   private changes = new ChangeController(this, () => [
@@ -172,6 +183,55 @@ export class PcToolbar extends PcPane {
       : this.t(name);
   }
 
+  /** The tools' buttons */
+  private renderToolButtons(app: PaintCanvas) {
+    return TOOLBAR_TOOLS.map(({ tool, icon, name, shortcutId }) => {
+      const label = this.toolLabel(app, name, shortcutId);
+      return html`<button
+        type="button"
+        data-tool=${tool}
+        title=${label}
+        aria-label=${label}
+        aria-pressed=${app.tool === tool}
+        @click=${() => this.onToolClick(tool)}
+      >
+        <img src=${this.iconUrl(icon)} alt="" />
+      </button>`;
+    });
+  }
+
+  /** The tools as one button, showing the current tool, that opens a menu of them */
+  private renderToolMenu(app: PaintCanvas) {
+    // Every tool is in the toolbar
+    const current = TOOLBAR_TOOLS.find(
+      ({ tool }) => tool === app.tool,
+    ) as (typeof TOOLBAR_TOOLS)[number];
+    const items: MenuEntry[] = [
+      { type: "label", label: this.t("paintCanvas.toolbar.label") },
+      ...TOOLBAR_TOOLS.map(({ tool, icon, name, shortcutId }) => ({
+        value: tool,
+        label: this.t(name),
+        icon,
+        shortcut: app.shortcuts.combo(shortcutId) ?? undefined,
+        selected: tool === app.tool,
+      })),
+    ];
+    const label = this.toolLabel(app, current.name, current.shortcutId);
+    return html`<pc-context-menu
+      class="tool-menu"
+      placement="beside"
+      data-tool=${current.tool}
+      title=${label}
+      label=${label}
+      menu-label=${this.t("paintCanvas.toolbar.label")}
+      .items=${items}
+      @pc-select=${(event: CustomEvent<{ value: string }>) =>
+        this.onToolClick(event.detail.value as Tool)}
+    >
+      <img slot="icon" src=${this.iconUrl(current.icon)} alt="" />
+    </pc-context-menu>`;
+  }
+
   /** The colours and tools */
   protected override renderStart() {
     const app = this.app;
@@ -180,19 +240,7 @@ export class PcToolbar extends PcPane {
         .app=${app}
         @pc-colour-click=${this.onColourClick}
       ></pc-colour-pair>
-      ${TOOLBAR_TOOLS.map(({ tool, icon, name, shortcutId }) => {
-        const label = this.toolLabel(app, name, shortcutId);
-        return html`<button
-          type="button"
-          data-tool=${tool}
-          title=${label}
-          aria-label=${label}
-          aria-pressed=${app.tool === tool}
-          @click=${() => this.onToolClick(tool)}
-        >
-          <img src=${this.iconUrl(icon)} alt="" />
-        </button>`;
-      })}`;
+      ${this.minimised ? this.renderToolMenu(app) : this.renderToolButtons(app)}`;
   }
 
   /** The space between the tools and the end */

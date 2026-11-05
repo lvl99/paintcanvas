@@ -1,21 +1,26 @@
 :host {
-  width: 50px;
+  width: var(--pc-side-button-size);
   height: 100%;
   background: var(--pc-bar);
   border-right: 1px solid var(--pc-border);
 }
-button {
-  width: 50px;
-  height: 50px;
+/* Every button the same size (borders included), like the rails' buttons */
+button,
+pc-colour-pair,
+.tool-menu {
+  box-sizing: border-box;
+  width: var(--pc-side-button-size);
+  height: var(--pc-side-button-size);
 }
 pc-colour-pair {
+  --pc-colour-pair-size: var(--pc-side-button-size);
   border-bottom: 1px solid var(--pc-border);
 }
 /* Buttons separated by thin lines, as designed */
 button {
   border: 0;
   border-bottom: 1px solid var(--pc-border);
-  background: transparent;
+  background: var(--pc-toolbar-button-background, transparent);
   font-size: 20px;
 }
 button:hover {
@@ -32,7 +37,7 @@ button[aria-pressed="true"]:hover {
 }
 button:disabled {
   opacity: 0.4;
-  background: transparent;
+  background: var(--pc-toolbar-button-background, transparent);
 }
 button:focus-visible {
   outline: var(--pc-focus-width) solid var(--pc-focus);
@@ -40,8 +45,8 @@ button:focus-visible {
 }
 img {
   display: block;
-  width: 40px;
-  height: 40px;
+  width: var(--pc-side-icon-size);
+  height: var(--pc-side-icon-size);
   margin: auto;
 }
 /* All the buttons in one column, so they shrink together when the toolbar is short */
@@ -54,4 +59,45 @@ img {
 .spacer {
   flex: 1;
   border-bottom: 1px solid var(--pc-border);
+}
+/* The tools as one button (while minimised), showing the current tool, selected like a tool button */
+.tool-menu {
+  border-bottom: 1px solid var(--pc-border);
+}
+.tool-menu::part(button) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--pc-accent);
+}
+.tool-menu::part(button):focus-visible {
+  outline-offset: -3px;
+}
+.tool-menu[open]::part(button) {
+  background: var(--pc-surface-active);
+}
+/* Overlay: over the canvas without a background, so only its buttons (each with its own) take presses */
+:host([mode="overlay"]) {
+  --pc-toolbar-button-background: var(--pc-surface-raised);
+  border-right: 0;
+  background: transparent;
+  pointer-events: none;
+}
+:host([mode="overlay"]) button,
+:host([mode="overlay"]) pc-colour-pair,
+:host([mode="overlay"]) .tool-menu {
+  margin-bottom: var(--pc-space-1);
+  border: 1px solid var(--pc-border);
+  border-radius: var(--pc-radius-small);
+  box-shadow: var(--pc-shadow);
+  pointer-events: auto;
+}
+:host([mode="overlay"]) pc-colour-pair {
+  background: var(--pc-surface-raised);
+}
+:host([mode="overlay"]) .tool-menu::part(button) {
+  border-radius: var(--pc-radius-small);
+}
+:host([mode="overlay"]) .spacer {
+  border-bottom: 0;
 }

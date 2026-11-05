@@ -4,6 +4,7 @@ import { WINDOWS_CSS as theme } from "../../styles";
 import { PILLS_CSS as pill } from "../../styles";
 import { ICON_CONTROLS_CSS as iconToggle } from "../../styles";
 import { iconLabel } from "../../icons";
+import { live } from "lit/directives/live.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { PcElement, defineElement } from "../../base";
 import "../PcBrushTest";
@@ -25,6 +26,7 @@ import {
   ShapeImageError,
   type ShapeImage,
 } from "../../../lib/brushes/shapeImage";
+import { BUILT_IN_SHAPES, builtInShapeId } from "../../../lib/brushes/shapes";
 import {
   MAX_SAMPLE_RATE,
   MIN_SAMPLE_RATE,
@@ -69,6 +71,9 @@ const SOURCE_LABELS: Record<VariationSource, string> = {
   randomise: "paintCanvas.brushConfig.randomise",
 };
 
+/** The shape picker's value for a shape the user uploaded or pasted */
+const CUSTOM_SHAPE = "custom";
+
 /** Translation keys of the brush shape error messages */
 const SHAPE_ERROR_KEYS: Record<string, string> = {
   [SHAPE_ERRORS.type]: "paintCanvas.shape.notPng",
@@ -87,7 +92,8 @@ const numberValue = (event: Event): number | undefined => {
 };
 
 /**
- * The brush (or eraser) configuration window: a testing area, the shape (upload or paste), smoothing, width, height,
+ * The brush (or eraser) configuration window: a testing area, the shape (pressing it picks a built-in shape from the
+ * device's own list, which says "Custom" for an uploaded or pasted one; or upload or paste one), smoothing, width, height,
  * opacity, rotation, offsets, sample rate, spacing and snapping to the pixel grid. Width, height, opacity, rotation and the offsets can vary with
  * pressure, tilt and randomness; when any is on, the setting has a min and max.
  *
@@ -143,8 +149,13 @@ export class PcBrushConfig extends PcElement {
   /** Turns files into brush shapes (replaceable for tests) */
   readShape: (file: File) => Promise<ShapeImage> = readShapeImage;
 
-  /** Reads a brush shape from the clipboard (replaceable for tests) */
-  readClipboard: () => Promise<ShapeImage> = () => readClipboardShape();
+  /**
+   * Reads a brush shape from the clipboard, or else from image data copied on the canvas (replaceable for tests)
+   */
+  readClipboard: () => Promise<ShapeImage> = () =>
+    readClipboardShape(navigator.clipboard, {}, async () =>
+      this.app?.copiedPng(),
+    );
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape") this.close();
@@ -409,8 +420,19 @@ export class PcBrushConfig extends PcElement {
     </div>`;
   }
 
+  /**
+   * Use a built-in shape (see `BUILT_IN_SHAPES`), keeping the width; they're all square, so the height is the same.
+   */
+  private useBuiltInShape(id: string): void {
+    const shape = BUILT_IN_SHAPES.find((built) => built.id === id);
+    if (!shape) return;
+    const width = this.draft?.width ?? 1;
+    this.change({ image: shape.image, height: width });
+  }
+
   /** Render the shape and smoothing row */
   private renderShape(draft: BrushConfig) {
+    const shapeId = builtInShapeId(draft.image);
     const smoothing =
       draft.smoothingType === SmoothingType.None ||
       draft.smoothingType === undefined
@@ -418,15 +440,43 @@ export class PcBrushConfig extends PcElement {
         : draft.smoothingType;
     return html`<div class="row shape-row">
       <span class="label">${this.t("paintCanvas.brushConfig.shape")}</span>
-      <span
-        class=${draft.image ? "shape-preview image" : "shape-preview"}
-        style=${styleMap({
-          maskImage:
-            typeof draft.image === "string"
-              ? `url("${draft.image}")`
-              : undefined,
-        })}
-      ></span>
+      <span class="shape-picker">
+        <span
+          class=${draft.image ? "shape-preview image" : "shape-preview"}
+          style=${styleMap({
+            maskImage:
+              typeof draft.image === "string"
+                ? `url("${draft.image}")`
+                : undefined,
+          })}
+        ></span>
+        <!-- Over the shape, so pressing it opens the device's own list -->
+        <select
+          class="shape-select"
+          aria-label=${this.t("paintCanvas.brushConfig.shape")}
+          title=${this.t("paintCanvas.brushConfig.chooseShape")}
+          ?disabled=${this.busy}
+          @change=${(e: Event) =>
+            this.useBuiltInShape((e.target as HTMLSelectElement).value)}
+        >
+          ${
+            shapeId === undefined
+              ? html`<option value=${CUSTOM_SHAPE} .selected=${true}>
+                  ${this.t("paintCanvas.brushConfig.customShape")}
+                </option>`
+              : nothing
+          }
+          ${BUILT_IN_SHAPES.map(
+            (shape) =>
+              html`<option
+                value=${shape.id}
+                .selected=${live(shape.id === shapeId)}
+              >
+                ${shape.name}
+              </option>`,
+          )}
+        </select>
+      </span>
       <button
         type="button"
         class="pill upload"

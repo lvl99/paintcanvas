@@ -43,6 +43,32 @@ export const stepOpacity = (percent: number, direction: 1 | -1): number => {
 };
 
 /**
+ * A brush size with the given width and proportions (width ÷ height), in whole pixels. The width is kept within the
+ * range where the smaller side is at least `MIN_BRUSH_SIZE` and the larger side at most `MAX_BRUSH_SIZE`, so the
+ * proportions are kept at either end.
+ *
+ * @example
+ * proportionalSize(0, 3); // { width: 3, height: 1 }
+ * proportionalSize(1000, 0.5); // { width: 128, height: 256 }
+ */
+export const proportionalSize = (
+  width: number,
+  aspect: number,
+): { width: number; height: number } => {
+  const fitted = Math.round(
+    clamp(
+      width,
+      Math.max(MIN_BRUSH_SIZE, MIN_BRUSH_SIZE * aspect),
+      Math.min(MAX_BRUSH_SIZE, MAX_BRUSH_SIZE * aspect),
+    ),
+  );
+  return {
+    width: fitted,
+    height: Math.round(clamp(fitted / aspect, MIN_BRUSH_SIZE, MAX_BRUSH_SIZE)),
+  };
+};
+
+/**
  * The settings of a brush or eraser: the selected preset, an editable copy of its settings (changed from the tool
  * settings bar or the configuration window, without changing the preset) and the size. The brush and eraser each have
  * their own instance.
@@ -69,6 +95,12 @@ export default class BrushSettings extends EventTarget {
 
   /** The current settings: a copy of the selected preset, with any changes */
   private current: BrushConfig;
+
+  /**
+   * The brush's proportions (width ÷ height), kept apart from the rounded size so resizing to either end and back
+   * doesn't change them. Set by the preset and by setting the size while proportions aren't constrained.
+   */
+  private aspect = 1;
 
   constructor(presets: BrushesConfig) {
     super();
@@ -137,49 +169,53 @@ export default class BrushSettings extends EventTarget {
    * Set the height, clamped to 1–256 pixels. If the settings constrain proportions, width follows height.
    */
   setHeight(height: number): void {
-    if (!this.current.constrainProportions) {
-      this.setSize(this.width, height);
-      return;
-    }
-    const ratio = this.width / this.height;
-    this.setSize(clamp(height, MIN_BRUSH_SIZE, MAX_BRUSH_SIZE) * ratio);
+    if (this.current.constrainProportions)
+      this.setProportionalSize(height * this.aspect);
+    else this.setSize(this.width, height);
   }
 
   /**
-   * Set the size, clamped to 1–256 pixels. If the settings constrain proportions, height follows width.
+   * Set the size, clamped to 1–256 pixels. If the settings constrain proportions, height follows width, and the width
+   * stops where either side would leave that range.
    */
   setSize(width: number, height: number = width): void {
-    const ratio = this.height / this.width;
+    if (this.current.constrainProportions) {
+      this.setProportionalSize(width);
+      return;
+    }
     this.width = Math.round(clamp(width, MIN_BRUSH_SIZE, MAX_BRUSH_SIZE));
-    this.height = Math.round(
-      clamp(
-        this.preset.constrainProportions ? this.width * ratio : height,
-        MIN_BRUSH_SIZE,
-        MAX_BRUSH_SIZE,
-      ),
-    );
+    this.height = Math.round(clamp(height, MIN_BRUSH_SIZE, MAX_BRUSH_SIZE));
+    this.aspect = this.width / this.height;
     this.notify();
   }
 
   /**
-   * Change the size by a number of pixels (positive = bigger). Used when dragging up/right (bigger) or down/left (smaller).
+   * Change the size by a number of pixels (positive = bigger), keeping the proportions: the larger side changes by
+   * `delta`. Stops when the smaller side reaches 1 pixel or the larger 256. Used when dragging up/right (bigger) or
+   * down/left (smaller).
    */
   resize(delta: number): void {
-    this.setSize(this.width + delta, this.height + delta);
+    const larger = Math.max(this.width, this.height) + delta;
+    this.setProportionalSize(this.aspect >= 1 ? larger : larger * this.aspect);
+  }
+
+  /** The larger side (what `resize` changes), which `grow` and `shrink` step from */
+  get largerSide(): number {
+    return Math.max(this.width, this.height);
   }
 
   /**
    * Increase the size by one step (at least 1 pixel).
    */
   grow(): void {
-    this.resize(Math.max(1, Math.round(this.width * BRUSH_SIZE_STEP)));
+    this.resize(Math.max(1, Math.round(this.largerSide * BRUSH_SIZE_STEP)));
   }
 
   /**
    * Decrease the size by one step (at least 1 pixel).
    */
   shrink(): void {
-    this.resize(-Math.max(1, Math.round(this.width * BRUSH_SIZE_STEP)));
+    this.resize(-Math.max(1, Math.round(this.largerSide * BRUSH_SIZE_STEP)));
   }
 
   /**
@@ -208,6 +244,15 @@ export default class BrushSettings extends EventTarget {
   private applyPresetSize(preset: BrushConfig): void {
     this.width = preset.width ?? MIN_BRUSH_SIZE;
     this.height = preset.height ?? this.width;
+    this.aspect = this.width / this.height;
+  }
+
+  /**
+   * Set the width, with the height following the stored proportions (see `proportionalSize`).
+   */
+  private setProportionalSize(width: number): void {
+    Object.assign(this, proportionalSize(width, this.aspect));
+    this.notify();
   }
 
   /**

@@ -53,8 +53,27 @@ input[type="range"] {
 .shape-row {
   flex-wrap: nowrap;
 }
-.shape-row .shape-preview {
+/* The shape, with an invisible list over it: pressing the shape opens the device's own list of shapes */
+.shape-picker {
+  position: relative;
+  display: inline-flex;
   flex: none;
+  border-radius: var(--pc-radius-small);
+}
+.shape-picker:hover {
+  background: var(--pc-surface-hover);
+}
+.shape-picker:focus-within {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+}
+.shape-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 fieldset.smoothing {
   display: flex;

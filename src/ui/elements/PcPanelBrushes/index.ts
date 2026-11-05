@@ -6,6 +6,7 @@ import { styleMap } from "lit/directives/style-map.js";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
 import { defineElement } from "../../base";
 import { PcPanel } from "../PcPanel";
+import "../PcBrushSize";
 import ChangeController from "../../ChangeController";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import type BrushSettings from "../../../lib/classes/BrushSettings";
@@ -96,7 +97,7 @@ export const previewSizes = (
  * tile showing its shape at its size relative to the rest of its family, five to a row. Picking a preset closes the
  * menu; holding Alt/Option shows an "X" over custom presets, and clicking one asks before deleting it.
  *
- * Dragging the size control up or right makes the brush bigger; down or left makes it smaller.
+ * Dragging the size control (`pc-brush-size`) up or right makes the brush bigger; down or left makes it smaller.
  *
  * Fires `pc-new-preset` (detail: "brush" or "eraser") for "New preset", and `pc-toast` (detail: the message) after
  * importing, exporting or deleting presets, or when that fails.
@@ -132,9 +133,6 @@ export class PcPanelBrushes extends PcPanel {
     blob,
     name,
   ) => saveFile(blob, name, undefined, JSON_FILE_TYPE);
-
-  /** Last pointer position while dragging the size control */
-  private dragPoint: { x: number; y: number } | null = null;
 
   private changes = new ChangeController(this, () => [this.app, this.settings]);
 
@@ -298,32 +296,6 @@ export class PcPanelBrushes extends PcPanel {
     this.app?.closePanel();
   }
 
-  /**
-   * Start dragging the size control.
-   */
-  private onPointerDown(event: PointerEvent): void {
-    this.dragPoint = { x: event.clientX, y: event.clientY };
-    (event.currentTarget as Element).setPointerCapture(event.pointerId);
-  }
-
-  /**
-   * Resize while dragging: right and up are positive, left and down are negative.
-   */
-  private onPointerMove(event: PointerEvent): void {
-    if (!this.dragPoint || !this.settings) return;
-    const delta =
-      event.clientX - this.dragPoint.x + (this.dragPoint.y - event.clientY);
-    this.dragPoint = { x: event.clientX, y: event.clientY };
-    if (delta !== 0) this.settings.resize(delta);
-  }
-
-  /**
-   * Stop dragging the size control.
-   */
-  private onPointerUp(): void {
-    this.dragPoint = null;
-  }
-
   /** Render a preset's tile */
   private renderTile(
     settings: BrushSettings,
@@ -406,19 +378,11 @@ export class PcPanelBrushes extends PcPanel {
           })}
         ></span>
         <span class="name">${preset.name ?? preset.id}</span>
-        <div
+        <pc-brush-size
           class="size"
-          role="slider"
-          aria-label=${this.t("paintCanvas.brushMenu.size", { tool: title })}
-          aria-valuenow=${settings.width}
-          title=${this.t("paintCanvas.brushMenu.dragToResize")}
-          @pointerdown=${this.onPointerDown}
-          @pointermove=${this.onPointerMove}
-          @pointerup=${this.onPointerUp}
-          @pointercancel=${this.onPointerUp}
-        >
-          ${settings.width === settings.height ? settings.width : `${settings.width} × ${settings.height}`}
-        </div>
+          .settings=${settings}
+          label=${this.t("paintCanvas.brushMenu.size", { tool: title })}
+        ></pc-brush-size>
       </div>
       <div
         class="presets"

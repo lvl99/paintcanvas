@@ -1,6 +1,7 @@
 import { html, nothing, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
 import { PcElement, defineElement, emit } from "../../base";
+import { markDismissingPress } from "../../dismiss";
 import ChangeController from "../../ChangeController";
 import PaintCanvas, { Panel } from "../../../lib/classes/PaintCanvas";
 import KeyboardShortcuts, {
@@ -40,8 +41,9 @@ import {
 import { hasToolSettings } from "../PcToolSettings";
 import "../PcPanel";
 import { PcPane, PANE_COLLAPSE_EVENT } from "../PcPane";
-import "../PcToolbar";
+import { PcToolbar } from "../PcToolbar";
 import "../PcToolSettings";
+import "../PcClipboardTools";
 import "../PcCanvas";
 import "../PcCanvasMap";
 import "../PcPanelBrushes";
@@ -69,8 +71,10 @@ const TAKE_OVER_CHOICE = "take-over";
  * window), with slots to add or replace content:
  *
  * - `header`: across the top (empty by default)
- * - `left`: `<pc-toolbar>` (a pane) by default
- * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) by default
+ * - `left`: `<pc-toolbar>` (a pane) by default; toolbars in the sides are minimised (their tools one button that opens a
+ *   menu of them) while the layout is narrow
+ * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) and, at its end,
+ *   `<pc-clipboard-tools>` (cut, copy and paste; a ⋮ menu while the layout is narrow) by default
  * - `right`: a `<pc-pane>` with `<pc-panel-layers>` by default
  * - `center`: `<pc-canvas>` by default
  * - `overlay`: drawn over the canvas; `<pc-canvas-map>` by default
@@ -84,8 +88,9 @@ const TAKE_OVER_CHOICE = "take-over";
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
  * rail@600"`), which the layout gives the side's `<pc-pane>`s (see `PcPane`): `docked` beside the canvas; `rail`, a
- * column of buttons (one per panel) that open each panel over the canvas; or `floating`, the pane over the canvas as a
- * box that collapses to a button. Give side content in a `<pc-pane>` to have it follow the side's mode.
+ * column of buttons (one per panel) that open each panel over the canvas; `floating`, the pane over the canvas as a
+ * box that collapses to a button; or `overlay`, a rail over the canvas without a background (the canvas fills the
+ * width behind it). Give side content in a `<pc-pane>` to have it follow the side's mode.
  *
  * Reports its state for styling as attributes (`narrow`, `input="pen|touch|mouse"`, `ui-hidden`, `left-mode`,
  * `right-mode`) and as `pc-state-change` events (see `LayoutState`). Creates its own canvas unless given one, and
@@ -95,8 +100,8 @@ const TAKE_OVER_CHOICE = "take-over";
  * reloading the page (see `LayerAutosave`). While another window is drawing on it, the layout is blocked by a message
  * that offers to draw here instead. Fires `pc-toast` when the drawing can't be loaded or saved.
  *
- * With a `settings-store` name, the user's app settings (input settings, keyboard shortcuts, colour palette and
- * colours) are kept in the browser under that name (see `SettingsAutosave`). Fires `pc-toast` when they can't be.
+ * With a `settings-store` name, the user's app settings (input settings, keyboard shortcuts, colour palette, colours,
+ * theme and language) are kept in the browser under that name (see `SettingsAutosave`). Fires `pc-toast` when they can't be.
  *
  * @example
  * html`<paint-canvas style="height: 600px"></paint-canvas>`
@@ -202,7 +207,7 @@ export class PaintCanvasElement extends PcElement {
   /** The state last reported, to report only changes */
   private reported?: string;
 
-  /** Space the floating sides cover over the canvas */
+  /** Space the floating and overlay sides cover over the canvas */
   private floatingInsets: Insets = NO_INSETS;
 
   private readonly resizeObserver?: ResizeObserver =
@@ -239,7 +244,7 @@ export class PaintCanvasElement extends PcElement {
 
   // A press outside the colour palette closes it
   private readonly onDocumentPointerDown = (event: PointerEvent) =>
-    this.closePaletteOutside(event.composedPath());
+    this.closePanelOutside(event);
 
   // A floating pane's size changes when it's shown or collapsed
   private readonly onPaneCollapse = () => this.requestUpdate();
@@ -348,20 +353,24 @@ export class PaintCanvasElement extends PcElement {
     );
   }
 
-  /** Show each side's panes in the side's mode, facing the canvas */
+  /** Show each side's panes in the side's mode, facing the canvas, with toolbars minimised while the layout is narrow */
   private setPaneModes(): void {
+    const narrow = this.width < this.narrowWidth;
     for (const side of SIDES)
       for (const pane of this.panesIn(side)) {
         pane.mode = this.modeOf(side);
         pane.edge = side;
+        if (pane instanceof PcToolbar) pane.minimised = narrow;
       }
   }
 
-  /** Keep the canvas clear of floating sides when fitting it */
+  /** Keep the canvas clear of floating and overlay sides when fitting it */
   private measureFloatingSides(): void {
     const width = (side: Side) =>
       this.panesIn(side)
-        .filter((pane) => pane.mode === "floating" && !pane.collapsed)
+        .filter((pane) =>
+          pane.mode === "floating" ? !pane.collapsed : pane.mode === "overlay",
+        )
         .reduce(
           (widest, pane) =>
             Math.max(widest, pane.getBoundingClientRect().width),
@@ -593,18 +602,26 @@ export class PaintCanvasElement extends PcElement {
   }
 
   /**
-   * Close the colour palette on a press outside it and the colours that open it.
+   * Close the open panel (brush, eraser, layers, app menu or colour palette) on a press outside it and the button that
+   * opens it, marking the press (see `markDismissingPress`) so the canvas doesn't draw unless it's dragged. Presses in
+   * dialogs (e.g. one the panel opened) don't count as outside.
    */
-  private closePaletteOutside(path: EventTarget[]): void {
-    const app = this.app;
-    if (app?.panel !== Panel.Palette) return;
-    const inside = path.some(
+  private closePanelOutside(event: PointerEvent): void {
+    const panel = this.app?.panel;
+    if (!panel) return;
+    const inside = event.composedPath().some(
       (target) =>
         target instanceof Element &&
-        (target.localName === "pc-panel-colours" ||
-          target.localName === "pc-colour-pair"),
+        // The open panel (the layout's floating ones), and dialogs
+        ((target.classList.contains("panel") &&
+          target.getRootNode() === this.renderRoot) ||
+          target.matches("dialog, pc-dialog") ||
+          target.getAttribute("data-panel") === panel ||
+          (panel === Panel.Palette && target.localName === "pc-colour-pair")),
     );
-    if (!inside) app.closePanel();
+    if (inside) return;
+    markDismissingPress(event);
+    (this.app as PaintCanvas).closePanel();
   }
 
   /** The menus the toolbar opens, floating over the canvas beside it */
@@ -703,6 +720,11 @@ export class PaintCanvasElement extends PcElement {
                     event: CustomEvent<"brush" | "eraser">,
                   ) => this.configure(event.detail)}
                 ></pc-tool-settings
+                ><pc-clipboard-tools
+                  slot="end"
+                  .app=${app}
+                  ?narrow=${this.width < this.narrowWidth}
+                ></pc-clipboard-tools
               ></pc-pane>`
             : nothing,
         )}
@@ -710,6 +732,7 @@ export class PaintCanvasElement extends PcElement {
       <div
         class="center"
         part="center"
+        style="--pc-left-inset: ${this.floatingInsets.left}px"
         role="region"
         aria-label=${this.t("paintCanvas.layout.canvas")}
         ?inert=${blocked}

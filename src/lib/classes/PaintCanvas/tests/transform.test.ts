@@ -52,6 +52,107 @@ describe("PaintCanvas clipboard", () => {
     expect(app.copy()).toBeUndefined();
   });
 
+  it("should tell listeners when there's copied image data, and give it as a PNG", async () => {
+    const { app } = createApp();
+    expect(app.hasClipboard).toBe(false);
+    expect(await app.copiedPng()).toBeUndefined();
+    fullMask(app);
+    const change = vi.fn();
+    app.addEventListener("change", change);
+    app.copy();
+    expect(change).toHaveBeenCalled();
+    expect(app.hasClipboard).toBe(true);
+    expect((await app.copiedPng())?.type).toBe("image/png");
+  });
+
+  it("should put copied image data on the system clipboard as a PNG, ignoring failures", async () => {
+    const write = vi.fn().mockRejectedValue(new Error("Not focused"));
+    const { factory } = createRecordingCanvasFactory();
+    const app = new PaintCanvas({
+      width: 10,
+      height: 10,
+      createCanvas: factory,
+      systemClipboard: { write },
+    });
+    const data = new Uint8ClampedArray(10 * 10 * 4);
+    data[(2 * 10 + 2) * 4 + 3] = 255;
+    (
+      app.layers.active.context as unknown as Record<string, unknown>
+    ).getImageData = () => ({ data });
+    fullMask(app);
+    // Browsers without ClipboardItem don't write
+    app.copy();
+    expect(write).not.toHaveBeenCalled();
+    class FakeClipboardItem {
+      constructor(readonly items: Record<string, Promise<Blob>>) {}
+    }
+    vi.stubGlobal("ClipboardItem", FakeClipboardItem);
+    try {
+      app.copy();
+      expect(write).toHaveBeenCalledTimes(1);
+      const [[item]] = write.mock.calls[0] as [[FakeClipboardItem]];
+      expect((await item.items["image/png"])!.type).toBe("image/png");
+      // Without a system clipboard, nothing is written
+      const without = new PaintCanvas({
+        createCanvas: factory,
+        systemClipboard: null,
+      });
+      expect(() => without.copy()).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("should paste an image from elsewhere in the middle of the view, shrunk to fit the canvas", () => {
+    const { app, created } = createApp();
+    const float = vi.spyOn(
+      (
+        app as unknown as {
+          transformer: { float: (...args: unknown[]) => void };
+        }
+      ).transformer,
+      "float",
+    );
+    vi.spyOn(app.viewport, "visibleRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+    });
+    const before = created.length;
+    app.pasteImage({ width: 4, height: 2 } as unknown as ImageBitmap);
+    expect(app.tool).toBe(Tool.Move);
+    expect(float).toHaveBeenLastCalledWith(
+      app.layers.active,
+      created[before]!.canvas,
+      { x: 3, y: 4, width: 4, height: 2 },
+    );
+    // Twice the canvas's width: half the size
+    app.pasteImage({ width: 20, height: 5 } as unknown as ImageBitmap);
+    expect(float.mock.lastCall![2]).toEqual({
+      x: 0,
+      y: 4,
+      width: 10,
+      height: 3,
+    });
+    const shrunk = created.find(
+      ({ canvas }) => canvas === float.mock.lastCall![1],
+    )!;
+    expect(shrunk.calls).toContainEqual([
+      "drawImage",
+      { width: 20, height: 5 },
+      0,
+      0,
+      10,
+      3,
+    ]);
+    // Not during a stroke
+    vi.spyOn(app.strokes, "drawing", "get").mockReturnValue(true);
+    float.mockClear();
+    app.pasteImage({ width: 4, height: 2 } as unknown as ImageBitmap);
+    expect(float).not.toHaveBeenCalled();
+  });
+
   it("should erase cut image data as one undoable action", () => {
     const { app } = createApp();
     app.cut();

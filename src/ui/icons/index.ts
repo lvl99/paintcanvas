@@ -1,42 +1,49 @@
 import { html } from "lit";
 
-// The icons that come with PaintCanvas (128 × 128 PNGs), and the registry elements look icons up in.
-import brush from "./images/brush.png?url";
-import eraser from "./images/eraser.png?url";
-import cursor from "./images/cursor.png?url";
-import rectangleMask from "./images/rectangle-mask.png?url";
-import circleMask from "./images/circle-mask.png?url";
-import polygonMask from "./images/polygon-mask.png?url";
-import freehandMask from "./images/freehand-mask.png?url";
-import eyedropper from "./images/eyedropper.png?url";
-import zoom from "./images/zoom.png?url";
-import zoomIn from "./images/zoom-in.png?url";
-import zoomOut from "./images/zoom-out.png?url";
-import pan from "./images/pan.png?url";
-import undo from "./images/undo.png?url";
-import redo from "./images/redo.png?url";
-import layers from "./images/layers.png?url";
-import locked from "./images/locked.png?url";
-import unlocked from "./images/unlocked.png?url";
-import visible from "./images/visible.png?url";
-import hidden from "./images/hidden.png?url";
-import linked from "./images/linked.png?url";
-import unlinked from "./images/unlinked.png?url";
-import pressure from "./images/pressure.png?url";
-import focusPen from "./images/focus-pen.png?url";
-import tilt from "./images/tilt.png?url";
-import randomise from "./images/randomise.png?url";
-import flipHorizontal from "./images/flip-horizontal.png?url";
-import flipVertical from "./images/flip-vertical.png?url";
-import rotate90Left from "./images/rotate-90-left.png?url";
-import rotate90Right from "./images/rotate-90-right.png?url";
-import clipboard from "./images/clipboard.png?url";
-import smoothingLinear from "./images/smoothing-linear.png?url";
-import smoothingBezierQuad from "./images/smoothing-bezier-quad.png?url";
-import smoothingBezierCubic from "./images/smoothing-bezier-cubic.png?url";
-import sun from "./images/sun.png?url";
-import moon from "./images/moon.png?url";
-import star from "./images/star.png?url";
+// The icons that come with PaintCanvas (128 × 128 PNGs made from the 64 × 64 SVG source artwork beside them by
+// `node scripts/build-icons.ts`), and the registry elements look icons up in.
+import brush from "./images/icon-brush@2x.png?url";
+import eraser from "./images/icon-eraser@2x.png?url";
+import cursor from "./images/icon-cursor@2x.png?url";
+import rectangleMask from "./images/icon-rectangle-mask@2x.png?url";
+import circleMask from "./images/icon-circle-mask@2x.png?url";
+import polygonMask from "./images/icon-polygon-mask@2x.png?url";
+import freehandMask from "./images/icon-freehand-mask@2x.png?url";
+import eyedropper from "./images/icon-eyedropper@2x.png?url";
+import zoom from "./images/icon-zoom@2x.png?url";
+import zoomIn from "./images/icon-zoom-in@2x.png?url";
+import zoomOut from "./images/icon-zoom-out@2x.png?url";
+import pan from "./images/icon-pan@2x.png?url";
+import undo from "./images/icon-undo@2x.png?url";
+import redo from "./images/icon-redo@2x.png?url";
+import layers from "./images/icon-layers@2x.png?url";
+import locked from "./images/icon-locked@2x.png?url";
+import unlocked from "./images/icon-unlocked@2x.png?url";
+import visible from "./images/icon-visible@2x.png?url";
+import hidden from "./images/icon-hidden@2x.png?url";
+import linked from "./images/icon-linked@2x.png?url";
+import unlinked from "./images/icon-unlinked@2x.png?url";
+import pressure from "./images/icon-pressure@2x.png?url";
+import focusPen from "./images/icon-focus-pen@2x.png?url";
+import tilt from "./images/icon-tilt@2x.png?url";
+import randomise from "./images/icon-randomise@2x.png?url";
+import flipHorizontal from "./images/icon-flip-horizontal@2x.png?url";
+import flipVertical from "./images/icon-flip-vertical@2x.png?url";
+import rotate90Left from "./images/icon-rotate-90-left@2x.png?url";
+import rotate90Right from "./images/icon-rotate-90-right@2x.png?url";
+import rotate from "./images/icon-rotate@2x.png?url";
+import horizontalSize from "./images/icon-horizontal-size@2x.png?url";
+import verticalSize from "./images/icon-vertical-size@2x.png?url";
+import diagonalTlbrSize from "./images/icon-diagonal-tlbr-size@2x.png?url";
+import diagonalTrblSize from "./images/icon-diagonal-trbl-size@2x.png?url";
+import clipboard from "./images/icon-clipboard@2x.png?url";
+import smoothingLinear from "./images/icon-smoothing-linear@2x.png?url";
+import smoothingBezierQuad from "./images/icon-smoothing-bezier-quad@2x.png?url";
+import smoothingBezierCubic from "./images/icon-smoothing-bezier-cubic@2x.png?url";
+import sun from "./images/icon-sun@2x.png?url";
+import moon from "./images/icon-moon@2x.png?url";
+import star from "./images/icon-star@2x.png?url";
+import cog from "./images/icon-cog@2x.png?url";
 
 /** Names of the icons that come with PaintCanvas */
 export type IconName =
@@ -69,13 +76,19 @@ export type IconName =
   | "flipVertical"
   | "rotate90Left"
   | "rotate90Right"
+  | "rotate"
+  | "horizontalSize"
+  | "verticalSize"
+  | "diagonalTlbrSize"
+  | "diagonalTrblSize"
   | "clipboard"
   | "smoothingLinear"
   | "smoothingBezierQuad"
   | "smoothingBezierCubic"
   | "sun"
   | "moon"
-  | "star";
+  | "star"
+  | "cog";
 
 /** The icons that come with PaintCanvas, as URLs */
 export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
@@ -108,6 +121,11 @@ export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
   flipVertical,
   rotate90Left,
   rotate90Right,
+  rotate,
+  horizontalSize,
+  verticalSize,
+  diagonalTlbrSize,
+  diagonalTrblSize,
   clipboard,
   smoothingLinear,
   smoothingBezierQuad,
@@ -115,6 +133,7 @@ export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
   sun,
   moon,
   star,
+  cog,
 };
 
 /**

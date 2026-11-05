@@ -13,6 +13,7 @@ import {
   toastText,
 } from "../../../../testing/elements";
 import { createApp, TEST_HANDLE } from "../../../../testing/app";
+import { BUILT_IN_SHAPES } from "../../../../lib/brushes/shapes";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -129,11 +130,11 @@ describe("pc-brush-config", () => {
         .getAttribute("src")
         ?.split("/")
         .pop();
-    expect(icon()).toBe("linked.png");
+    expect(icon()).toBe("icon-linked@2x.png");
     constrain.checked = false;
     constrain.dispatchEvent(new Event("change"));
     await element.updateComplete;
-    expect(icon()).toBe("unlinked.png");
+    expect(icon()).toBe("icon-unlinked@2x.png");
     await enter(element, "input[type=range].width", "10", "input");
     await enter(element, "input[type=number].height", "30");
     expect([draft(element).width, draft(element).height]).toEqual([10, 30]);
@@ -173,9 +174,9 @@ describe("pc-brush-config", () => {
         toggle.querySelector("input")?.getAttribute("aria-label"),
       ]),
     ).toEqual([
-      ["Pressure", "pressure.png", "Width: Pressure"],
-      ["Tilt", "tilt.png", "Width: Tilt"],
-      ["Randomize", "randomise.png", "Width: Randomize"],
+      ["Pressure", "icon-pressure@2x.png", "Width: Pressure"],
+      ["Tilt", "icon-tilt@2x.png", "Width: Tilt"],
+      ["Randomize", "icon-randomise@2x.png", "Width: Randomize"],
     ]);
   });
 
@@ -204,9 +205,9 @@ describe("pc-brush-config", () => {
         label.querySelector("img")?.getAttribute("src")?.split("/").pop(),
       ]),
     ).toEqual([
-      ["Linear", "smoothing-linear.png"],
-      ["Quadratic curve", "smoothing-bezier-quad.png"],
-      ["Cubic curve", "smoothing-bezier-cubic.png"],
+      ["Linear", "icon-smoothing-linear@2x.png"],
+      ["Quadratic curve", "icon-smoothing-bezier-quad@2x.png"],
+      ["Cubic curve", "icon-smoothing-bezier-cubic@2x.png"],
     ]);
   });
 
@@ -264,6 +265,63 @@ describe("pc-brush-config", () => {
       ["pc-toast", "error: There is no PNG image to paste"],
       ["pc-toast", "error: Couldn't use the brush shape"],
     ]);
+  });
+
+  it("should pick a built-in shape from a list over the shape, saying Custom for the user's own", async () => {
+    const { element } = await setup();
+    const select = () =>
+      query<HTMLSelectElement>(element, "select.shape-select");
+    const options = () =>
+      [...select().options].map((option) => [
+        option.value,
+        option.textContent!.trim(),
+      ]);
+    // Round 20 uses the round shape
+    expect(select().value).toBe("round");
+    expect(select().getAttribute("aria-label")).toBe("Shape");
+    expect(select().title).toBe("Choose a shape");
+    expect(options()).toEqual(
+      BUILT_IN_SHAPES.map((shape) => [shape.id, shape.name]),
+    );
+    expect(select().parentElement!.classList.contains("shape-picker")).toBe(
+      true,
+    );
+
+    // Picking one uses its image, square at the current width
+    await enter(element, "input[type=number].height", "5");
+    select().value = "splatter";
+    select().dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    const splatter = BUILT_IN_SHAPES.find((s) => s.id === "splatter")!;
+    expect(draft(element)).toMatchObject({
+      image: splatter.image,
+      width: 20,
+      height: 20,
+    });
+    expect(select().value).toBe("splatter");
+
+    // An uploaded or pasted shape is "Custom"
+    await click(element, "button.paste");
+    expect(options()[0]).toEqual(["custom", "Custom"]);
+    expect(select().value).toBe("custom");
+    // Picking "Custom" (or anything unknown) changes nothing
+    select().dispatchEvent(new Event("change"));
+    expect(draft(element).image).toBe(shape.image);
+    select().value = "round";
+    select().dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    expect(options()[0]![0]).toBe("round");
+  });
+
+  it("should pick a built-in shape at width 1 when the settings have no width", async () => {
+    const { element } = await setup({ config: { id: "a" } });
+    const select = query<HTMLSelectElement>(element, "select.shape-select");
+    // No image: drawn round
+    expect(select.value).toBe("round");
+    select.value = "square";
+    select.dispatchEvent(new Event("change"));
+    expect(draft(element).width).toBeUndefined();
+    expect(draft(element).height).toBe(1);
   });
 
   it("should size an uploaded shape from its own width when the settings have none", async () => {
@@ -381,6 +439,14 @@ describe("pc-brush-config", () => {
     });
     await expect(element.readClipboard()).rejects.toThrow(
       "There is no PNG image to paste",
+    );
+    // Image data copied on the canvas is used instead (jsdom can't decode it)
+    element.app = createApp();
+    vi.spyOn(element.app, "copiedPng").mockResolvedValue(
+      new Blob([], { type: "image/png" }),
+    );
+    await expect(element.readClipboard()).rejects.toThrow(
+      "Couldn't read the brush shape image",
     );
     vi.restoreAllMocks();
   });

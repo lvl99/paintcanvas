@@ -91,7 +91,7 @@ pnpm dev
 
 Starts a development server and opens the demo in your browser. It uses the source directly, so saving a change to `src/`, `demo/` or `locales/` reloads the page with the change straight away. (The whole page reloads because custom elements can't be redefined in a running page, so the drawing starts again.)
 
-- http://localhost:5190/: a full-page PaintCanvas with a layers panel, the colour palette (from the colours at the top of the toolbar), a menu with input settings, keyboard shortcuts, settings import and export, a dark theme switch and a "New drawing" button. The drawing and the settings are kept in the browser, so they survive reloads.
+- http://localhost:5190/: a full-page PaintCanvas with a layers panel, the colour palette (from the colours at the top of the toolbar), a menu with input settings, keyboard shortcuts, settings import and export, a theme picker (light, dark or system) and a "New drawing" button. The drawing and the settings, including the theme and language, are kept in the browser, so they survive reloads. Below 600px wide, the toolbar and the layers rail sit over the canvas.
 - http://localhost:5190/elements.html: the base elements.
 
 To try it with a pen or touch on another device (e.g. a tablet) on the same network, run `pnpm dev --host` and open the network address it prints. This makes the server reachable by anyone on that network.
@@ -119,23 +119,26 @@ Source layout:
 
 Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in jsdom; pixel tests (`*.browser.test.ts`) run in headless Chromium.
 
-| Command                 | Does                                                                              |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| `pnpm typecheck`        | Checks types in the source, tests, scripts and demo                               |
-| `pnpm lint`             | Checks the code with ESLint                                                       |
-| `pnpm format`           | Formats files with Prettier (`pnpm format:check` only checks)                     |
-| `pnpm test`             | Runs the unit tests                                                               |
-| `pnpm test:browser`     | Runs the pixel tests in a real browser                                            |
-| `pnpm test:all`         | Runs both                                                                         |
-| `pnpm coverage`         | Runs both, with a coverage report in `coverage/`                                  |
-| `pnpm build`            | Builds the package into `dist/`: ES modules matching `src/`, with types           |
-| `pnpm build:validators` | Regenerates the validators after changing the preset, message or document schemas |
-| `pnpm dev`              | Starts the demo, reloading it when files change (`pnpm demo` does the same)       |
-| `pnpm docs`             | Starts the documentation site (`pnpm docs:build` builds it into `docs/build/`)    |
-| `pnpm demo:build`       | Builds the demo pages as a static site into `.pages/app/`                         |
-| `pnpm pages:build`      | Builds the GitHub Pages site (docs and demo) into `.pages/`                       |
-| `pnpm pages:preview`    | Serves the built site at http://localhost:5191/paintcanvas/                       |
-| `pnpm pages:deploy`     | Builds the site from `main` and publishes it to the `gh-pages` branch             |
+| Command                 | Does                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm typecheck`        | Checks types in the source, tests, scripts and demo                                 |
+| `pnpm lint`             | Checks the code with ESLint                                                         |
+| `pnpm format`           | Formats files with Prettier (`pnpm format:check` only checks)                       |
+| `pnpm test`             | Runs the unit tests                                                                 |
+| `pnpm test:browser`     | Runs the pixel tests in a real browser                                              |
+| `pnpm test:all`         | Runs both                                                                           |
+| `pnpm coverage`         | Runs both, with a coverage report in `coverage/`                                    |
+| `pnpm build`            | Builds the package into `dist/`: ES modules matching `src/`, with types             |
+| `pnpm build:validators` | Regenerates the validators after changing the preset, message or document schemas   |
+| `pnpm icons:build`      | Optimises the icons' SVGs and makes their PNGs (`pnpm build` and `pnpm dev` run it) |
+| `pnpm dev`              | Starts the demo, reloading it when files change (`pnpm demo` does the same)         |
+| `pnpm docs`             | Starts the documentation site (`pnpm docs:build` builds it into `docs/build/`)      |
+| `pnpm demo:build`       | Builds the demo pages as a static site into `.pages/app/`                           |
+| `pnpm pages:build`      | Builds the GitHub Pages site (docs and demo) into `.pages/`                         |
+| `pnpm pages:preview`    | Serves the built site at http://localhost:5191/paintcanvas/                         |
+| `pnpm pages:deploy`     | Builds the site from `main` and publishes it to the `gh-pages` branch               |
+
+Icons live in `src/ui/icons/images`, each as `icon-<name>.svg` (the 64 × 64 source artwork) and `icon-<name>@2x.png` (128 × 128, which the UI uses). Edit or add the SVG, then run `pnpm icons:build`: it optimises the SVGs with svgo and makes the PNGs from them. A test fails if a PNG doesn't match its SVG. Register a new icon in `src/ui/icons/index.ts`.
 
 Each folder in `src/lib` and `src/ui` is published as its own import path (e.g. `src/lib/classes/PaintCanvas` as `@lvl99dotcom/paintcanvas/lib/classes/PaintCanvas`). `sideEffects` in `package.json` lists the UI modules that register elements when loaded (`src/ui/index.ts` and each `src/ui/elements/*/index.ts`), so bundlers keep them; add any other module that registers elements there.
 
