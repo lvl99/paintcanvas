@@ -412,6 +412,9 @@ export default class PaintCanvas extends EventTarget {
   /** Image data copied with cut or copy, and the area it was copied from */
   private clipboard?: { image: OffscreenCanvas; area: Rect };
 
+  /** How many times image data has been copied (see `copyCount`) */
+  private copies = 0;
+
   /** The system clipboard copies are also put on, if any */
   private readonly systemClipboard?: SystemClipboardLike;
 
@@ -1113,9 +1116,18 @@ export default class PaintCanvas extends EventTarget {
     const image = copyArea(this.createCanvas, layer.canvas, area);
     applyMask(image, copyArea(this.createCanvas, mask, area));
     this.clipboard = { image, area };
+    this.copies++;
     this.writeSystemClipboard(image);
     this.notify();
     return area;
+  }
+
+  /**
+   * How many times image data has been copied or cut, to tell whether it was copied here since something else may have
+   * been copied in another app (see `KeyboardShortcuts`).
+   */
+  get copyCount(): number {
+    return this.copies;
   }
 
   /** Whether there is copied image data to paste (see `copy` and `cut`) */

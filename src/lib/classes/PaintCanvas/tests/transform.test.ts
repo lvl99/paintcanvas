@@ -106,7 +106,11 @@ describe("PaintCanvas clipboard", () => {
   it("should paste an image from elsewhere in the middle of the view, shrunk to fit the canvas", () => {
     const { app, created } = createApp();
     const float = vi.spyOn(
-      (app as unknown as { transformer: { float: () => void } }).transformer,
+      (
+        app as unknown as {
+          transformer: { float: (...args: unknown[]) => void };
+        }
+      ).transformer,
       "float",
     );
     vi.spyOn(app.viewport, "visibleRect").mockReturnValue({

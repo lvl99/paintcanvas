@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import KeyboardShortcuts, { SHORTCUT_EVENT } from "..";
+import KeyboardShortcuts, {
+  PASTE_EVENT_WAIT_MS,
+  SHORTCUT_EVENT,
+  pastedImage,
+} from "..";
 import PaintCanvas, { Panel, Tool } from "../../PaintCanvas";
 import { createFakeCanvasFactory } from "../../../../testing/fakeCanvas";
 
@@ -7,6 +11,13 @@ const createApp = () =>
   new PaintCanvas({
     createCanvas: createFakeCanvasFactory(),
   });
+
+/** A `paste` event (jsdom has no ClipboardEvent) carrying files */
+const pasteEvent = (files: File[] = []) =>
+  Object.assign(
+    new Event("paste", { bubbles: true, composed: true, cancelable: true }),
+    { clipboardData: { files } },
+  ) as unknown as ClipboardEvent;
 
 const press = (
   target: EventTarget,
@@ -119,8 +130,116 @@ describe("KeyboardShortcuts", () => {
     expect(copy).toHaveBeenCalledOnce();
     press(window, "x", { metaKey: true });
     expect(cut).toHaveBeenCalledOnce();
-    press(window, "v", { metaKey: true });
+    vi.useFakeTimers();
+    try {
+      // Cmd+V leaves the browser to fire `paste`, then pastes what was copied here if it doesn't
+      const event = press(window, "v", { metaKey: true });
+      expect(event.defaultPrevented).toBe(false);
+      expect(paste).not.toHaveBeenCalled();
+      press(window, "v", { metaKey: true });
+      vi.advanceTimersByTime(PASTE_EVENT_WAIT_MS);
+      expect(paste).toHaveBeenCalledOnce();
+      // A `paste` event in time stops the wait
+      press(window, "v", { metaKey: true });
+      window.dispatchEvent(pasteEvent());
+      vi.advanceTimersByTime(PASTE_EVENT_WAIT_MS);
+      expect(paste).toHaveBeenCalledTimes(2);
+      // Running the action pastes straight away
+      shortcuts.run({ type: "paste" });
+      expect(paste).toHaveBeenCalledTimes(3);
+      // Detaching stops it too
+      press(window, "v", { metaKey: true });
+      shortcuts.detach();
+      vi.advanceTimersByTime(PASTE_EVENT_WAIT_MS);
+      expect(paste).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("should paste another app's image from the browser's paste event, unless image data was copied here since the window was last left", async () => {
+    const app = createApp();
+    const bitmap = { width: 2, height: 2 } as ImageBitmap;
+    const decode = vi.fn(async () => bitmap);
+    shortcuts = new KeyboardShortcuts(app, decode);
+    shortcuts.attach(window);
+    const paste = vi.spyOn(app, "paste").mockImplementation(() => undefined);
+    const pasteImage = vi
+      .spyOn(app, "pasteImage")
+      .mockImplementation(() => undefined);
+    const image = new File([], "copied.png", { type: "image/png" });
+
+    // An image from elsewhere
+    const event = pasteEvent([new File([], "notes.txt"), image]);
+    window.dispatchEvent(event);
+    await Promise.resolve();
+    expect(event.defaultPrevented).toBe(true);
+    expect(decode).toHaveBeenCalledWith(image);
+    expect(pasteImage).toHaveBeenCalledWith(bitmap);
+
+    // Copied here since: the copy here wins
+    vi.spyOn(app, "copyCount", "get").mockReturnValue(1);
+    vi.spyOn(app, "hasClipboard", "get").mockReturnValue(true);
+    window.dispatchEvent(pasteEvent([image]));
     expect(paste).toHaveBeenCalledOnce();
+
+    // Leaving the window: something else may have been copied
+    window.dispatchEvent(new Event("blur"));
+    window.dispatchEvent(pasteEvent([image]));
+    await Promise.resolve();
+    expect(pasteImage).toHaveBeenCalledTimes(2);
+
+    // No image: the copy here
+    window.dispatchEvent(pasteEvent());
+    expect(paste).toHaveBeenCalledTimes(2);
+
+    // An image that can't be read pastes nothing
+    decode.mockRejectedValueOnce(new Error("Bad image"));
+    window.dispatchEvent(pasteEvent([image]));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(pasteImage).toHaveBeenCalledTimes(2);
+    expect(paste).toHaveBeenCalledTimes(2);
+
+    // Pasting into a text field is left to it
+    const input = document.createElement("input");
+    document.body.append(input);
+    const typed = pasteEvent([image]);
+    input.dispatchEvent(typed);
+    expect(typed.defaultPrevented).toBe(false);
+    input.remove();
+
+    // An event handled directly (not dispatched) has no path
+    await shortcuts.handlePaste(pasteEvent());
+    expect(paste).toHaveBeenCalledTimes(3);
+  });
+
+  it("should find the first image in pasted data", () => {
+    const image = new File([], "a.png", { type: "image/png" });
+    expect(pastedImage(null)).toBeUndefined();
+    expect(
+      pastedImage({
+        files: [new File([], "a.txt"), image],
+      } as unknown as DataTransfer),
+    ).toBe(image);
+  });
+
+  it("should read images with the browser by default", async () => {
+    const app = createApp();
+    shortcuts = new KeyboardShortcuts(app);
+    shortcuts.attach(window);
+    const createImageBitmap = vi.fn(async () => ({ width: 1, height: 1 }));
+    vi.stubGlobal("createImageBitmap", createImageBitmap);
+    vi.spyOn(app, "pasteImage").mockImplementation(() => undefined);
+    try {
+      window.dispatchEvent(
+        pasteEvent([new File([], "a.png", { type: "image/png" })]),
+      );
+      await Promise.resolve();
+      expect(createImageBitmap).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("should delete the masked image data with Delete or Backspace", () => {
