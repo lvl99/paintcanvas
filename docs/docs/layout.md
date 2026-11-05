@@ -45,7 +45,7 @@ The layout's areas are built from a few kinds of elements, each sharing its look
 
 - **Panes** (`<pc-pane>`): areas where buttons and panels are shown or docked, with `start`, `middle` and `end` slots (content without a slot goes at the start). They run `vertical` (the sides) or `horizontal` (the top); the middle takes the space left. `<pc-toolbar>` is a pane.
 - **Panels** (`<pc-panel>`, and panels made for one purpose that extend `PcPanel`: `<pc-panel-layers>`, `<pc-panel-brushes>` and `<pc-panel-colours>`): boxes of settings or content, with `header`, `body` and `footer` slots (content without a slot goes in the body). A panel's `icon`, `label` and `badge` (a dot meaning something new) are shown on its rail button.
-- **Menus** (`<pc-menu>`): lists of items, each with an optional icon or checkmark and keyboard shortcut. `<pc-context-menu>` is a button (its `icon` slot, ⋮ by default) that opens one: a `pc-menu` in its `menu` slot, or its own of `items`.
+- **Menus** (`<pc-menu>`): lists of items, each with an optional icon or checkmark and keyboard shortcut, with optional non-interactive labels (`{ type: "label", label }`) and dividers (`{ type: "divider" }`) between them. `<pc-context-menu>` is a button (its `icon` slot, ⋮ by default) that opens one: a `pc-menu` in its `menu` slot, or its own of `items`.
 
 ```html
 <pc-context-menu label="Layer actions" .items="${items}" @pc-select="${(e)" ="">

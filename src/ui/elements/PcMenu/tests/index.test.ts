@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect } from "vitest";
 import "..";
-import type { PcMenu } from "..";
+import { isMenuItem, menuSections, type MenuEntry, type PcMenu } from "..";
 import { events, mount } from "../../../../testing/elements";
 import {
   ariaKeyShortcut,
@@ -181,5 +181,87 @@ describe("pc-menu item extras", () => {
       items: extras.slice(0, 1),
     });
     expect(menu.shadowRoot!.querySelector(".start")).toBeNull();
+  });
+
+  it("should show labels and dividers that focus skips and screen readers group by", async () => {
+    const entries: MenuEntry[] = [
+      { type: "label", label: "Tools" },
+      { value: "brush", label: "Brush", checked: true },
+      { value: "eraser", label: "Eraser", checked: false },
+      { type: "divider" },
+      { type: "label", label: "View" },
+      { value: "grid", label: "Grid" },
+      { type: "divider" },
+      { value: "reset", label: "Reset" },
+    ];
+    const menu = await mount<PcMenu>("pc-menu", { items: entries });
+    const root = menu.shadowRoot!;
+    const groups = [...root.querySelectorAll("[role=group]")];
+    expect(
+      groups.map((group) => [
+        root
+          .getElementById(group.getAttribute("aria-labelledby")!)!
+          .textContent!.trim(),
+        [...group.querySelectorAll("button")].map((b) => b.dataset.value),
+      ]),
+    ).toEqual([
+      ["Tools", ["brush", "eraser"]],
+      ["View", ["grid"]],
+    ]);
+    expect(root.querySelectorAll("[role=separator]")).toHaveLength(2);
+    expect(root.querySelector("[part=label]")!.getAttribute("role")).toBe(
+      "presentation",
+    );
+    // Items without a label aren't grouped
+    expect(root.querySelector("[data-value=reset]")!.parentElement!.role).toBe(
+      "menu",
+    );
+    menu.open = true;
+    await menu.updateComplete;
+    expect((root.activeElement as HTMLElement).dataset.value).toBe("brush");
+    press(menu, "End");
+    expect((root.activeElement as HTMLElement).dataset.value).toBe("reset");
+    press(menu, "ArrowUp");
+    expect((root.activeElement as HTMLElement).dataset.value).toBe("grid");
+  });
+});
+
+describe("isMenuItem", () => {
+  it("should tell items from labels and dividers", () => {
+    expect(isMenuItem({ value: "a", label: "A" })).toBe(true);
+    expect(isMenuItem({ type: "item", value: "a", label: "A" })).toBe(true);
+    expect(isMenuItem({ type: "label", label: "A" })).toBe(false);
+    expect(isMenuItem({ type: "divider" })).toBe(false);
+  });
+});
+
+describe("menuSections", () => {
+  const a = { value: "a", label: "A" };
+  const b = { value: "b", label: "B" };
+
+  it("should start a section at each label and divider", () => {
+    expect(
+      menuSections([
+        a,
+        { type: "divider" },
+        { type: "label", label: "L" },
+        b,
+        { type: "label", label: "M" },
+      ]),
+    ).toEqual([
+      { items: [a], divided: false },
+      { label: "L", items: [b], divided: true },
+      { label: "M", items: [], divided: false },
+    ]);
+  });
+
+  it("should leave out the empty start, but keep dividers", () => {
+    expect(menuSections([])).toEqual([]);
+    expect(menuSections([{ type: "divider" }, a])).toEqual([
+      { items: [a], divided: true },
+    ]);
+    expect(menuSections([{ type: "label", label: "L" }, a])).toEqual([
+      { label: "L", items: [a], divided: false },
+    ]);
   });
 });

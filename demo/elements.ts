@@ -3,6 +3,7 @@ import "../src/ui";
 import { languageName, translations } from "../src/lib/i18n";
 import type { PcContextMenu } from "../src/ui/elements/PcContextMenu";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
+import type { MenuEntry } from "../src/ui/elements/PcMenu";
 
 /** An element on the page (the page always has it) */
 const find = <T extends Element = HTMLElement>(selector: string): T =>
@@ -48,10 +49,13 @@ find("#dialog-button").addEventListener("click", () => {
 const menu = find<PcContextMenu>("#menu");
 let alphaLock = false;
 /** Menu items, with the alpha lock toggle showing its state */
-const menuItems = () => [
+const menuItems = (): MenuEntry[] => [
+  { type: "label", label: "Layer" },
   { value: "duplicate", label: "Duplicate", shortcut: { key: "j", cmd: true } },
   { value: "merge", label: "Merge down…", disabled: true },
   { value: "alpha-lock", label: "Alpha lock", checked: alphaLock },
+  { type: "divider" },
+  { type: "label", label: "Tools" },
   {
     value: "brush",
     label: "Select the brush tool",
@@ -63,6 +67,7 @@ const menuItems = () => [
     label: "Fill the layer with the background colour",
     shortcut: { key: "backspace", alt: true },
   },
+  { type: "divider" },
   { value: "delete", label: "Delete", danger: true },
 ];
 menu.items = menuItems();

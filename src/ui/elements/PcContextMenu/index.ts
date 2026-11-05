@@ -1,6 +1,6 @@
 import { css, html, nothing, type PropertyValues } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
-import { PcMenu, type MenuItem } from "../PcMenu";
+import { PcMenu, type MenuEntry } from "../PcMenu";
 import "../PcMenu";
 
 /** Space kept between a context menu's menu and the window's edges */
@@ -107,7 +107,7 @@ export class PcContextMenu extends PcElement {
   declare open: boolean;
 
   /** The items of its own menu, when no `pc-menu` is slotted */
-  declare items: readonly MenuItem[];
+  declare items: readonly MenuEntry[];
 
   /** Names the button for screen readers */
   declare label: string;
