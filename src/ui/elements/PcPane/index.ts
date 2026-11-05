@@ -8,7 +8,7 @@ import {
 import { PcElement, defineElement, emit } from "../../base";
 import { markDismissingPress } from "../../dismiss";
 import { PcPanel } from "../PcPanel";
-import type { SideMode } from "../../layout";
+import { showsRail, type SideMode } from "../../layout";
 
 /** Which way a pane's start, middle and end run */
 export type PaneOrientation = "vertical" | "horizontal";
@@ -35,6 +35,8 @@ const FOCUSABLE =
  *   button again closes it, and focus goes back to the button.
  * - `floating`: the pane floats over the canvas as a box that collapses to a button (`collapsed`, named with its
  *   `label`), firing `pc-collapse` when it's shown or collapsed.
+ * - `overlay`: a rail over the canvas, without a background: each button has its own, and presses between them reach
+ *   the canvas. Its panels stay solid.
  *
  * Panes made for one purpose extend it and put their own content in its regions (see `renderStart`, `renderMiddle`
  * and `renderEnd`), e.g. `<pc-toolbar>`.
@@ -136,6 +138,31 @@ export class PcPane extends PcElement {
         border: 2px solid var(--pc-bar);
         border-radius: 50%;
         background: var(--pc-red);
+      }
+
+      /* Overlay: the rail over the canvas without a background, so only its buttons (each with its own) take presses */
+      :host([mode="overlay"]) {
+        pointer-events: none;
+      }
+      :host([mode="overlay"]) .rail {
+        border-inline: 0;
+        background: transparent;
+      }
+      :host([mode="overlay"]) .rail button,
+      :host([mode="overlay"]) ::slotted(*) {
+        pointer-events: auto;
+      }
+      :host([mode="overlay"]) .rail button {
+        border-color: var(--pc-border);
+        background: var(--pc-surface-raised);
+        box-shadow: var(--pc-shadow);
+      }
+      :host([mode="overlay"]) .rail button:hover {
+        background: var(--pc-surface-hover);
+      }
+      :host([mode="overlay"]) .rail button[aria-expanded="true"] {
+        border-color: var(--pc-accent);
+        background: var(--pc-accent);
       }
 
       /* Floating: the pane floats over the canvas as a box, and collapses to a button */
@@ -313,7 +340,7 @@ export class PcPane extends PcElement {
 
   /** Show the panels for the mode: hidden behind the rail (except the open one, beside the pane) or as they are */
   private syncPanels(): void {
-    const rail = this.mode === "rail";
+    const rail = showsRail(this.mode);
     for (const panel of this.panels) {
       panel.toggleAttribute("data-pc-rail", rail);
       if (rail && panel === this.openPanel)
@@ -325,7 +352,7 @@ export class PcPane extends PcElement {
   protected override updated(changed: PropertyValues<this>): void {
     if (!changed.has("mode") && !changed.has("edge")) return;
     // A panel opened from the rail closes when the rail goes
-    if (this.mode !== "rail") this.closePanel(false);
+    if (!showsRail(this.mode)) this.closePanel(false);
     this.syncPanels();
   }
 
@@ -346,7 +373,7 @@ export class PcPane extends PcElement {
 
   /** The rail: a button per panel */
   private renderRail() {
-    if (this.mode !== "rail" || this.panels.length === 0) return nothing;
+    if (!showsRail(this.mode) || this.panels.length === 0) return nothing;
     return html`<div
       class="rail"
       part="rail"

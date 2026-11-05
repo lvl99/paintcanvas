@@ -82,6 +82,7 @@ export {
   STATE_EVENT,
   matchesState,
   parseSideModes,
+  showsRail,
   sideModeFor,
   type InputKind,
   type LayoutState,

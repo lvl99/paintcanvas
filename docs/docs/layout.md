@@ -57,11 +57,12 @@ The layout's areas are built from a few kinds of elements, each sharing its look
 
 ## Side modes
 
-Each side (`left` and `right`) is shown in one of three modes, chosen by the layout's width. The layout gives the mode to the side's panes (its own, or `<pc-pane>`s you give the side), so give side content in a pane:
+Each side (`left` and `right`) is shown in one of four modes, chosen by the layout's width. The layout gives the mode to the side's panes (its own, or `<pc-pane>`s you give the side), so give side content in a pane:
 
 - `docked`: beside the canvas.
 - `rail`: a column of buttons, one per panel in the pane. Each button opens its panel over the canvas; Escape or a press outside closes it. Open one from code with `pane.togglePanel(panel)`.
 - `floating`: the pane floats over the canvas as a box that starts collapsed to a button.
+- `overlay`: a rail over the canvas, which fills the width behind it. The pane has no background; each button has its own, and presses between them reach the canvas. Its panels stay solid. The toolbar's own panels (e.g. the brush presets) open beside a left overlay. When fitting the drawing, the canvas keeps it clear of the overlay.
 
 Set the rules with `left-modes` and `right-modes`: a mode, then `mode@width` for layouts narrower than that width. The default is `"docked, rail@600"`.
 

@@ -111,6 +111,23 @@ pc-canvas-map {
   grid-row: 3;
   width: 0;
 }
+/* Overlay: the side's rail sits over the canvas (beside it only, not the tool settings), so the canvas fills the
+   width behind it; presses between its panes' buttons (which take presses themselves) reach the canvas */
+.side[data-mode="overlay"] {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  pointer-events: none;
+}
+.side.left[data-mode="overlay"] {
+  justify-self: start;
+}
+.side.right[data-mode="overlay"] {
+  justify-self: end;
+}
+/* The toolbar's panels open beside a left overlay rail, not under it */
+:host([left-mode="overlay"]) .panel {
+  left: var(--pc-left-inset);
+}
 /* While another window is drawing, its message covers only the layout (not the whole page) */
 pc-dialog.elsewhere {
   position: absolute;

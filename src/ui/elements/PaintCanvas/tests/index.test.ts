@@ -357,6 +357,29 @@ describe("paint-canvas", () => {
     expect(insets()).toEqual({ top: 0, right: 240, bottom: 0, left: 0 });
   });
 
+  it("should keep the canvas clear of overlay sides, and open the toolbar's panels beside a left one", async () => {
+    const { layout } = await setup();
+    layout.leftModes = "overlay";
+    await layout.updateComplete;
+    const toolbar = query<PcToolbar>(layout, ".side.left pc-toolbar");
+    expect(toolbar.mode).toBe("overlay");
+    expect(layout.getAttribute("left-mode")).toBe("overlay");
+    vi.spyOn(toolbar, "getBoundingClientRect").mockReturnValue({
+      width: 50,
+    } as DOMRect);
+    layout.requestUpdate();
+    await layout.updateComplete;
+    await layout.updateComplete;
+    expect(
+      query<HTMLElement & { insets: unknown }>(layout, "pc-canvas").insets,
+    ).toEqual({ top: 0, right: 0, bottom: 0, left: 50 });
+    expect(
+      query<HTMLElement>(layout, ".center").style.getPropertyValue(
+        "--pc-left-inset",
+      ),
+    ).toBe("50px");
+  });
+
   it("should handle keyboard shortcuts unless asked not to, saving a screenshot on Cmd/Ctrl + S", async () => {
     const { layout, app } = await setup();
     const saveFile = vi.fn(async () => "download" as const);

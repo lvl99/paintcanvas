@@ -15,7 +15,7 @@ pc-colour-pair {
 button {
   border: 0;
   border-bottom: 1px solid var(--pc-border);
-  background: transparent;
+  background: var(--pc-toolbar-button-background, transparent);
   font-size: 20px;
 }
 button:hover {
@@ -32,7 +32,7 @@ button[aria-pressed="true"]:hover {
 }
 button:disabled {
   opacity: 0.4;
-  background: transparent;
+  background: var(--pc-toolbar-button-background, transparent);
 }
 button:focus-visible {
   outline: var(--pc-focus-width) solid var(--pc-focus);
@@ -72,4 +72,29 @@ img {
 }
 .tool-menu[open]::part(button) {
   background: var(--pc-surface-active);
+}
+/* Overlay: over the canvas without a background, so only its buttons (each with its own) take presses */
+:host([mode="overlay"]) {
+  --pc-toolbar-button-background: var(--pc-surface-raised);
+  border-right: 0;
+  background: transparent;
+  pointer-events: none;
+}
+:host([mode="overlay"]) button,
+:host([mode="overlay"]) pc-colour-pair,
+:host([mode="overlay"]) .tool-menu {
+  margin-bottom: var(--pc-space-1);
+  border: 1px solid var(--pc-border);
+  border-radius: var(--pc-radius-small);
+  box-shadow: var(--pc-shadow);
+  pointer-events: auto;
+}
+:host([mode="overlay"]) pc-colour-pair {
+  background: var(--pc-surface-raised);
+}
+:host([mode="overlay"]) .tool-menu::part(button) {
+  border-radius: var(--pc-radius-small);
+}
+:host([mode="overlay"]) .spacer {
+  border-bottom: 0;
 }

@@ -86,8 +86,9 @@ const TAKE_OVER_CHOICE = "take-over";
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
  * rail@600"`), which the layout gives the side's `<pc-pane>`s (see `PcPane`): `docked` beside the canvas; `rail`, a
- * column of buttons (one per panel) that open each panel over the canvas; or `floating`, the pane over the canvas as a
- * box that collapses to a button. Give side content in a `<pc-pane>` to have it follow the side's mode.
+ * column of buttons (one per panel) that open each panel over the canvas; `floating`, the pane over the canvas as a
+ * box that collapses to a button; or `overlay`, a rail over the canvas without a background (the canvas fills the
+ * width behind it). Give side content in a `<pc-pane>` to have it follow the side's mode.
  *
  * Reports its state for styling as attributes (`narrow`, `input="pen|touch|mouse"`, `ui-hidden`, `left-mode`,
  * `right-mode`) and as `pc-state-change` events (see `LayoutState`). Creates its own canvas unless given one, and
@@ -204,7 +205,7 @@ export class PaintCanvasElement extends PcElement {
   /** The state last reported, to report only changes */
   private reported?: string;
 
-  /** Space the floating sides cover over the canvas */
+  /** Space the floating and overlay sides cover over the canvas */
   private floatingInsets: Insets = NO_INSETS;
 
   private readonly resizeObserver?: ResizeObserver =
@@ -361,11 +362,13 @@ export class PaintCanvasElement extends PcElement {
       }
   }
 
-  /** Keep the canvas clear of floating sides when fitting it */
+  /** Keep the canvas clear of floating and overlay sides when fitting it */
   private measureFloatingSides(): void {
     const width = (side: Side) =>
       this.panesIn(side)
-        .filter((pane) => pane.mode === "floating" && !pane.collapsed)
+        .filter((pane) =>
+          pane.mode === "floating" ? !pane.collapsed : pane.mode === "overlay",
+        )
         .reduce(
           (widest, pane) =>
             Math.max(widest, pane.getBoundingClientRect().width),
@@ -722,6 +725,7 @@ export class PaintCanvasElement extends PcElement {
       <div
         class="center"
         part="center"
+        style="--pc-left-inset: ${this.floatingInsets.left}px"
         role="region"
         aria-label=${this.t("paintCanvas.layout.canvas")}
         ?inert=${blocked}

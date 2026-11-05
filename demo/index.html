@@ -41,7 +41,8 @@
       .narrow-note {
         position: absolute;
         top: 8px;
-        right: 8px;
+        left: 50%;
+        transform: translateX(-50%);
         padding: 4px 8px;
         border-radius: 4px;
         background: var(--pc-accent);
@@ -56,7 +57,8 @@
     <paint-canvas
       store="demo"
       settings-store="demo"
-      right-modes="docked, rail@800, floating@400"
+      left-modes="docked, overlay@600"
+      right-modes="docked, rail@800, overlay@600"
     >
       <div slot="menu" class="menu">
         <pc-input-settings id="settings"></pc-input-settings>

@@ -136,6 +136,19 @@ describe("pc-pane", () => {
     expect(queryAll(pane, ".rail")).toHaveLength(0);
   });
 
+  it("should show a rail over the canvas as an overlay, opening its panels beside it", async () => {
+    const pane = await setup(panelHtml("Layers"), { mode: "overlay" });
+    const panel = pane.querySelector<PcPanel>("pc-panel")!;
+    expect(panel.hasAttribute("data-pc-rail")).toBe(true);
+    query<HTMLButtonElement>(pane, ".rail button").click();
+    expect(pane.openPanel).toBe(panel);
+    expect(panel.getAttribute("data-pc-open")).toBe("left");
+    pane.mode = "rail";
+    await pane.updateComplete;
+    // Still a rail, so the panel stays open
+    expect(pane.openPanel).toBe(panel);
+  });
+
   it("should open and close panels from code, and close one that's removed", async () => {
     const pane = await setup(panelHtml("Layers"), { mode: "rail" });
     const panel = pane.querySelector<PcPanel>("pc-panel")!;
