@@ -80,8 +80,15 @@ button img {
   bottom: 3px;
   font-size: 13px;
 }
-/* Focus pen mode sits on the right of every tool's settings */
-.focus-pen {
+/* The tool's settings at the start; actions (e.g. cut, copy and paste, focus pen mode) at the end, on the right */
+.start,
+.end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.end {
   margin-left: auto;
 }
 /* The brush size, dragged to resize */

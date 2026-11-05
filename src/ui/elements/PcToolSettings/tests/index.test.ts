@@ -12,6 +12,7 @@ import {
 import type { PcBrushSize } from "../../PcBrushSize";
 import type { PcNumberSlider } from "../../PcNumberSlider";
 import type { PcPopover } from "../../PcPopover";
+import type { PcContextMenu } from "../../PcContextMenu";
 import { icons } from "../../../icons";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../../lib/classes/Viewport";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
@@ -55,13 +56,6 @@ const setup = async (tool: Tool = Tool.Brush) => {
       events.push([type, (e as CustomEvent).detail]),
     );
   return { app, element, events };
-};
-
-/** Set a number input's value and fire `change` */
-const enter = (element: PcToolSettings, selector: string, value: string) => {
-  const input = query<HTMLInputElement>(element, selector);
-  input.value = value;
-  input.dispatchEvent(new Event("change"));
 };
 
 /** Give the move and rotate tools a box to change, as if pixels were found */
@@ -314,32 +308,137 @@ describe("pc-tool-settings", () => {
     expect(app.brush.preset.rotationConfig?.useTilt).toBe(false);
   });
 
-  it.each([
-    Tool.Brush,
-    Tool.Eraser,
-    Tool.RectangleLasso,
-    Tool.Move,
-    Tool.Zoom,
-    Tool.ColourSample,
-  ])(
-    "should switch focus pen mode on and off, last in the settings for tool %s",
+  it.each([Tool.Brush, Tool.Eraser])(
+    "should switch focus pen mode on and off, at the end of the settings for tool %s",
     async (tool) => {
       const { app, element } = await setup(tool);
-      const items = queryAll(element, "[role=toolbar] > *");
-      expect(items.at(-1)!.classList.contains("focus-pen")).toBe(true);
-      const toggle = query<HTMLInputElement>(element, ".focus-pen input");
-      expect(toggle.checked).toBe(false);
-      expect(query(element, ".focus-pen img").getAttribute("src")).toMatch(
+      const end = query(element, "[role=toolbar] > .end");
+      const toggle = query<HTMLButtonElement>(
+        element,
+        ".end > button.focus-pen",
+      );
+      expect(toggle.parentElement).toBe(end);
+      expect(toggle.getAttribute("aria-label")).toBe("Focus pen mode");
+      expect(toggle.getAttribute("aria-pressed")).toBe("false");
+      expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(
         /icon-focus-pen@2x\.png$/,
       );
-      toggle.checked = true;
-      toggle.dispatchEvent(new Event("change"));
+      toggle.click();
       expect(app.input.data.focusPen).toBe(true);
-      app.input.update({ focusPen: false });
       await element.updateComplete;
-      expect(toggle.checked).toBe(false);
+      expect(toggle.getAttribute("aria-pressed")).toBe("true");
+      toggle.click();
+      expect(app.input.data.focusPen).toBe(false);
     },
   );
+
+  it.each([Tool.RectangleLasso, Tool.Move, Tool.Zoom, Tool.ColourSample])(
+    "should leave out focus pen mode for tool %s",
+    async (tool) => {
+      const { element } = await setup(tool);
+      expect(element.shadowRoot!.querySelector(".focus-pen")).toBeNull();
+    },
+  );
+
+  it("should put the tool's settings at the start and actions at the end, each with a slot", async () => {
+    const { element } = await setup(Tool.RectangleLasso);
+    const start = query(element, "[role=toolbar] > .start");
+    const end = query(element, "[role=toolbar] > .end");
+    expect(start.getAttribute("part")).toBe("start");
+    expect(end.getAttribute("part")).toBe("end");
+    expect(start.querySelector("button.select-all")).not.toBeNull();
+    expect(start.lastElementChild!.getAttribute("name")).toBe("start");
+    expect(end.lastElementChild!.getAttribute("name")).toBe("end");
+  });
+
+  it.each([Tool.RectangleLasso, Tool.CircleLasso, Tool.Move])(
+    "should cut, copy (with a mask) and paste (with copied image data) at the end for tool %s",
+    async (tool) => {
+      const { app, element } = await setup(tool);
+      const button = (name: string) =>
+        query<HTMLButtonElement>(element, `.end > button.${name}`);
+      expect(
+        queryAll(element, ".end > button").map((b) => b.textContent!.trim()),
+      ).toEqual(["Cut", "Copy", "Paste"]);
+      expect(
+        ["cut", "copy", "paste"].map((name) => button(name).disabled),
+      ).toEqual([true, true, true]);
+      const cut = vi.spyOn(app, "cut").mockImplementation(() => undefined);
+      const copy = vi.spyOn(app, "copy").mockReturnValue(undefined);
+      const paste = vi.spyOn(app, "paste").mockImplementation(() => undefined);
+      app.selection.active = true;
+      vi.spyOn(app, "hasClipboard", "get").mockReturnValue(true);
+      app.selection.dispatchEvent(new Event("change"));
+      await element.updateComplete;
+      expect(
+        ["cut", "copy", "paste"].map((name) => button(name).disabled),
+      ).toEqual([false, false, false]);
+      button("cut").click();
+      button("copy").click();
+      button("paste").click();
+      expect([cut, copy, paste].map((spy) => spy.mock.calls.length)).toEqual([
+        1, 1, 1,
+      ]);
+    },
+  );
+
+  it("should not cut or copy while a transform is pending", async () => {
+    const { app, element } = await setup(Tool.Move);
+    app.selection.active = true;
+    vi.spyOn(app.transform, "pending", "get").mockReturnValue(true);
+    app.selection.dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    expect(
+      query<HTMLButtonElement>(element, ".end > button.copy").disabled,
+    ).toBe(true);
+  });
+
+  it("should put several actions in a ⋮ menu while narrow, but not a single one", async () => {
+    const { app, element } = await setup(Tool.RectangleLasso);
+    element.narrow = true;
+    await element.updateComplete;
+    expect(queryAll(element, ".end > button")).toHaveLength(0);
+    const menu = query<PcContextMenu>(element, ".end > pc-context-menu.more");
+    expect(menu.label).toBe("More actions");
+    expect(menu.items).toEqual([
+      {
+        value: "cut",
+        label: "Cut",
+        disabled: true,
+        icon: undefined,
+        selected: undefined,
+      },
+      {
+        value: "copy",
+        label: "Copy",
+        disabled: true,
+        icon: undefined,
+        selected: undefined,
+      },
+      {
+        value: "paste",
+        label: "Paste",
+        disabled: true,
+        icon: undefined,
+        selected: undefined,
+      },
+    ]);
+    const paste = vi.spyOn(app, "paste").mockImplementation(() => undefined);
+    menu.dispatchEvent(
+      new CustomEvent("pc-select", { detail: { value: "paste" } }),
+    );
+    menu.dispatchEvent(
+      new CustomEvent("pc-select", { detail: { value: "unknown" } }),
+    );
+    expect(paste).toHaveBeenCalledOnce();
+    // The brush's one action (focus pen mode) stays a button
+    app.selectTool(Tool.Brush);
+    await element.updateComplete;
+    expect(
+      element.shadowRoot!.querySelector(".end > pc-context-menu"),
+    ).toBeNull();
+    expect(query(element, ".end > button.focus-pen")).not.toBeNull();
+  });
 
   it("should ask to configure the brush or eraser", async () => {
     const { app, element, events } = await setup(Tool.Eraser);
@@ -427,14 +526,21 @@ describe("pc-tool-settings", () => {
 
   it("should leave the move settings off until there is something to move", async () => {
     const { element } = await setup(Tool.Move);
-    expect(query<HTMLInputElement>(element, "input.width").disabled).toBe(true);
+    for (const name of ["width", "height", "angle"]) {
+      expect(slider(element, name).disabled).toBe(true);
+      expect(slider(element, name).text).toBe("–");
+    }
     expect(
       query<HTMLButtonElement>(element, "button.flip-horizontal").disabled,
     ).toBe(true);
     // Clicking disabled buttons programmatically does nothing
     query(element, "button.flip-horizontal").click();
     query(element, "button.flip-vertical").click();
-    enter(element, "input.width", "10");
+    const setBox = vi.spyOn(element.app!.transform, "setBox");
+    slider(element, "width").dispatchEvent(
+      new CustomEvent("pc-change", { detail: { value: 10 } }),
+    );
+    expect(setBox).not.toHaveBeenCalled();
   });
 
   it("should resize in pixels or percent, constrained or not, flip and reset", async () => {
@@ -448,19 +554,22 @@ describe("pc-tool-settings", () => {
     );
     app.setConstrainProportions(true);
     await element.updateComplete;
-    expect(query<HTMLInputElement>(element, "input.width").value).toBe("100");
-    enter(element, "input.width", "200");
+    const width = slider(element, "width");
+    expect([width.value, width.unit, width.text]).toEqual([100, "", ""]);
+    await typeInto(width, "200");
     expect(app.transform.box).toMatchObject({ width: 200, height: 100 });
-    enter(element, "input.width", "0");
-    enter(element, "input.width", "");
-    expect(setBox).toHaveBeenCalledOnce();
+    // Not below 1
+    await typeInto(width, "0");
+    expect(app.transform.box).toMatchObject({ width: 1, height: 0.5 });
+    expect(setBox).toHaveBeenCalledTimes(2);
+    await typeInto(width, "200");
 
     const percent = query<HTMLInputElement>(element, "input.percent");
     percent.checked = true;
     percent.dispatchEvent(new Event("change"));
     await element.updateComplete;
-    expect(query<HTMLInputElement>(element, "input.width").value).toBe("200");
-    enter(element, "input.height", "50");
+    expect([width.value, width.unit]).toEqual([200, "%"]);
+    await typeInto(slider(element, "height"), "50");
     expect(app.transform.box).toMatchObject({ width: 50, height: 25 });
 
     const constrain = query<HTMLInputElement>(element, "input.constrain");
@@ -475,7 +584,7 @@ describe("pc-tool-settings", () => {
     app.setConstrainProportions(false);
     await element.updateComplete;
     expect(constrain.checked).toBe(false);
-    enter(element, "input.width", "100");
+    await typeInto(width, "100");
     expect(app.transform.box).toMatchObject({ width: 100, height: 25 });
 
     query(element, "button.flip-horizontal").click();
@@ -483,8 +592,8 @@ describe("pc-tool-settings", () => {
     expect(app.transform.box).toMatchObject({ width: -100, height: -25 });
     await element.updateComplete;
     // Flipped sides show as positive, and resizing keeps the flips
-    expect(query<HTMLInputElement>(element, "input.width").value).toBe("100");
-    enter(element, "input.width", "50");
+    expect(width.value).toBe(100);
+    await typeInto(width, "50");
     expect(app.transform.box?.width).toBe(-50);
 
     const cancel = vi.spyOn(app, "cancelTransform");
@@ -499,8 +608,8 @@ describe("pc-tool-settings", () => {
       "Move, scale and rotate settings",
     );
     expect(
-      [...toolbar.querySelectorAll("label, button")].map((item) =>
-        item.textContent?.replace(/\s+/g, " ").trim(),
+      [...toolbar.querySelectorAll(".start > :is(.field, label, button)")].map(
+        (item) => item.textContent?.replace(/\s+/g, " ").trim(),
       ),
     ).toEqual([
       "Width",
@@ -509,12 +618,19 @@ describe("pc-tool-settings", () => {
       "Percent",
       "Flip horizontal",
       "Flip vertical",
-      "Angle °",
+      "Angle",
       "Rotate 90° left",
       "Rotate 90° right",
       "Reset",
-      "Focus pen mode",
     ]);
+    const angle = slider(element, "angle");
+    expect([
+      angle.min,
+      angle.max,
+      angle.step,
+      angle.dragStep,
+      angle.unit,
+    ]).toEqual([-360, 360, 0.01, 1, "°"]);
   });
 
   it("should show icons on the flip and rotate 90° buttons", async () => {
@@ -544,12 +660,14 @@ describe("pc-tool-settings", () => {
 
   it("should rotate by an angle (to 2 decimal places) or 90° steps", async () => {
     const { app, element } = await setup(Tool.Move);
-    expect(query<HTMLInputElement>(element, "input.angle").disabled).toBe(true);
+    const angle = slider(element, "angle");
+    expect(angle.disabled).toBe(true);
     query(element, "button.rotate-right").click();
     query(element, "button.rotate-left").click();
     query(element, "button.reset").click();
     const setBox = vi.spyOn(app.transform, "setBox");
-    enter(element, "input.angle", "5");
+    // A change with nothing to move does nothing
+    angle.dispatchEvent(new CustomEvent("pc-change", { detail: { value: 5 } }));
     expect(setBox).not.toHaveBeenCalled();
     setBox.mockRestore();
     withBox(app);
@@ -559,17 +677,16 @@ describe("pc-tool-settings", () => {
     query(element, "button.rotate-left").click();
     query(element, "button.rotate-left").click();
     expect(app.transform.box?.rotation).toBe(-90);
-    enter(element, "input.angle", "400");
+    await typeInto(angle, "400");
+    // At most 360°, which is a whole turn
+    expect(app.transform.box?.rotation).toBe(0);
+    await typeInto(angle, "40");
     expect(app.transform.box?.rotation).toBe(40);
-    enter(element, "input.angle", "");
-    await element.updateComplete;
-    expect(query<HTMLInputElement>(element, "input.angle").value).toBe("40");
-    expect(query<HTMLInputElement>(element, "input.angle").step).toBe("0.01");
-    enter(element, "input.angle", "12.3456");
+    await typeInto(angle, "12.3456");
     expect(app.transform.box?.rotation).toBe(12.35);
     app.transform.setBox({ ...app.transform.box!, rotation: 33.33333 });
     await element.updateComplete;
-    expect(query<HTMLInputElement>(element, "input.angle").value).toBe("33.33");
+    expect(angle.value).toBe(33.33);
   });
 });
 
@@ -607,7 +724,7 @@ describe("pc-tool-settings zoom", () => {
           item.getAttribute("aria-label") ??
           item.textContent?.replace(/\s+/g, " ").trim(),
       ),
-    ).toEqual(["Zoom in", "Zoom out", "Zoom 100%", "Reset", "Focus pen mode"]);
+    ).toEqual(["Zoom in", "Zoom out", "Zoom 100%", "Reset"]);
     expect(toolbar.querySelector(".zoom-in img")?.getAttribute("src")).toMatch(
       /icon-zoom-in@2x\.png$/,
     );

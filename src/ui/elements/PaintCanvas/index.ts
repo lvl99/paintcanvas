@@ -714,6 +714,7 @@ export class PaintCanvasElement extends PcElement {
                 ><pc-tool-settings
                   slot="middle"
                   .app=${app}
+                  ?narrow=${this.width < this.narrowWidth}
                   @pc-configure-brush=${(
                     event: CustomEvent<"brush" | "eraser">,
                   ) => this.configure(event.detail)}
