@@ -4,6 +4,7 @@ import { TOOLBAR_TOOLS, type PcToolbar } from "..";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import { mount, query, queryAll } from "../../../../testing/elements";
 import type { PcColourPair } from "../../PcColourPair";
+import type { PcContextMenu } from "../../PcContextMenu";
 import { createApp } from "../../../../testing/app";
 
 afterEach(() => document.body.replaceChildren());
@@ -207,5 +208,54 @@ describe("pc-toolbar", () => {
       menu: false,
     });
     expect(queryAll(element, `[data-panel="${Panel.Menu}"]`)).toHaveLength(0);
+  });
+
+  it("should show the tools as one button with the current tool's icon while minimised", async () => {
+    const app = createApp();
+    const element = await mount<PcToolbar>("pc-toolbar", {
+      app,
+      minimised: true,
+    });
+    expect(element.hasAttribute("minimised")).toBe(true);
+    expect(queryAll(element, "button[data-tool]")).toHaveLength(0);
+    const toggle = query<PcContextMenu>(element, "pc-context-menu.tool-menu");
+    expect(toggle.dataset.tool).toBe(Tool.Brush);
+    expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(
+      /brush\.png$/,
+    );
+    expect(toggle.label).toBe("Brush (B)");
+    expect(toggle.placement).toBe("beside");
+    app.selectTool(Tool.Eraser);
+    await element.updateComplete;
+    expect(toggle.dataset.tool).toBe(Tool.Eraser);
+    expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(
+      /eraser\.png$/,
+    );
+  });
+
+  it("should list every tool under a label in the minimised tools' menu, and select the chosen one", async () => {
+    const app = createApp();
+    app.shortcuts.set("tool-zoom", null);
+    const element = await mount<PcToolbar>("pc-toolbar", {
+      app,
+      minimised: true,
+    });
+    const toggle = query<PcContextMenu>(element, "pc-context-menu.tool-menu");
+    expect(toggle.menuLabel).toBe("Tools");
+    expect(toggle.items[0]).toEqual({ type: "label", label: "Tools" });
+    expect(toggle.items.slice(1)).toEqual(
+      TOOLBAR_TOOLS.map(({ tool, icon }) =>
+        expect.objectContaining({ value: tool, icon }),
+      ),
+    );
+    const zoom = toggle.items.find(
+      (item) => "value" in item && item.value === Tool.Zoom,
+    );
+    expect(zoom).toMatchObject({ label: "Zoom", shortcut: undefined });
+    expect(toggle.items[1]).toMatchObject({ shortcut: { key: "b" } });
+    toggle.dispatchEvent(
+      new CustomEvent("pc-select", { detail: { value: Tool.Pan } }),
+    );
+    expect([app.tool, app.panel]).toEqual([Tool.Pan, null]);
   });
 });

@@ -40,7 +40,7 @@ import {
 import { hasToolSettings } from "../PcToolSettings";
 import "../PcPanel";
 import { PcPane, PANE_COLLAPSE_EVENT } from "../PcPane";
-import "../PcToolbar";
+import { PcToolbar } from "../PcToolbar";
 import "../PcToolSettings";
 import "../PcCanvas";
 import "../PcCanvasMap";
@@ -69,7 +69,8 @@ const TAKE_OVER_CHOICE = "take-over";
  * window), with slots to add or replace content:
  *
  * - `header`: across the top (empty by default)
- * - `left`: `<pc-toolbar>` (a pane) by default
+ * - `left`: `<pc-toolbar>` (a pane) by default; toolbars in the sides are minimised (their tools one button that opens a
+ *   menu of them) while the layout is narrow
  * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) by default
  * - `right`: a `<pc-pane>` with `<pc-panel-layers>` by default
  * - `center`: `<pc-canvas>` by default
@@ -348,12 +349,14 @@ export class PaintCanvasElement extends PcElement {
     );
   }
 
-  /** Show each side's panes in the side's mode, facing the canvas */
+  /** Show each side's panes in the side's mode, facing the canvas, with toolbars minimised while the layout is narrow */
   private setPaneModes(): void {
+    const narrow = this.width < this.narrowWidth;
     for (const side of SIDES)
       for (const pane of this.panesIn(side)) {
         pane.mode = this.modeOf(side);
         pane.edge = side;
+        if (pane instanceof PcToolbar) pane.minimised = narrow;
       }
   }
 

@@ -29,6 +29,8 @@ sidebar_label: Layout and slots
 
 Put your own element in a slot to replace its default. Empty areas take no space. While a side has a `<pc-panel-layers>` (as the right side does by default), the toolbar has no layers button. On its own, `<pc-toolbar>` leaves the button out with `.layers=${false}`.
 
+While the layout is narrow (below `narrow-width`, 600px by default), toolbars in the sides are minimised: their tools become one button showing the current tool's icon, which opens a menu of the tools. On its own, set `minimised` on `<pc-toolbar>`.
+
 ```html
 <paint-canvas menu-text="App" menu-label="App menu">
   <pc-pane slot="right">

@@ -181,6 +181,18 @@ describe("paint-canvas", () => {
     expect(app.panel).toBeNull();
   });
 
+  it("should minimise its toolbars while narrow", async () => {
+    const { layout } = await setup("", 1000);
+    const toolbar = layout.shadowRoot!.querySelector<PcToolbar>("pc-toolbar")!;
+    expect(toolbar.minimised).toBe(false);
+    layout.width = 599;
+    await layout.updateComplete;
+    expect(toolbar.minimised).toBe(true);
+    layout.width = 600;
+    await layout.updateComplete;
+    expect(toolbar.minimised).toBe(false);
+  });
+
   it("should report its state as attributes and events", async () => {
     const { layout } = await setup("", 1000);
     const states = events<LayoutState>(layout, STATE_EVENT);

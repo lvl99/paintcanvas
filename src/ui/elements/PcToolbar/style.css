@@ -55,3 +55,21 @@ img {
   flex: 1;
   border-bottom: 1px solid var(--pc-border);
 }
+/* The tools as one button (while minimised), showing the current tool, selected like a tool button */
+.tool-menu {
+  width: 50px;
+  height: 50px;
+  border-bottom: 1px solid var(--pc-border);
+}
+.tool-menu::part(button) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--pc-accent);
+}
+.tool-menu::part(button):focus-visible {
+  outline-offset: -3px;
+}
+.tool-menu[open]::part(button) {
+  background: var(--pc-surface-active);
+}
