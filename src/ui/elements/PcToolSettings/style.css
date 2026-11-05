@@ -86,8 +86,11 @@ button img {
 }
 /* The brush size, dragged to resize */
 .size {
-  align-self: stretch;
   min-width: 56px;
+}
+/* The size settings, with room around them */
+.size-popover::part(popover) {
+  padding: 15px;
 }
 /* The size settings: width, constrain proportions and height, in a row */
 .size-fields {
@@ -95,7 +98,7 @@ button img {
   align-items: flex-end;
   gap: 8px;
 }
-/* Brush width, height and opacity: dragged or typed, 24px tall (WCAG 2.2's smallest target) under their names */
+/* Brush size, width, height and opacity: dragged or typed, 24px tall (WCAG 2.2's smallest target) under their names */
 .field {
   line-height: 1;
 }
@@ -103,7 +106,9 @@ button img {
   min-width: 4.5em;
 }
 .field pc-number-slider::part(control),
-.field pc-number-slider::part(field) {
+.field pc-number-slider::part(field),
+.field pc-brush-size::part(control),
+.field pc-brush-size::part(field) {
   box-sizing: border-box;
   min-height: 24px;
 }

@@ -13,6 +13,7 @@
   "paintCanvas.common.moreInformation": "자세히 보기",
   "paintCanvas.common.width": "너비",
   "paintCanvas.common.height": "높이",
+  "paintCanvas.common.size": "크기",
   "paintCanvas.common.opacity": "불투명도",
   "paintCanvas.tool.brush": "브러시",
   "paintCanvas.tool.eraser": "지우개",

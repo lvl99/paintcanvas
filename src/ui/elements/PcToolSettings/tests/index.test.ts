@@ -122,10 +122,14 @@ describe("pc-tool-settings", () => {
     const size = query<PcBrushSize>(element, "pc-brush-size");
     expect(size.settings).toBe(app.eraser);
     expect(size.label).toBe("Eraser size");
-    expect(size.previousElementSibling!.classList.contains("preset")).toBe(
+    // Named "Size" above it, like the other fields
+    const field = size.parentElement!;
+    expect(field.classList.contains("field")).toBe(true);
+    expect(field.firstElementChild!.textContent).toBe("Size");
+    expect(field.previousElementSibling!.classList.contains("preset")).toBe(
       true,
     );
-    expect(size.nextElementSibling!.classList.contains("size-settings")).toBe(
+    expect(field.nextElementSibling!.classList.contains("size-settings")).toBe(
       true,
     );
   });

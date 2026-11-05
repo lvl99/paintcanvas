@@ -13,6 +13,7 @@
   "paintCanvas.common.moreInformation": "More information",
   "paintCanvas.common.width": "Width",
   "paintCanvas.common.height": "Height",
+  "paintCanvas.common.size": "Size",
   "paintCanvas.common.opacity": "Opacity",
   "paintCanvas.tool.brush": "Brush",
   "paintCanvas.tool.eraser": "Eraser",

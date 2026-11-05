@@ -357,11 +357,14 @@ export class PcToolSettings extends PcElement {
           ></span>
           ${preset.name ?? preset.id}
         </button>
-        <pc-brush-size
-          class="size"
-          .settings=${settings}
-          label=${this.t("paintCanvas.brushMenu.size", { tool: label })}
-        ></pc-brush-size>
+        <div class="field">
+          <span aria-hidden="true">${this.t("paintCanvas.common.size")}</span>
+          <pc-brush-size
+            class="size"
+            .settings=${settings}
+            label=${this.t("paintCanvas.brushMenu.size", { tool: label })}
+          ></pc-brush-size>
+        </div>
         <button
           type="button"
           class="size-settings"

@@ -13,6 +13,7 @@
   "paintCanvas.common.moreInformation": "詳細",
   "paintCanvas.common.width": "幅",
   "paintCanvas.common.height": "高さ",
+  "paintCanvas.common.size": "サイズ",
   "paintCanvas.common.opacity": "不透明度",
   "paintCanvas.tool.brush": "ブラシ",
   "paintCanvas.tool.eraser": "消しゴム",

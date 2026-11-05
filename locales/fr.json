@@ -13,6 +13,7 @@
   "paintCanvas.common.moreInformation": "Plus d’informations",
   "paintCanvas.common.width": "Largeur",
   "paintCanvas.common.height": "Hauteur",
+  "paintCanvas.common.size": "Taille",
   "paintCanvas.common.opacity": "Opacité",
   "paintCanvas.tool.brush": "Pinceau",
   "paintCanvas.tool.eraser": "Gomme",
