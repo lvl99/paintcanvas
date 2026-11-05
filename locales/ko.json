@@ -76,7 +76,7 @@
   "paintCanvas.toolSettings.areaSample": "영역 평균으로 추출",
   "paintCanvas.brushMenu.presets": "{tool} 프리셋",
   "paintCanvas.brushMenu.size": "{tool} 크기",
-  "paintCanvas.brushMenu.dragToResize": "좌우로 드래그해 크기 조절",
+  "paintCanvas.numberSlider.hint": "좌우로 드래그해 변경, 탭해 입력",
   "paintCanvas.brushMenu.newPreset": "새 프리셋",
   "paintCanvas.brushMenu.create": "만들기",
   "paintCanvas.brushMenu.import": "가져오기",

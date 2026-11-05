@@ -15,6 +15,7 @@ export { PcButtonGroup } from "./elements/PcButtonGroup";
 export { PcIconToggle } from "./elements/PcIconToggle";
 export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
+export { PcNumberSlider, fitNumber } from "./elements/PcNumberSlider";
 export { PcBrushSize, sizeText } from "./elements/PcBrushSize";
 export { PointerDrag, DRAG_THRESHOLD, dragDelta } from "./drag";
 export { markDismissingPress, isDismissingPress } from "./dismiss";

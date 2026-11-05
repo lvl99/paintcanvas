@@ -76,7 +76,7 @@
   "paintCanvas.toolSettings.areaSample": "Area sample",
   "paintCanvas.brushMenu.presets": "{tool} presets",
   "paintCanvas.brushMenu.size": "{tool} size",
-  "paintCanvas.brushMenu.dragToResize": "Drag sideways to resize",
+  "paintCanvas.numberSlider.hint": "Drag sideways to change, or tap to type",
   "paintCanvas.brushMenu.newPreset": "New preset",
   "paintCanvas.brushMenu.create": "Create",
   "paintCanvas.brushMenu.import": "Import",

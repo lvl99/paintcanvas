@@ -76,7 +76,7 @@
   "paintCanvas.toolSettings.areaSample": "範囲の平均で取得",
   "paintCanvas.brushMenu.presets": "{tool}のプリセット",
   "paintCanvas.brushMenu.size": "{tool}のサイズ",
-  "paintCanvas.brushMenu.dragToResize": "左右にドラッグしてサイズを変更",
+  "paintCanvas.numberSlider.hint": "左右にドラッグして変更、タップして入力",
   "paintCanvas.brushMenu.newPreset": "新しいプリセット",
   "paintCanvas.brushMenu.create": "作成",
   "paintCanvas.brushMenu.import": "読み込み",

@@ -76,7 +76,7 @@
   "paintCanvas.toolSettings.areaSample": "區域平均取色",
   "paintCanvas.brushMenu.presets": "{tool}預設",
   "paintCanvas.brushMenu.size": "{tool}大小",
-  "paintCanvas.brushMenu.dragToResize": "左右拖曳以調整大小",
+  "paintCanvas.numberSlider.hint": "左右拖曳以變更，點一下以輸入",
   "paintCanvas.brushMenu.newPreset": "新預設",
   "paintCanvas.brushMenu.create": "建立",
   "paintCanvas.brushMenu.import": "匯入",

@@ -76,7 +76,7 @@
   "paintCanvas.toolSettings.areaSample": "Prélever une zone",
   "paintCanvas.brushMenu.presets": "Préréglages : {tool}",
   "paintCanvas.brushMenu.size": "Taille : {tool}",
-  "paintCanvas.brushMenu.dragToResize": "Faire glisser latéralement pour redimensionner",
+  "paintCanvas.numberSlider.hint": "Faire glisser latéralement pour modifier, ou toucher pour saisir",
   "paintCanvas.brushMenu.newPreset": "Nouveau préréglage",
   "paintCanvas.brushMenu.create": "Créer",
   "paintCanvas.brushMenu.import": "Importer",
