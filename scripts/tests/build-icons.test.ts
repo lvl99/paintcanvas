@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   mkdtempSync,
   readFileSync,
@@ -20,6 +20,9 @@ import {
   pngSize,
   renderPng,
 } from "../build-icons";
+
+// Rendering PNGs can take longer than the usual 5 seconds while the other tests run alongside
+vi.setConfig({ testTimeout: 30_000 });
 
 /** Artwork as an editor saves it: sized to fill, with the editor's own attributes */
 const EDITOR_SVG =
