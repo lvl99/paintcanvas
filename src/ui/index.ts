@@ -37,6 +37,11 @@ export {
   type MenuPlacement,
 } from "./elements/PcContextMenu";
 export {
+  PcDialogWindow,
+  DIALOG_DISMISS_EVENT,
+  type DialogCloseReason,
+} from "./elements/PcDialogWindow";
+export {
   PcDialog,
   CANCEL_CHOICE,
   type DialogChoice,

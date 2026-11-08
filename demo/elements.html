@@ -38,12 +38,25 @@
     </section>
     <section>
       <pc-button id="dialog-button">Open dialog</pc-button>
+      <pc-button id="window-button">Open window</pc-button>
       <pc-button variant="cancel">Cancel</pc-button>
       <pc-button variant="dismiss">Dismiss</pc-button>
       <pc-button variant="pill">Pill</pc-button>
       <pc-button variant="icon" icon="undo" label="Undo"></pc-button>
       <pc-button disabled>Disabled</pc-button>
     </section>
+    <pc-dialog-window id="window" shaded>
+      <strong slot="header-start">Window</strong>
+      <p slot="body">
+        A window with a header, a body and a footer. Its body scrolls when it's
+        taller than the screen; the header and footer stay in view.
+      </p>
+      <ol slot="body" id="window-lines"></ol>
+      <pc-button slot="footer-start" variant="dismiss" id="window-dismiss"
+        >Dismiss</pc-button
+      >
+      <pc-button slot="footer-end" id="window-done">Done</pc-button>
+    </pc-dialog-window>
     <section>
       <pc-button size="pill-s">Pill S</pc-button>
       <pc-button>Pill</pc-button>

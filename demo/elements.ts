@@ -3,6 +3,7 @@ import "../src/ui";
 import { languageName, translations } from "../src/lib/i18n";
 import type { PcContextMenu } from "../src/ui/elements/PcContextMenu";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
+import type { PcDialogWindow } from "../src/ui/elements/PcDialogWindow";
 import type { MenuEntry } from "../src/ui/elements/PcMenu";
 
 /** An element on the page (the page always has it) */
@@ -45,6 +46,22 @@ find("#dialog-button").addEventListener("click", () => {
   dialog.addEventListener("pc-choose", () => dialog.remove());
   document.body.append(dialog);
 });
+
+// A window long enough to scroll its body
+const dialogWindow = find<PcDialogWindow>("#window");
+find("#window-lines").append(
+  ...Array.from({ length: 30 }, (_, i) =>
+    Object.assign(document.createElement("li"), {
+      textContent: `Line ${i + 1}`,
+    }),
+  ),
+);
+find("#window-button").addEventListener(
+  "click",
+  () => (dialogWindow.open = true),
+);
+for (const id of ["#window-dismiss", "#window-done"])
+  find(id).addEventListener("click", () => (dialogWindow.open = false));
 
 const menu = find<PcContextMenu>("#menu");
 let alphaLock = false;
