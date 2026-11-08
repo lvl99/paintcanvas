@@ -1,7 +1,8 @@
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import type { PcAppSettings } from "..";
 import type { PcShortcutSettings } from "../../PcShortcutSettings";
+import type { PcDialogWindow } from "../../PcDialogWindow";
 import { events, mount, query } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 import {
@@ -9,19 +10,6 @@ import {
   collectSettings,
   exportSettingsFile,
 } from "../../../../lib/settings";
-
-// jsdom has no modal dialogs: opening and closing one sets `open`, and closing fires `close` like browsers do
-beforeEach(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn(function (
-    this: HTMLDialogElement,
-  ) {
-    this.setAttribute("open", "");
-  });
-  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
-    this.removeAttribute("open");
-    this.dispatchEvent(new Event("close"));
-  });
-});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -33,7 +21,7 @@ const setup = async () => {
   const app = createApp();
   const element = await mount<PcAppSettings>("pc-app-settings", { app });
   const toasts = events<{ message: string; kind: string }>(element, "pc-toast");
-  const dialog = () => query<HTMLDialogElement>(element, "dialog");
+  const dialog = () => query<PcDialogWindow>(element, "pc-dialog-window");
   return { app, element, toasts, dialog };
 };
 
@@ -43,12 +31,12 @@ describe("pc-app-settings", () => {
     expect(element.shadowRoot!.querySelector("button")).toBeNull();
     element.shortcutsOpen = true;
     await element.updateComplete;
-    expect(element.shadowRoot!.querySelector("dialog")).toBeNull();
+    expect(element.shadowRoot!.querySelector("pc-dialog-window")).toBeNull();
     await element.importFile(new File(["{}"], "x.json"));
     await element.exportFile();
   });
 
-  it("should open the keyboard shortcuts in a modal window", async () => {
+  it("should open the keyboard shortcuts in a shaded window", async () => {
     const { app, element, dialog } = await setup();
     expect(dialog().open).toBe(false);
     expect(
@@ -61,48 +49,26 @@ describe("pc-app-settings", () => {
     ]).toEqual(["Keyboard shortcuts", "dialog"]);
     button.click();
     await element.updateComplete;
-    expect(dialog().showModal).toHaveBeenCalledOnce();
-    expect(dialog().open).toBe(true);
-    expect(dialog().getAttribute("aria-labelledby")).toBe("shortcuts-title");
-    expect(query(element, "#shortcuts-title").textContent?.trim()).toBe(
+    expect([dialog().open, dialog().shaded]).toEqual([true, true]);
+    const heading = query(element, "h2");
+    expect([heading.slot, heading.textContent?.trim()]).toEqual([
+      "header-middle",
       "Keyboard shortcuts",
-    );
-    expect(
-      query<PcShortcutSettings>(element, "pc-shortcut-settings").settings,
-    ).toBe(app.shortcuts);
-    expect(query(element, "button.close").hasAttribute("autofocus")).toBe(true);
-    // Updating while open doesn't open it again
-    element.requestUpdate("shortcutsOpen");
-    await element.updateComplete;
-    element.requestUpdate();
-    await element.updateComplete;
-    expect(dialog().showModal).toHaveBeenCalledOnce();
+    ]);
+    const settings = query<PcShortcutSettings>(element, "pc-shortcut-settings");
+    expect([settings.slot, settings.settings]).toEqual(["body", app.shortcuts]);
   });
 
-  it("should close with its Close button, when the browser closes it (Escape), or on a press on the backdrop", async () => {
+  it("should close when its window asks (⨉, Escape or a press outside)", async () => {
     const { element, dialog } = await setup();
-    const open = async () => {
-      element.shortcutsOpen = true;
-      await element.updateComplete;
-    };
-    await open();
-    query<HTMLButtonElement>(element, "button.close").click();
+    element.shortcutsOpen = true;
+    await element.updateComplete;
+    dialog().requestClose("outside");
     await element.updateComplete;
     expect([element.shortcutsOpen, dialog().open]).toEqual([false, false]);
     expect(
       element.shadowRoot!.querySelector("pc-shortcut-settings"),
     ).toBeNull();
-    await open();
-    dialog().close();
-    await element.updateComplete;
-    expect(element.shortcutsOpen).toBe(false);
-    await open();
-    // A press inside the window doesn't close it; one on the backdrop (the dialog itself) does
-    query(element, ".window").click();
-    expect(element.shortcutsOpen).toBe(true);
-    dialog().click();
-    await element.updateComplete;
-    expect(element.shortcutsOpen).toBe(false);
   });
 
   it("should import a settings file, using its settings", async () => {

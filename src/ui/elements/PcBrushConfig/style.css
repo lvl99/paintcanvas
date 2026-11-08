@@ -1,20 +1,22 @@
 :host {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--pc-backdrop);
+  display: contents;
 }
-[role="dialog"] {
+pc-dialog-window {
+  --pc-dialog-width: 560px;
+}
+.settings {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: min(560px, 95vw);
-  max-height: 95vh;
-  overflow: auto;
-  padding: 8px;
-  background: var(--pc-surface);
+}
+.name-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.actions {
+  display: flex;
+  gap: 6px;
 }
 .row {
   display: flex;
@@ -44,10 +46,6 @@ input[type="range"] {
   mask-repeat: no-repeat;
   mask-size: contain;
   mask-position: center;
-}
-/* The name, with "Close" on the right */
-.header .close {
-  margin-left: auto;
 }
 /* The shape (preview, Upload and Paste) and the smoothing icons on one row */
 .shape-row {

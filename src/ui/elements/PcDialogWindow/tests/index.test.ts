@@ -176,8 +176,14 @@ describe("pc-dialog-window", () => {
     expect(element.open).toBe(false);
     await reopen();
 
-    // Other keys do nothing
+    // Other keys do nothing, nor Escape that something in it used
     dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    const used = new KeyboardEvent("keydown", {
+      key: "Escape",
+      cancelable: true,
+    });
+    used.preventDefault();
+    dialog.dispatchEvent(used);
     expect(element.open).toBe(true);
 
     // The browser's own request (e.g. a back gesture) is handled as Escape
@@ -264,6 +270,29 @@ describe("pc-dialog-window", () => {
     expect(element.getAttribute("closable")).toBe("false");
   });
 
+  it("should give focus back to what had it before it opened when taken out of the page while open", async () => {
+    // A button in a shadow root, as in another element
+    const host = document.createElement("div");
+    const button = document.createElement("button");
+    host.attachShadow({ mode: "open" }).append(button);
+    document.body.append(host);
+    button.focus();
+    const element = await mount<PcDialogWindow>("pc-dialog-window", {
+      open: true,
+    });
+    query<HTMLButtonElement>(element, "button.close").focus();
+    element.remove();
+    expect(host.shadowRoot!.activeElement).toBe(button);
+    // Not when what had focus has gone too
+    document.body.append(element);
+    await element.updateComplete;
+    const other = document.createElement("input");
+    document.body.append(other);
+    host.remove();
+    element.remove();
+    expect(document.activeElement).not.toBe(host);
+  });
+
   it("should follow being closed some other way, and show again when put back in the page", async () => {
     const element = await mount<PcDialogWindow>("pc-dialog-window", {
       open: true,
@@ -275,8 +304,12 @@ describe("pc-dialog-window", () => {
 
     element.open = true;
     await element.updateComplete;
+    // Taken out of the page: closed, so focus goes back, but still open to show again
     element.remove();
+    expect(dialog.open).toBe(false);
     expect(document.documentElement.style.overflow).toBe("");
+    await settle();
+    expect(element.open).toBe(true);
     document.body.append(element);
     expect(dialog.open).toBe(true);
     expect(document.documentElement.style.overflow).toBe("hidden");

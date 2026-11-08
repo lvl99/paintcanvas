@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
+import type { PcDialogWindow } from "../../PcDialogWindow";
 import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
 import { OK_CHOICE } from "../../../ask";
 import type { PcBrushConfig } from "..";
@@ -74,26 +75,30 @@ const click = async (element: PcBrushConfig, selector: string) => {
 describe("pc-brush-config", () => {
   it("should show nothing without settings", async () => {
     const element = await mount<PcBrushConfig>("pc-brush-config");
-    expect(queryAll(element, "[role=dialog]")).toHaveLength(0);
+    expect(queryAll(element, "pc-dialog-window")).toHaveLength(0);
   });
 
-  it("should edit a copy of the settings, and close with Dismiss or Escape", async () => {
+  it("should edit a copy of the settings in a shaded window, closed with ⨉ or Escape but not a press outside", async () => {
     const { element, events } = await setup();
     const config = element.config as BrushConfig;
-    expect(query(element, "[role=dialog]").getAttribute("aria-label")).toBe(
-      "Brush configuration",
-    );
+    const dialogWindow = query<PcDialogWindow>(element, "pc-dialog-window");
+    expect([
+      dialogWindow.open,
+      dialogWindow.shaded,
+      dialogWindow.closable,
+      dialogWindow.dismissible,
+      dialogWindow.label,
+    ]).toEqual([true, true, true, false, "Brush configuration"]);
+    expect(query(element, ".name-field").slot).toBe("header-start");
+    expect(query(element, ".settings").slot).toBe("body");
+    expect(query(element, ".actions").slot).toBe("footer-end");
     await enter(element, "input.name", "Renamed", "input");
     expect(draft(element).name).toBe("Renamed");
     expect(config.name).toBe("Round 20px");
-    const dismiss = query(element, "button.close");
-    expect(dismiss.textContent?.trim()).toBe("Dismiss");
-    expect(dismiss.classList).toContain("dismiss");
-    await click(element, "button.close");
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-    element.remove();
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    // The window stays for the layout to remove
+    dialogWindow.requestClose("close");
+    dialogWindow.requestClose("escape");
+    expect(dialogWindow.open).toBe(true);
     expect(events).toEqual([
       ["pc-close", null],
       ["pc-close", null],
@@ -102,7 +107,7 @@ describe("pc-brush-config", () => {
 
   it("should name the eraser's window", async () => {
     const { element } = await setup({ kind: "eraser" });
-    expect(query(element, "[role=dialog]").getAttribute("aria-label")).toBe(
+    expect(query<PcDialogWindow>(element, "pc-dialog-window").label).toBe(
       "Eraser configuration",
     );
   });

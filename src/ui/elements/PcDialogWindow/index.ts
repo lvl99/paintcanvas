@@ -34,6 +34,16 @@ const lockPageScroll = (lock: boolean): void => {
 };
 
 /**
+ * The element with keyboard focus, inside shadow roots too.
+ */
+const focusedElement = (): HTMLElement | null => {
+  let focused = document.activeElement;
+  while (focused?.shadowRoot?.activeElement)
+    focused = focused.shadowRoot.activeElement;
+  return focused as HTMLElement | null;
+};
+
+/**
  * Whether a named slot has content (only elements can go in named slots).
  */
 const hasContent = (slot: HTMLSlotElement): boolean =>
@@ -236,6 +246,9 @@ export class PcDialogWindow extends PcElement {
   /** Whether it's keeping the page from scrolling */
   private scrollLocked = false;
 
+  /** What had focus before it opened, to give it back to if it's taken out of the page while open */
+  private returnFocus: HTMLElement | null = null;
+
   /** Whether the `<dialog>` was last shown inline (not modal) */
   private shownInline = false;
 
@@ -274,15 +287,19 @@ export class PcDialogWindow extends PcElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Put back in the page while open (e.g. moved): show it again, as taking it out of the page took it out of the top layer
-    if (!this.hasUpdated) return;
-    const dialog = this.dialog as HTMLDialogElement;
-    if (dialog.open) dialog.close();
-    this.syncOpen();
+    // Put back in the page while open (e.g. moved): show it again
+    if (this.hasUpdated) this.syncOpen();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    // Taken out of the page while open: closed, and focus goes back to where it was before it opened (the browser only
+    // does that when it's closed in the page)
+    const dialog = this.dialog;
+    if (dialog?.open) {
+      dialog.close();
+      if (this.returnFocus?.isConnected) this.returnFocus.focus();
+    }
     this.syncScrollLock();
   }
 
@@ -307,6 +324,7 @@ export class PcDialogWindow extends PcElement {
       dialog.close();
     if (this.open && !dialog.open && this.isConnected) {
       this.shownInline = this.inline;
+      this.returnFocus = focusedElement();
       if (this.inline) dialog.show();
       else dialog.showModal();
     }
@@ -335,9 +353,10 @@ export class PcDialogWindow extends PcElement {
     return REGIONS.some((place) => this.filled.has(`${region}-${place}`));
   }
 
-  // Escape asks to close (and stops the browser closing it by itself)
+  // Escape asks to close (and stops the browser closing it by itself), unless something in it used it (e.g. a window
+  // over this one, or a menu closing)
   private readonly onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== "Escape") return;
+    if (event.key !== "Escape" || event.defaultPrevented) return;
     event.preventDefault();
     if (this.closable || this.dismissible) this.requestClose("escape");
   };
@@ -348,9 +367,9 @@ export class PcDialogWindow extends PcElement {
     if (this.closable || this.dismissible) this.requestClose("escape");
   };
 
-  // Closed some other way (e.g. a form with `method="dialog"`)
+  // Closed some other way (e.g. a form with `method="dialog"`), not by being taken out of the page
   private readonly onClose = () => {
-    if (this.open && !this.dialog?.open) this.open = false;
+    if (this.isConnected && this.open && !this.dialog?.open) this.open = false;
   };
 
   // A press on the `<dialog>` itself (not the window in it) is outside the window: on the backdrop
