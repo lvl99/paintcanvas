@@ -128,7 +128,3 @@ pc-canvas-map {
 :host([left-mode="overlay"]) .panel {
   left: var(--pc-left-inset);
 }
-/* While another window is drawing, its message covers only the layout (not the whole page) */
-pc-dialog.elsewhere {
-  position: absolute;
-}

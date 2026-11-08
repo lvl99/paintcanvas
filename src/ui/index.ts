@@ -45,7 +45,19 @@ export {
   PcDialog,
   CANCEL_CHOICE,
   type DialogChoice,
+  type DialogChoiceDetail,
+  type DialogField,
 } from "./elements/PcDialog";
+export {
+  askConfirm,
+  askText,
+  deletePresetQuestion,
+  OK_CHOICE,
+  type AskOptions,
+  type AskTextOptions,
+  type ConfirmFn,
+  type PromptFn,
+} from "./ask";
 export { PcToast, TOAST_DURATION_MS, type ToastKind } from "./elements/PcToast";
 export { PcInfoTip } from "./elements/PcInfoTip";
 export { PcPopover } from "./elements/PcPopover";

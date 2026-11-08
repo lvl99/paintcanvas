@@ -6,6 +6,7 @@ import { styleMap } from "lit/directives/style-map.js";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
 import { defineElement } from "../../base";
 import { PcPanel } from "../PcPanel";
+import { askConfirm, deletePresetQuestion, type ConfirmFn } from "../../ask";
 import "../PcBrushSize";
 import ChangeController from "../../ChangeController";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
@@ -45,8 +46,7 @@ export { DELETE_CURSOR };
 /** Size the previews of presets without a family are measured against, so a 50px preset fills its tile */
 const UNGROUPED_FULL_SIZE = 50;
 
-/** Asks the user to confirm; replaceable for tests */
-export type ConfirmFn = (message: string) => boolean;
+export type { ConfirmFn } from "../../ask";
 
 /** Largest shape preview in a preset tile, in CSS pixels */
 export const MAX_PREVIEW_SIZE = 30;
@@ -126,7 +126,8 @@ export class PcPanelBrushes extends PcPanel {
   /** Which settings this menu controls */
   declare kind: "brush" | "eraser";
 
-  confirm: ConfirmFn = (message) => window.confirm(message);
+  /** Asks the user to confirm, in a dialog (replaceable for tests) */
+  confirm: ConfirmFn = (options) => askConfirm(this.renderRoot, options);
 
   /** Saves exported presets (replaceable for tests) */
   saveFile: (blob: Blob, name: string) => Promise<SaveMethod | undefined> = (
@@ -189,7 +190,7 @@ export class PcPanelBrushes extends PcPanel {
     const app = this.app;
     if (!app) return;
     const name = preset.name ?? preset.id;
-    if (!this.confirm(this.t("paintCanvas.presets.deleteConfirm", { name })))
+    if (!(await this.confirm(deletePresetQuestion(this.translations, name))))
       return;
     try {
       await app.customPresets.remove(preset.id);

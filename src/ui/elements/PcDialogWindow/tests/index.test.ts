@@ -73,6 +73,10 @@ describe("pc-dialog-window", () => {
     await element.updateComplete;
     expect(dialog.getAttribute("aria-label")).toBe("Settings");
     expect(dialog.hasAttribute("aria-labelledby")).toBe(false);
+    expect(dialog.hasAttribute("aria-description")).toBe(false);
+    element.description = "Change the keys";
+    await element.updateComplete;
+    expect(dialog.getAttribute("aria-description")).toBe("Change the keys");
   });
 
   it("should show its header and footer only with content (or the ⨉ button)", async () => {
@@ -88,10 +92,13 @@ describe("pc-dialog-window", () => {
         .assignedNodes()
         .map((node) => node.textContent),
     ).toEqual(["Only a body, without a slot"]);
-    // The ⨉ button shows the header
+    // The ⨉ button shows the header, with only its end
     element.closable = true;
     await element.updateComplete;
     expect(query(element, "header").hidden).toBe(false);
+    expect(
+      queryAll(element, "header > div").map((region) => region.hidden),
+    ).toEqual([true, true, false]);
     // Content added later shows the footer
     const footer = document.createElement("span");
     footer.slot = "footer-end";
@@ -99,6 +106,9 @@ describe("pc-dialog-window", () => {
     await new Promise((resolve) => setTimeout(resolve));
     await element.updateComplete;
     expect(query(element, "footer").hidden).toBe(false);
+    expect(
+      queryAll(element, "footer > div").map((region) => region.hidden),
+    ).toEqual([true, true, false]);
   });
 
   it("should open as a modal window and keep the page from scrolling until it closes", async () => {

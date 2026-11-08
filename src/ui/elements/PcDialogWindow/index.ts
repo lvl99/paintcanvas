@@ -45,7 +45,7 @@ const hasContent = (slot: HTMLSlotElement): boolean =>
  * in it (moving to its first control, and back to where it was once it closes).
  *
  * Content goes in its slots: `header-start`, `header-middle` (which names the window for screen readers, unless it has a
- * `label`), `header-end`, `body` (or no slot), `footer-start`, `footer-middle` and `footer-end`. The body scrolls when
+ * `label`; `description` describes it), `header-end`, `body` (or no slot), `footer-start`, `footer-middle` and `footer-end`. The body scrolls when
  * there's too much to fit, keeping the header and footer in view. The header and footer only show with content (or the
  * ⨉ button).
  *
@@ -75,8 +75,8 @@ export class PcDialogWindow extends PcElement {
     dismissible: { converter: onUnlessFalse, reflect: true },
     inline: { type: Boolean, reflect: true },
     label: { type: String },
-    hasHeader: { state: true },
-    hasFooter: { state: true },
+    description: { type: String },
+    filled: { state: true },
   };
 
   static override styles = [
@@ -155,9 +155,8 @@ export class PcDialogWindow extends PcElement {
         align-items: center;
         gap: var(--pc-space-2);
       }
-      header[hidden],
-      footer[hidden] {
-        display: none;
+      [hidden] {
+        display: none !important;
       }
       .start,
       .end {
@@ -228,11 +227,11 @@ export class PcDialogWindow extends PcElement {
   /** Its name for screen readers, instead of its `header-middle` content */
   declare label?: string;
 
-  /** Whether its header slots have content */
-  declare hasHeader: boolean;
+  /** A description for screen readers, e.g. the question a prompt asks */
+  declare description?: string;
 
-  /** Whether its footer slots have content */
-  declare hasFooter: boolean;
+  /** The names of its header and footer slots that have content */
+  declare filled: ReadonlySet<string>;
 
   /** Whether it's keeping the page from scrolling */
   private scrollLocked = false;
@@ -250,8 +249,7 @@ export class PcDialogWindow extends PcElement {
     this.shaded = false;
     this.dismissible = true;
     this.inline = false;
-    this.hasHeader = false;
-    this.hasFooter = false;
+    this.filled = new Set();
   }
 
   /** The `<dialog>` it's built on */
@@ -323,18 +321,18 @@ export class PcDialogWindow extends PcElement {
     lockPageScroll(lock);
   }
 
-  /** Show the header and footer only while their slots have content */
+  /** Note which header and footer slots have content: only those (and the header and footer with them) are shown */
   private updateRegions(): void {
-    const has = (region: "header" | "footer") =>
-      REGIONS.some((place) =>
-        hasContent(
-          this.renderRoot.querySelector(
-            `slot[name="${region}-${place}"]`,
-          ) as HTMLSlotElement,
-        ),
-      );
-    this.hasHeader = has("header");
-    this.hasFooter = has("footer");
+    this.filled = new Set(
+      [...this.renderRoot.querySelectorAll<HTMLSlotElement>("slot[name]")]
+        .filter(hasContent)
+        .map((slot) => slot.name),
+    );
+  }
+
+  /** Whether any of a header's or footer's slots have content */
+  private hasRegion(region: "header" | "footer"): boolean {
+    return REGIONS.some((place) => this.filled.has(`${region}-${place}`));
   }
 
   // Escape asks to close (and stops the browser closing it by itself)
@@ -374,6 +372,7 @@ export class PcDialogWindow extends PcElement {
         html`<div
           class=${place}
           part="${region}-${place}"
+          ?hidden=${!this.filled.has(`${region}-${place}`) && (place !== "end" || end === nothing)}
           id=${region === "header" && place === "middle" ? "title" : nothing}
         >
           <slot
@@ -402,6 +401,7 @@ export class PcDialogWindow extends PcElement {
       part="dialog"
       aria-label=${this.label || nothing}
       aria-labelledby=${this.label ? nothing : "title"}
+      aria-description=${this.description || nothing}
       @keydown=${this.onKeyDown}
       @cancel=${this.onCancel}
       @close=${this.onClose}
@@ -409,14 +409,17 @@ export class PcDialogWindow extends PcElement {
       @click=${this.onClick}
     >
       <div class="window" part="window">
-        <header part="header" ?hidden=${!this.hasHeader && !this.closable}>
+        <header
+          part="header"
+          ?hidden=${!this.hasRegion("header") && !this.closable}
+        >
           ${this.renderRegion("header", closeButton)}
         </header>
         <div class="body" part="body">
           <slot name="body"></slot>
           <slot></slot>
         </div>
-        <footer part="footer" ?hidden=${!this.hasFooter}>
+        <footer part="footer" ?hidden=${!this.hasRegion("footer")}>
           ${this.renderRegion("footer")}
         </footer>
       </div>

@@ -1,5 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
+import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
+import { OK_CHOICE } from "../../../ask";
 import type { PcBrushConfig } from "..";
 import { SmoothingType, type BrushConfig } from "../../../../lib/brushes/types";
 import {
@@ -341,10 +343,13 @@ describe("pc-brush-config", () => {
       author: { handle: TEST_HANDLE },
     });
     expect(app.brush.presetId).toBe(saved!.id);
-    expect(element.prompt).toHaveBeenCalledWith(
-      "Name of the preset",
-      "Round 20px",
-    );
+    expect(element.prompt).toHaveBeenCalledWith({
+      heading: "Add to presets",
+      label: "Name of the preset",
+      value: "Round 20px",
+      confirm: "Save",
+      cancel: "Cancel",
+    });
     expect(events).toEqual([
       ["pc-toast", 'success: Saved "My brush" to My presets'],
       ["pc-close", null],
@@ -359,9 +364,13 @@ describe("pc-brush-config", () => {
     await element.addToPresets();
     expect(app.customPresets.presets).toHaveLength(1);
     await element.addToPresets();
-    expect(element.confirm).toHaveBeenCalledWith(
-      'You already have a preset called "My brush". Replace it?',
-    );
+    expect(element.confirm).toHaveBeenCalledWith({
+      heading: "Replace preset",
+      message: 'You already have a preset called "My brush". Replace it?',
+      confirm: "Replace",
+      cancel: "Cancel",
+      cancelling: true,
+    });
     expect(app.customPresets.presets.map((preset) => preset.id)).toEqual([id]);
     expect(app.eraser.presetId).toBe(id);
   });
@@ -398,9 +407,13 @@ describe("pc-brush-config", () => {
     );
     await element.deletePreset();
     await element.deletePreset();
-    expect(element.confirm).toHaveBeenCalledWith(
-      'Delete "Old brush"? This can\'t be undone.',
-    );
+    expect(element.confirm).toHaveBeenCalledWith({
+      heading: "Delete preset",
+      message: 'Delete "Old brush"? This can\'t be undone.',
+      confirm: "Delete",
+      cancel: "Cancel",
+      cancelling: true,
+    });
     expect(app.customPresets.presets).toEqual([]);
     element.editingId = "gone";
     await element.deletePreset();
@@ -423,16 +436,25 @@ describe("pc-brush-config", () => {
     expect(element.busy).toBe(false);
   });
 
-  it("should use the browser's prompts and clipboard by default", async () => {
+  it("should ask in dialogs and use the clipboard by default", async () => {
     const element = await mount<PcBrushConfig>("pc-brush-config", {
       config: { id: "a" },
     });
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    const prompt = vi.spyOn(window, "prompt").mockReturnValue(null);
-    expect(element.confirm("Sure?")).toBe(false);
-    expect(element.prompt("Name", "x")).toBeNull();
-    expect(confirm).toHaveBeenCalledWith("Sure?");
-    expect(prompt).toHaveBeenCalledWith("Name", "x");
+    const question = { heading: "Sure?", confirm: "Yes", cancel: "No" };
+    /** The dialog asking, in the window */
+    const asking = async () => {
+      const dialog = await vi.waitFor(() =>
+        query<PcDialog>(element, "pc-dialog"),
+      );
+      await dialog.updateComplete;
+      return dialog;
+    };
+    const confirmed = element.confirm(question);
+    (await asking()).choose(CANCEL_CHOICE);
+    expect(await confirmed).toBe(false);
+    const named = element.prompt({ ...question, label: "Name", value: "x" });
+    (await asking()).choose(OK_CHOICE);
+    expect(await named).toBe("x");
     Object.defineProperty(navigator, "clipboard", {
       value: { read: async () => [] },
       configurable: true,
@@ -462,7 +484,9 @@ describe("pc-brush-config", () => {
     await click(element, "input.width.randomise");
     expect(draft(element).height).toBe(1);
     await element.addToPresets();
-    expect(element.prompt).toHaveBeenLastCalledWith("Name of the preset", "");
+    expect(element.prompt).toHaveBeenLastCalledWith(
+      expect.objectContaining({ label: "Name of the preset", value: "" }),
+    );
   });
 
   it.each(["brush", "eraser"] as const)(

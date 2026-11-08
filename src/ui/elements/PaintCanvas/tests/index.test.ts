@@ -586,11 +586,13 @@ describe("paint-canvas", () => {
     expect(dialog.choices.map((choice) => choice.label)).toEqual([
       "Draw here instead",
     ]);
+    // Over the layout only, and not dismissed by Escape or a press outside
+    expect([dialog.inline, dialog.dismissible]).toEqual([true, false]);
     expect(queryAll(layout, "[inert]")).toHaveLength(7);
     // Shortcuts don't change the drawing
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "e" }));
     expect(app.tool).toBe(Tool.Brush);
-    // Escape leaves it blocked
+    // Another choice leaves it blocked
     dialog.choose("cancel");
     await layout.updateComplete;
     expect(layout.blocked).toBe(true);

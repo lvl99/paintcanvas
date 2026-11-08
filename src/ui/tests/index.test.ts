@@ -13,6 +13,7 @@ describe("@lvl99dotcom/paintcanvas/ui", () => {
       "pc-menu",
       "pc-context-menu",
       "pc-dialog",
+      "pc-dialog-window",
       "pc-toast",
       "pc-info-tip",
       "pc-popover",
@@ -21,5 +22,6 @@ describe("@lvl99dotcom/paintcanvas/ui", () => {
     ])
       expect(customElements.get(tag), tag).toBeDefined();
     expect(ui.icons.get("brush")).toBeDefined();
+    expect(typeof ui.askConfirm).toBe("function");
   });
 });

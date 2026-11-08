@@ -4,6 +4,13 @@ import { WINDOWS_CSS as theme } from "../../styles";
 import { PILLS_CSS as pill } from "../../styles";
 import { ICON_CONTROLS_CSS as iconToggle } from "../../styles";
 import { iconLabel } from "../../icons";
+import {
+  askConfirm,
+  askText,
+  deletePresetQuestion,
+  type ConfirmFn,
+  type PromptFn,
+} from "../../ask";
 import { live } from "lit/directives/live.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { PcElement, defineElement } from "../../base";
@@ -32,11 +39,7 @@ import {
   MIN_SAMPLE_RATE,
 } from "../../../lib/brushes/StrokeSampler";
 
-/** Asks the user to confirm; replaceable for tests */
-export type ConfirmFn = (message: string) => boolean;
-
-/** Asks the user for text; replaceable for tests */
-export type PromptFn = (message: string, value: string) => string | null;
+export type { ConfirmFn, PromptFn } from "../../ask";
 
 /** The smoothing choices, in the order shown: value, translation key of the name, and icon name */
 export const SMOOTHING_CHOICES = [
@@ -142,9 +145,11 @@ export class PcBrushConfig extends PcElement {
   /** Whether a preset is being saved or deleted */
   declare busy: boolean;
 
-  confirm: ConfirmFn = (message) => window.confirm(message);
+  /** Asks the user to confirm, in a dialog (replaceable for tests) */
+  confirm: ConfirmFn = (options) => askConfirm(this.renderRoot, options);
 
-  prompt: PromptFn = (message, value) => window.prompt(message, value);
+  /** Asks the user for text, in a dialog (replaceable for tests) */
+  prompt: PromptFn = (options) => askText(this.renderRoot, options);
 
   /** Turns files into brush shapes (replaceable for tests) */
   readShape: (file: File) => Promise<ShapeImage> = readShapeImage;
@@ -262,9 +267,14 @@ export class PcBrushConfig extends PcElement {
     const app = this.app;
     const draft = this.draft;
     if (!app || !draft) return;
-    const name = this.prompt(
-      this.t("paintCanvas.brushConfig.presetName"),
-      draft.name ?? "",
+    const name = (
+      await this.prompt({
+        heading: this.t("paintCanvas.brushConfig.addToPresets"),
+        label: this.t("paintCanvas.brushConfig.presetName"),
+        value: draft.name ?? "",
+        confirm: this.t("paintCanvas.common.save"),
+        cancel: this.t("paintCanvas.common.cancel"),
+      })
     )?.trim();
     if (!name) return;
     const existing = app.customPresets.findOwn(
@@ -274,7 +284,13 @@ export class PcBrushConfig extends PcElement {
     );
     if (
       existing &&
-      !this.confirm(this.t("paintCanvas.presets.replaceConfirm", { name }))
+      !(await this.confirm({
+        heading: this.t("paintCanvas.presets.replaceHeading"),
+        message: this.t("paintCanvas.presets.replaceConfirm", { name }),
+        confirm: this.t("paintCanvas.presets.replace"),
+        cancel: this.t("paintCanvas.common.cancel"),
+        cancelling: true,
+      }))
     )
       return;
     const preset = {
@@ -308,7 +324,7 @@ export class PcBrushConfig extends PcElement {
     const id = this.editingId;
     if (!app || !id) return;
     const name = app.customPresets.get(id)?.name ?? "this preset";
-    if (!this.confirm(this.t("paintCanvas.presets.deleteConfirm", { name })))
+    if (!(await this.confirm(deletePresetQuestion(this.translations, name))))
       return;
     this.busy = true;
     try {

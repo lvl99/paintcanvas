@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
+import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
 import { PresetFileError } from "../../../../lib/brushes/presetFile";
 import { previewSizes, type PcPanelBrushes } from "..";
 import type { PcBrushSize } from "../../PcBrushSize";
@@ -180,9 +181,13 @@ describe("pc-panel-brushes", () => {
     await vi.waitFor(() =>
       expect(app.customPresets.get(mine.id)).toBeUndefined(),
     );
-    expect(element.confirm).toHaveBeenCalledWith(
-      'Delete "Mine"? This can\'t be undone.',
-    );
+    expect(element.confirm).toHaveBeenCalledWith({
+      heading: "Delete preset",
+      message: 'Delete "Mine"? This can\'t be undone.',
+      confirm: "Delete",
+      cancel: "Cancel",
+      cancelling: true,
+    });
     // Alt-clicking a PaintCanvas preset selects it
     altClick("round5");
     expect(app.brush.presetId).toBe("round5");
@@ -279,13 +284,21 @@ describe("pc-panel-brushes", () => {
     ]);
   });
 
-  it("should confirm with the browser and save to a JSON file by default", async () => {
+  it("should confirm in a dialog and save to a JSON file by default", async () => {
     const element = await mount<PcPanelBrushes>("pc-panel-brushes", {
       app: createApp(),
     });
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    expect(element.confirm("Delete?")).toBe(false);
-    expect(confirm).toHaveBeenCalledWith("Delete?");
+    const confirmed = element.confirm({
+      heading: "Delete?",
+      confirm: "Delete",
+      cancel: "Cancel",
+    });
+    const dialog = await vi.waitFor(() =>
+      query<PcDialog>(element, "pc-dialog"),
+    );
+    await dialog.updateComplete;
+    dialog.choose(CANCEL_CHOICE);
+    expect(await confirmed).toBe(false);
     const picker = vi.fn(async () => ({
       createWritable: async () => ({ write: vi.fn(), close: vi.fn() }),
     }));
