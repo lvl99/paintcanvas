@@ -1,5 +1,6 @@
 import { rgbToHex } from "../../utils/colour";
 import type { CanvasFactory } from "../../classes/Layer";
+import { clipRect } from "../../brushes/StrokeEngine";
 import {
   CANVAS_BACKGROUND,
   drawLayers,
@@ -77,8 +78,36 @@ export const pixelRect = (
 };
 
 /**
+ * Copy an area of a canvas onto a new canvas the size of the area, by reading its pixels. Reading only the area keeps
+ * this quick for GPU-backed canvases: drawing one onto another canvas can copy all of its pixels back from the GPU.
+ *
+ * @example
+ * copyPixels(layer.canvas, { x: 10, y: 10, width: 1, height: 1 }, createOffscreenCanvas); // a 1 × 1 canvas
+ */
+export const copyPixels = (
+  source: OffscreenCanvas,
+  area: PixelRect,
+  createCanvas: CanvasFactory,
+): OffscreenCanvas => {
+  const { x, y, width, height } = area;
+  const piece = createCanvas(width, height);
+  const pixels = (
+    source.getContext("2d") as OffscreenCanvasRenderingContext2D
+  ).getImageData(x, y, width, height);
+  (piece.getContext("2d") as OffscreenCanvasRenderingContext2D).putImageData(
+    pixels,
+    0,
+    0,
+  );
+  return piece;
+};
+
+/**
  * Draw an area of the canvas as it's shown (the white background, then every layer mixed as shown) onto a new canvas,
  * scaled to fit `width` × `height`. Parts outside the canvas stay transparent.
+ *
+ * Only the area of each layer is used: at full size, its pixels are read (see `copyPixels`); scaled down (e.g. a
+ * preview of a large area), that part of each layer is drawn scaled.
  *
  * @example
  * flattenArea(app.drawables, app.createCanvas, app.width, app.height, { x: 10, y: 10, width: 10, height: 10 });
@@ -93,16 +122,35 @@ export const flattenArea = (
   height = area.height,
 ): OffscreenCanvas => {
   const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext("2d", {
-    willReadFrequently: true,
-  }) as OffscreenCanvasRenderingContext2D;
+  // The part of the area on the canvas (pixel rects are whole pixels, so clipping keeps them whole)
+  const source = clipRect(area, canvasWidth, canvasHeight);
+  if (!source) return canvas;
+  const ctx = canvas.getContext("2d") as OffscreenCanvasRenderingContext2D;
   const scaleX = width / area.width;
   const scaleY = height / area.height;
+  const scaled = scaleX < 1 || scaleY < 1;
   ctx.setTransform(scaleX, 0, 0, scaleY, -area.x * scaleX, -area.y * scaleY);
-  ctx.imageSmoothingEnabled = scaleX < 1 || scaleY < 1;
+  ctx.imageSmoothingEnabled = scaled;
   ctx.fillStyle = CANVAS_BACKGROUND;
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-  drawLayers(ctx, layers);
+  ctx.fillRect(source.x, source.y, source.width, source.height);
+  if (scaled) {
+    drawLayers(ctx, layers, undefined, source);
+    return canvas;
+  }
+  // Each shown layer's pixels in the area, drawn where the area starts
+  ctx.translate(source.x, source.y);
+  drawLayers(
+    ctx,
+    layers
+      .filter((layer) => layer.visible && layer.opacity > 0)
+      // Not spread: a layer's opacity is a getter
+      .map(({ visible, opacity, blendMode, canvas: image }) => ({
+        visible,
+        opacity,
+        blendMode,
+        canvas: copyPixels(image, source, createCanvas),
+      })),
+  );
   return canvas;
 };
 

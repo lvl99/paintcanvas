@@ -1,28 +1,15 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
-import { formatBytes, type PcStats } from "..";
+import { COLOUR_INTERVAL_MS, formatBytes, type PcStats } from "..";
 import { mount, query, queryAll } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 
 afterEach(() => {
   document.body.replaceChildren();
-  vi.unstubAllGlobals();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
-
-/** Run animation frames when asked, collecting them to run by hand */
-const stubFrames = () => {
-  const frames: FrameRequestCallback[] = [];
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-    frames.push(callback);
-    return frames.length;
-  });
-  vi.stubGlobal("cancelAnimationFrame", vi.fn());
-  /** Run the frames asked for so far */
-  const run = () => frames.splice(0).forEach((frame) => frame(0));
-  return { frames, run };
-};
 
 /** The text of one of the stats */
 const stat = (element: PcStats, name: string) =>
@@ -45,7 +32,7 @@ describe("pc-stats", () => {
   });
 
   it("should show the canvas size, zoom and colour under the pointer, in a labelled list", async () => {
-    const { frames, run } = stubFrames();
+    vi.useFakeTimers();
     const app = createApp();
     const sample = vi.spyOn(app, "sampleColour").mockReturnValue("#ff0000");
     const element = await mount<PcStats>("pc-stats", { app });
@@ -59,15 +46,23 @@ describe("pc-stats", () => {
     expect(queryAll(element, ".swatch")).toHaveLength(0);
     expect(queryAll(element, "li.stored")).toHaveLength(0);
 
-    // Pointer moves are shown once a frame
+    // The colour is read at most every interval, at the pointer's latest position
     app.setPointer({ x: 3, y: 4 });
     app.setPointer({ x: 5, y: 6 });
-    expect(frames).toHaveLength(1);
-    run();
-    await element.updateComplete;
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS - 1);
+    expect(sample).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(sample).toHaveBeenCalledOnce();
     expect(sample).toHaveBeenLastCalledWith({ x: 5, y: 6 });
+    await element.updateComplete;
     expect(stat(element, "colour")).toBe("Color: #ff0000");
     expect(query(element, ".swatch").style.background).toBe("rgb(255, 0, 0)");
+
+    // Other changes show the colour last read, without reading it again
+    app.viewport.zoom = 0.75;
+    app.viewport.dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    expect(sample).toHaveBeenCalledOnce();
 
     // Zooming and resizing
     app.viewport.zoom = 0.5;
@@ -100,25 +95,58 @@ describe("pc-stats", () => {
     ]);
   });
 
+  it("should not read the colour while a stroke is drawn", async () => {
+    vi.useFakeTimers();
+    const app = createApp();
+    const sample = vi.spyOn(app, "sampleColour").mockReturnValue("#ff0000");
+    const drawing = vi.spyOn(app.strokes, "drawing", "get");
+    const element = await mount<PcStats>("pc-stats", { app });
+    drawing.mockReturnValue(true);
+    app.setPointer({ x: 3, y: 4 });
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    expect(sample).not.toHaveBeenCalled();
+    // The next move after the stroke reads it
+    drawing.mockReturnValue(false);
+    app.setPointer({ x: 5, y: 6 });
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    expect(sample).toHaveBeenCalledWith({ x: 5, y: 6 });
+    await element.updateComplete;
+    expect(stat(element, "colour")).toBe("Color: #ff0000");
+  });
+
   it("should follow a new canvas's pointer, and stop following when removed", async () => {
-    const { frames } = stubFrames();
+    vi.useFakeTimers();
     const first = createApp();
+    const firstSample = vi
+      .spyOn(first, "sampleColour")
+      .mockReturnValue("#ff0000");
     const element = await mount<PcStats>("pc-stats", { app: first });
+    first.setPointer({ x: 1, y: 1 });
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    await element.updateComplete;
+    expect(stat(element, "colour")).toBe("Color: #ff0000");
     const second = createApp();
+    const secondSample = vi
+      .spyOn(second, "sampleColour")
+      .mockReturnValue("#00ff00");
+    // A read waiting for the first canvas is forgotten, as is its colour
+    first.setPointer({ x: 2, y: 2 });
     element.app = second;
     await element.updateComplete;
-    first.setPointer({ x: 1, y: 1 });
-    expect(frames).toHaveLength(0);
+    expect(stat(element, "colour")).toBe("Color: —");
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    first.setPointer({ x: 3, y: 3 });
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    expect(firstSample).toHaveBeenCalledOnce();
     second.setPointer({ x: 1, y: 1 });
-    expect(frames).toHaveLength(1);
-    element.remove();
-    expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    expect(secondSample).toHaveBeenCalledOnce();
+    // Removed: a waiting read is forgotten, and moves aren't followed
     second.setPointer({ x: 2, y: 2 });
-    expect(frames).toHaveLength(1);
-    // Removed with no frame waiting
-    document.body.append(element);
-    await element.updateComplete;
     element.remove();
-    expect(cancelAnimationFrame).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    second.setPointer({ x: 3, y: 3 });
+    vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
+    expect(secondSample).toHaveBeenCalledOnce();
   });
 });
