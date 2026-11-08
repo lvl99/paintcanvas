@@ -1,4 +1,5 @@
-import { css, html, nothing } from "lit";
+import { css, html, nothing, unsafeCSS } from "lit";
+import { PILLS_CSS } from "../../styles";
 import { PcElement, defineElement, emit } from "../../base";
 import ChangeController from "../../ChangeController";
 import {
@@ -73,6 +74,7 @@ export class PcShortcutSettings extends PcElement {
 
   static override styles = [
     PcElement.styles,
+    unsafeCSS(PILLS_CSS),
     css`
       :host {
         display: flex;
@@ -166,15 +168,6 @@ export class PcShortcutSettings extends PcElement {
       }
       button.reset {
         align-self: flex-start;
-        min-height: var(--pc-control-size);
-        padding: var(--pc-space-1) var(--pc-space-3);
-        border: 0;
-        border-radius: var(--pc-radius-pill);
-        background: var(--pc-accent);
-        color: var(--pc-accent-text);
-        font: inherit;
-        font-weight: bold;
-        cursor: pointer;
       }
     `,
   ];
@@ -319,7 +312,7 @@ export class PcShortcutSettings extends PcElement {
       <p class="status" role="status">${this.status}</p>
       <button
         type="button"
-        class="reset"
+        class="pill reset"
         @click=${() => {
           settings.reset();
           this.status = this.t("paintCanvas.shortcuts.wasReset");

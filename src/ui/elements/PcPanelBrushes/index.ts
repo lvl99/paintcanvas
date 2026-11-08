@@ -402,14 +402,14 @@ export class PcPanelBrushes extends PcPanel {
       <div class="actions">
         <button
           type="button"
-          class="pill new-preset"
+          class="pill-s new-preset"
           @click=${() => this.emit("pc-new-preset", this.kind)}
         >
           ${this.t("paintCanvas.brushMenu.create")}
         </button>
         <button
           type="button"
-          class="pill import"
+          class="pill-s import"
           @click=${() =>
             this.renderRoot
               .querySelector<HTMLInputElement>(".import-file")
@@ -435,7 +435,7 @@ export class PcPanelBrushes extends PcPanel {
         </label>
         <button
           type="button"
-          class="pill export"
+          class="pill-s export"
           @click=${() => void this.exportFile()}
         >
           ${this.t("paintCanvas.brushMenu.export")}
