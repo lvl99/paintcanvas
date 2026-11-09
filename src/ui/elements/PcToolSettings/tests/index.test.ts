@@ -571,14 +571,14 @@ describe("pc-tool-settings", () => {
     }
   });
 
-  it("should make the mask actions and the zoom's Reset purple pills", async () => {
+  it("should make the mask actions and the zoom's Reset small purple pills", async () => {
     const masks = await setup(Tool.RectangleLasso);
     for (const button of ["select-all", "invert", "deselect"])
       expect(query(masks.element, `button.${button}`).classList).toContain(
-        "pill",
+        "pill-s",
       );
     const zoom = await setup(Tool.Zoom);
-    expect(query(zoom.element, "button.reset").classList).toContain("pill");
+    expect(query(zoom.element, "button.reset").classList).toContain("pill-s");
   });
 
   it("should rotate by an angle (to 2 decimal places) or 90° steps", async () => {

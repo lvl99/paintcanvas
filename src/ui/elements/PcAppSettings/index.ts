@@ -191,7 +191,7 @@ export class PcAppSettings extends PcElement {
     return html`<div class="actions">
         <button
           type="button"
-          class="pill shortcuts"
+          class="pill-s shortcuts"
           aria-haspopup="dialog"
           @click=${() => (this.shortcutsOpen = true)}
         >
@@ -199,7 +199,7 @@ export class PcAppSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill import"
+          class="pill-s import"
           @click=${() =>
             this.renderRoot
               .querySelector<HTMLInputElement>(".import-file")
@@ -209,7 +209,7 @@ export class PcAppSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill export"
+          class="pill-s export"
           @click=${() => void this.exportFile()}
         >
           ${this.t("paintCanvas.settings.export")}
