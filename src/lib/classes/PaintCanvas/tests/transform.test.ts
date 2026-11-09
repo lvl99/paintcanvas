@@ -52,6 +52,14 @@ describe("PaintCanvas clipboard", () => {
     expect(app.copy()).toBeUndefined();
   });
 
+  it("should copy merged only with masked image data, and not during a stroke or a pending transform", () => {
+    const { app } = createApp();
+    expect(app.copyMerged()).toBeUndefined();
+    vi.spyOn(app.strokes, "drawing", "get").mockReturnValue(true);
+    fullMask(app);
+    expect(app.copyMerged()).toBeUndefined();
+  });
+
   it("should tell listeners when there's copied image data, and give it as a PNG", async () => {
     const { app } = createApp();
     expect(app.hasClipboard).toBe(false);

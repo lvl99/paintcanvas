@@ -7,6 +7,7 @@
   "paintCanvas.common.clear": "クリア",
   "paintCanvas.common.cut": "切り取り",
   "paintCanvas.common.copy": "コピー",
+  "paintCanvas.common.copyMerged": "結合部分をコピー",
   "paintCanvas.common.paste": "ペースト",
   "paintCanvas.common.undo": "取り消す",
   "paintCanvas.common.redo": "やり直す",

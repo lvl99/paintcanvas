@@ -1109,11 +1109,36 @@ export default class PaintCanvas extends EventTarget {
    * nothing during a stroke or while a transform is pending. Returns the area copied, if any.
    */
   copy(): Rect | undefined {
-    const area = this.maskedArea();
+    return this.copyMasked(this.layerStack.active.canvas);
+  }
+
+  /**
+   * Copy the masked image data of all the shown layers, mixed as they're shown (each layer's opacity and blend mode,
+   * without the white background), to the clipboard. Hidden layers are left out. Like `copy`, it needs a mask with image
+   * data inside it, and does nothing during a stroke or while a transform is pending. Returns the area copied, if any.
+   *
+   * @example
+   * app.selection.selectAll();
+   * app.copyMerged(); // { x: 10, y: 20, width: 30, height: 5 }: the part of the canvas with paint on any shown layer
+   */
+  copyMerged(): Rect | undefined {
+    if (!this.canCopy) return undefined;
+    const merged = this.createCanvas(this.width, this.height);
+    drawLayers(
+      merged.getContext("2d") as OffscreenCanvasRenderingContext2D,
+      this.layerStack.layers,
+    );
+    return this.copyMasked(merged);
+  }
+
+  /**
+   * Copy the masked part of a canvas-sized image to the clipboard (see `copy`), returning the area copied, if any.
+   */
+  private copyMasked(source: OffscreenCanvas): Rect | undefined {
+    const area = this.maskedArea(source);
     const mask = this.currentSelection.mask;
     if (!area || !mask) return undefined;
-    const layer = this.layerStack.active;
-    const image = copyArea(this.createCanvas, layer.canvas, area);
+    const image = copyArea(this.createCanvas, source, area);
     applyMask(image, copyArea(this.createCanvas, mask, area));
     this.clipboard = { image, area };
     this.copies++;
@@ -1217,17 +1242,25 @@ export default class PaintCanvas extends EventTarget {
       : { x: 0, y: 0, width, height };
   }
 
+  /** Whether image data can be copied now: not during a stroke or while a transform is pending */
+  private get canCopy(): boolean {
+    return !this.strokeEngine.drawing && !this.transformer.pending;
+  }
+
   /**
-   * The bounds of the selected layer's image data inside the mask, if there is a mask with image data inside it. None
-   * during a stroke or while a transform is pending.
+   * The bounds of a canvas-sized image's data (the selected layer's by default) inside the mask, if there is a mask
+   * with image data inside it. None during a stroke or while a transform is pending.
    */
-  private maskedArea(): Rect | undefined {
+  private maskedArea(
+    source: OffscreenCanvas = this.layerStack.active.canvas,
+  ): Rect | undefined {
     const mask = this.currentSelection.mask;
-    if (!mask || this.strokeEngine.drawing || this.transformer.pending)
-      return undefined;
+    if (!mask || !this.canCopy) return undefined;
     const { width, height } = this;
     return contentBounds(
-      this.layerStack.active.context.getImageData(0, 0, width, height).data,
+      (
+        source.getContext("2d") as OffscreenCanvasRenderingContext2D
+      ).getImageData(0, 0, width, height).data,
       width,
       height,
       (mask.getContext("2d") as OffscreenCanvasRenderingContext2D).getImageData(

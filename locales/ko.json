@@ -7,6 +7,7 @@
   "paintCanvas.common.clear": "지우기",
   "paintCanvas.common.cut": "잘라내기",
   "paintCanvas.common.copy": "복사",
+  "paintCanvas.common.copyMerged": "병합하여 복사",
   "paintCanvas.common.paste": "붙여넣기",
   "paintCanvas.common.undo": "실행 취소",
   "paintCanvas.common.redo": "다시 실행",

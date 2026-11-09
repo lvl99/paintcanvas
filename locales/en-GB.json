@@ -7,6 +7,7 @@
   "paintCanvas.common.clear": "Clear",
   "paintCanvas.common.cut": "Cut",
   "paintCanvas.common.copy": "Copy",
+  "paintCanvas.common.copyMerged": "Copy merged",
   "paintCanvas.common.paste": "Paste",
   "paintCanvas.common.undo": "Undo",
   "paintCanvas.common.redo": "Redo",

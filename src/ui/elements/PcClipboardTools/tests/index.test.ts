@@ -37,7 +37,7 @@ describe("pc-clipboard-tools", () => {
   });
 
   it.each(CLIPBOARD_TOOLS)(
-    "should cut, copy (with a mask) and paste (with copied image data) for tool %s",
+    "should cut, copy, copy merged (with a mask) and paste (with copied image data) for tool %s",
     async (tool) => {
       const { app, element } = await setup(tool);
       expect(element.hidden).toBe(false);
@@ -45,27 +45,33 @@ describe("pc-clipboard-tools", () => {
         query<HTMLButtonElement>(element, `button.${name}`);
       expect(
         queryAll(element, "button").map((b) => b.textContent!.trim()),
-      ).toEqual(["Cut", "Copy", "Paste"]);
-      expect(button("cut").classList).toContain("pill");
-      expect(
-        ["cut", "copy", "paste"].map((name) => button(name).disabled),
-      ).toEqual([true, true, true]);
+      ).toEqual(["Cut", "Copy", "Copy merged", "Paste"]);
+      expect(button("cut").classList).toContain("pill-s");
+      const names = ["cut", "copy", "copy-merged", "paste"];
+      expect(names.map((name) => button(name).disabled)).toEqual([
+        true,
+        true,
+        true,
+        true,
+      ]);
       const cut = vi.spyOn(app, "cut").mockImplementation(() => undefined);
       const copy = vi.spyOn(app, "copy").mockReturnValue(undefined);
+      const copyMerged = vi.spyOn(app, "copyMerged").mockReturnValue(undefined);
       const paste = vi.spyOn(app, "paste").mockImplementation(() => undefined);
       app.selection.active = true;
       vi.spyOn(app, "hasClipboard", "get").mockReturnValue(true);
       app.selection.dispatchEvent(new Event("change"));
       await element.updateComplete;
-      expect(
-        ["cut", "copy", "paste"].map((name) => button(name).disabled),
-      ).toEqual([false, false, false]);
-      button("cut").click();
-      button("copy").click();
-      button("paste").click();
-      expect([cut, copy, paste].map((spy) => spy.mock.calls.length)).toEqual([
-        1, 1, 1,
+      expect(names.map((name) => button(name).disabled)).toEqual([
+        false,
+        false,
+        false,
+        false,
       ]);
+      for (const name of names) button(name).click();
+      expect(
+        [cut, copy, copyMerged, paste].map((spy) => spy.mock.calls.length),
+      ).toEqual([1, 1, 1, 1]);
     },
   );
 
@@ -78,6 +84,9 @@ describe("pc-clipboard-tools", () => {
     expect(query<HTMLButtonElement>(element, "button.copy").disabled).toBe(
       true,
     );
+    expect(
+      query<HTMLButtonElement>(element, "button.copy-merged").disabled,
+    ).toBe(true);
   });
 
   it("should show and hide as the tool changes", async () => {
@@ -100,6 +109,7 @@ describe("pc-clipboard-tools", () => {
     expect(menu.items).toEqual([
       { value: "cut", label: "Cut", disabled: true },
       { value: "copy", label: "Copy", disabled: true },
+      { value: "copy-merged", label: "Copy merged", disabled: true },
       { value: "paste", label: "Paste", disabled: true },
     ]);
     const paste = vi.spyOn(app, "paste").mockImplementation(() => undefined);

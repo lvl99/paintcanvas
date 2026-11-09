@@ -19,16 +19,17 @@ export const CLIPBOARD_TOOLS: readonly Tool[] = [
 
 /** A clipboard action: its name (class and menu value), label, whether it can be done, and what it does */
 interface ClipboardAction {
-  name: "cut" | "copy" | "paste";
+  name: "cut" | "copy" | "copy-merged" | "paste";
   label: string;
   disabled: boolean;
   run(): void;
 }
 
 /**
- * Cut, copy and paste buttons for the canvas's masked image data, shown for the brush, eraser, lassos and Move tool
- * (see `CLIPBOARD_TOOLS`). Cut and copy work while there's a mask and no transform is pending; paste while there's
- * copied image data. While `narrow`, they're one ⋮ menu (`pc-context-menu`) instead.
+ * Cut, copy, copy merged and paste buttons for the canvas's masked image data, shown for the brush, eraser, lassos and
+ * Move tool (see `CLIPBOARD_TOOLS`). "Copy merged" copies the shown layers mixed as shown (see `PaintCanvas.copyMerged`).
+ * Cut and both copies work while there's a mask and no transform is pending; paste while there's copied image data.
+ * While `narrow`, they're one ⋮ menu (`pc-context-menu`) instead.
  *
  * `<paint-canvas>` puts it at the end of its top pane, after the tool settings.
  *
@@ -75,7 +76,7 @@ export class PcClipboardTools extends PcElement {
     this.narrow = false;
   }
 
-  /** Cut, copy and paste, each with whether it can be done now */
+  /** Cut, copy, copy merged and paste, each with whether it can be done now */
   private actions(app: PaintCanvas): ClipboardAction[] {
     const noCopy = !app.selection.active || app.transform.pending;
     return [
@@ -90,6 +91,12 @@ export class PcClipboardTools extends PcElement {
         label: this.t("paintCanvas.common.copy"),
         disabled: noCopy,
         run: () => app.copy(),
+      },
+      {
+        name: "copy-merged",
+        label: this.t("paintCanvas.common.copyMerged"),
+        disabled: noCopy,
+        run: () => app.copyMerged(),
       },
       {
         name: "paste",
@@ -125,7 +132,7 @@ export class PcClipboardTools extends PcElement {
       (action) =>
         html`<button
           type="button"
-          class="pill ${action.name}"
+          class="pill-s ${action.name}"
           ?disabled=${action.disabled}
           @click=${action.run}
         >

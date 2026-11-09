@@ -7,6 +7,7 @@
   "paintCanvas.common.clear": "清除",
   "paintCanvas.common.cut": "剪下",
   "paintCanvas.common.copy": "拷貝",
+  "paintCanvas.common.copyMerged": "合併拷貝",
   "paintCanvas.common.paste": "貼上",
   "paintCanvas.common.undo": "復原",
   "paintCanvas.common.redo": "重做",
