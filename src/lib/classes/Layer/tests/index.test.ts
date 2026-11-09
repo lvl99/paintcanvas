@@ -3,6 +3,7 @@ import Layer, {
   BlendMode,
   MAX_LAYER_NAME_LENGTH,
   clampOpacity,
+  createMemoryCanvas,
   createOffscreenCanvas,
 } from "..";
 import {
@@ -121,5 +122,31 @@ describe("Layer", () => {
       createFakeCanvasFactory(false),
     );
     expect(() => layer.clear()).toThrow("Layer canvas has no 2D context");
+  });
+});
+
+describe("createMemoryCanvas", () => {
+  it("should make a canvas whose 2D context keeps its pixels in regular memory", () => {
+    const contexts: unknown[] = [];
+    vi.stubGlobal(
+      "OffscreenCanvas",
+      class {
+        constructor(
+          readonly width: number,
+          readonly height: number,
+        ) {}
+        getContext(type: string, options?: unknown) {
+          contexts.push([type, options]);
+          return {};
+        }
+      },
+    );
+    try {
+      const canvas = createMemoryCanvas(20, 10);
+      expect([canvas.width, canvas.height]).toEqual([20, 10]);
+      expect(contexts).toEqual([["2d", { willReadFrequently: true }]]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

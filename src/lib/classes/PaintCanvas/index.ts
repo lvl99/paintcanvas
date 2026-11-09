@@ -24,7 +24,7 @@ import Transformer, {
 } from "../../transform/Transformer";
 import { boxBounds } from "../../transform/geometry";
 import Layer, {
-  createOffscreenCanvas,
+  createMemoryCanvas,
   type BlendMode,
   type CanvasFactory,
   type LayerConfig,
@@ -242,7 +242,11 @@ export interface PaintCanvasOptions {
   maxCanvasSize?: number;
   /** Most layers the user can have (default `DEFAULT_MAX_LAYERS`) */
   maxLayers?: number;
-  /** Creates layer canvases (replaceable for tests) */
+  /**
+   * Creates the canvases the engine draws in: layers, stroke buffers, masks and copies. `createMemoryCanvas` by default,
+   * keeping pixels in regular memory so saving and copying don't stall phones; pass `createOffscreenCanvas` to keep them
+   * on the GPU instead (replaceable for tests).
+   */
   createCanvas?: CanvasFactory;
   /** Where custom brush presets are kept (defaults to keeping them in memory only) */
   presetStore?: PresetStoreLike;
@@ -475,7 +479,7 @@ export default class PaintCanvas extends EventTarget {
       this.listCustomPresets(),
     );
     void this.customPresets.load().catch(() => undefined);
-    this.createCanvas = options.createCanvas ?? createOffscreenCanvas;
+    this.createCanvas = options.createCanvas ?? createMemoryCanvas;
     this.systemClipboard =
       options.systemClipboard === null
         ? undefined
