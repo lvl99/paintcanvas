@@ -111,6 +111,29 @@ describe("isValidBrushPreset", () => {
 });
 
 describe("isValidBrushPresetFile", () => {
+  it("should check a setting's profile graph", () => {
+    const profile = (points: unknown, profileId: unknown = "overweight") =>
+      isValidBrushPreset(
+        withChanges({
+          widthConfig: { useRandomise: true, profileId, profile: points },
+        }),
+      ).valid;
+    expect(
+      profile([
+        { x: 0, y: -10, i: "linear" },
+        { x: 10, y: 0, i: "linear" },
+      ]),
+    ).toBe(true);
+    expect(profile([{ x: 0, y: -10, i: "linear" }])).toBe(false);
+    expect(
+      profile([
+        { x: 0, y: -10, i: "wavy" },
+        { x: 10, y: 0, i: "linear" },
+      ]),
+    ).toBe(false);
+    expect(profile(undefined, "")).toBe(false);
+  });
+
   it("should accept a file of presets", () => {
     const input = file([validPreset]);
     expect(isValidBrushPresetFile(input)).toEqual({
