@@ -445,7 +445,7 @@ export class PcBrushConfig extends PcElement {
       </fieldset>
       <button
         type="button"
-        class=${`icon-button profile ${param}`}
+        class=${`icon-button profile ${param} ${draft[configKey(param)]?.profile ? "configured" : ""}`}
         title=${this.t("paintCanvas.profileEditor.button", { param: label })}
         aria-haspopup="dialog"
         ?disabled=${!active || disabled || this.busy}

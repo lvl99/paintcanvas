@@ -98,3 +98,8 @@ fieldset.sources {
   padding: 0;
   border: 0;
 }
+/* A setting with a profile graph: its button is purple */
+button.icon-button.profile.configured {
+  border-color: var(--pc-accent);
+  background: var(--pc-accent);
+}

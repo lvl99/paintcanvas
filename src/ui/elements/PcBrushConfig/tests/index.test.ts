@@ -274,6 +274,8 @@ describe("pc-brush-config", () => {
     });
     // The height follows while constrained
     expect(draft(element).heightConfig?.profileId).toBe("overweight");
+    // Its button is purple while it has a profile graph
+    expect(button().classList).toContain("configured");
 
     // Opened again: its graph; a straight line isn't stored
     await click(element, "button.profile.width");
@@ -289,6 +291,7 @@ describe("pc-brush-config", () => {
     await element.updateComplete;
     expect(draft(element).widthConfig?.profile).toBeUndefined();
     expect(draft(element).widthConfig?.profileId).toBeUndefined();
+    expect(button().classList).not.toContain("configured");
 
     // Points without an ID; closing changes nothing
     element.draft = {
