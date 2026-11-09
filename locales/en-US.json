@@ -17,6 +17,8 @@
   "paintCanvas.common.height": "Height",
   "paintCanvas.common.size": "Size",
   "paintCanvas.common.opacity": "Opacity",
+  "paintCanvas.range.low": "{label} (min)",
+  "paintCanvas.range.high": "{label} (max)",
   "paintCanvas.tool.brush": "Brush",
   "paintCanvas.tool.eraser": "Eraser",
   "paintCanvas.tool.move": "Move, scale and rotate",

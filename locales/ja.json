@@ -17,6 +17,8 @@
   "paintCanvas.common.height": "高さ",
   "paintCanvas.common.size": "サイズ",
   "paintCanvas.common.opacity": "不透明度",
+  "paintCanvas.range.low": "{label}（最小）",
+  "paintCanvas.range.high": "{label}（最大）",
   "paintCanvas.tool.brush": "ブラシ",
   "paintCanvas.tool.eraser": "消しゴム",
   "paintCanvas.tool.move": "移動・拡大縮小・回転",

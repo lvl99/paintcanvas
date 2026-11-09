@@ -129,6 +129,23 @@ describe("writeRange", () => {
     });
   });
 
+  it("should keep the end that isn't given", () => {
+    const config: BrushConfig = {
+      id: "a",
+      alpha: 0.8,
+      alphaConfig: { usePressure: true, minPressure: 0.5, maxPressure: 1 },
+    };
+    // From 40% to 80%: only the max changes, then only the min
+    expect(writeRange(config, "alpha", { max: 100 })).toMatchObject({
+      alpha: 1,
+      alphaConfig: { minPressure: 0.4 },
+    });
+    expect(writeRange(config, "alpha", { min: 20 })).toMatchObject({
+      alpha: 0.8,
+      alphaConfig: { minPressure: 0.25 },
+    });
+  });
+
   it("should write rotation and offset ranges", () => {
     expect(
       writeRange(

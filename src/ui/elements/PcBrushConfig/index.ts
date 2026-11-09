@@ -16,6 +16,8 @@ import { styleMap } from "lit/directives/style-map.js";
 import { PcElement, defineElement } from "../../base";
 import "../PcBrushTest";
 import "../PcDialogWindow";
+import "../PcSliderRange";
+import type { RangeDetail } from "../PcSliderRange";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import { SmoothingType, type BrushConfig } from "../../../lib/brushes/types";
 import {
@@ -99,7 +101,7 @@ const numberValue = (event: Event): number | undefined => {
  * The brush (or eraser) configuration window: a testing area, the shape (pressing it picks a built-in shape from the
  * device's own list, which says "Custom" for an uploaded or pasted one; or upload or paste one), smoothing, width, height,
  * opacity, rotation, offsets, sample rate, spacing and snapping to the pixel grid. Width, height, opacity, rotation and the offsets can vary with
- * pressure, tilt and randomness; when any is on, the setting has a min and max.
+ * pressure, tilt and randomness; when any is on, the setting has a min and max, set with a `<pc-slider-range>`.
  *
  * Changes stay in the window until "Save" (fires `pc-save` with the settings, to apply to the current tool) or "Add to
  * presets" (saves them as one of the user's presets, asking before replacing one with the same name, and selects it).
@@ -385,11 +387,20 @@ export class PcBrushConfig extends PcElement {
     const isOffset = param === "offsetX" || param === "offsetY";
     const write = (values: { value?: number; min?: number; max?: number }) =>
       this.changeParam(param, writeRange(draft, param, values));
+    const writeEnds = (event: CustomEvent<RangeDetail>) =>
+      write({ min: event.detail.low, max: event.detail.high });
     const values = range.varies
-      ? html`${this.number(`${param} min`, range.min, limits, (min) => write({ min }), disabled)}
-        ${this.slider(`${param} min`, range.min, limits, (min) => write({ min }), disabled)}
-        ${this.slider(`${param} max`, range.max, limits, (max) => write({ max }), disabled)}
-        ${this.number(`${param} max`, range.max, limits, (max) => write({ max }), disabled)}`
+      ? html`<pc-slider-range
+          class=${`${param} range`}
+          label=${label}
+          min=${limits.min}
+          max=${limits.max}
+          .low=${live(Math.round(range.min))}
+          .high=${live(Math.round(range.max))}
+          ?disabled=${disabled || this.busy}
+          @pc-input=${writeEnds}
+          @pc-change=${writeEnds}
+        ></pc-slider-range>`
       : html`${this.number(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}
         ${this.slider(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}`;
     return html`<div class="row" data-param=${param}>

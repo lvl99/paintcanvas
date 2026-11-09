@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import type { PcDialogWindow } from "../../PcDialogWindow";
+import type { PcSliderRange } from "../../PcSliderRange";
 import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
 import { OK_CHOICE } from "../../../ask";
 import type { PcBrushConfig } from "..";
@@ -156,16 +157,26 @@ describe("pc-brush-config", () => {
     expect(
       query<HTMLInputElement>(element, "input.width.pressure").checked,
     ).toBe(true);
-    await enter(element, "input[type=number].width.min", "5");
-    await enter(element, "input[type=range].width.max", "30", "input");
+    // The min and max are a range slider's ends, changed while dragging and once let go
+    const range = () => query<PcSliderRange>(element, "pc-slider-range.width");
+    expect([range().label, range().min, range().max]).toEqual([
+      "Width",
+      1,
+      256,
+    ]);
+    expect([range().low, range().high]).toEqual([10, 20]);
+    range().setEnd("low", 5, "pc-input");
+    range().setEnd("high", 30);
+    await element.updateComplete;
     expect(draft(element).width).toBe(30);
-    await enter(element, "input[type=range].width.min", "15", "input");
-    await enter(element, "input[type=number].width.max", "15");
+    expect(draft(element).widthConfig?.minPressure).toBeCloseTo(5 / 30);
+    range().setEnd("low", 30);
+    await element.updateComplete;
     expect(draft(element).widthConfig?.minPressure).toBe(1);
     await click(element, "input.width.tilt");
     await click(element, "input.width.pressure");
     await click(element, "input.width.tilt");
-    expect(queryAll(element, "input.width.min")).toHaveLength(0);
+    expect(queryAll(element, "pc-slider-range.width")).toHaveLength(0);
   });
 
   it("should show pressure, tilt and randomise as icon toggles on each setting that varies", async () => {
@@ -193,7 +204,8 @@ describe("pc-brush-config", () => {
       query<HTMLInputElement>(element, "input[type=number].offsetX").disabled,
     ).toBe(true);
     await click(element, "input.offsetX.randomise");
-    await enter(element, "input[type=number].offsetX.max", "10");
+    query<PcSliderRange>(element, "pc-slider-range.offsetX").setEnd("high", 10);
+    await element.updateComplete;
     expect(draft(element).offsetXConfig).toMatchObject({
       useRandomise: true,
       maxRandomise: 0.5,

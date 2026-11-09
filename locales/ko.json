@@ -17,6 +17,8 @@
   "paintCanvas.common.height": "높이",
   "paintCanvas.common.size": "크기",
   "paintCanvas.common.opacity": "불투명도",
+  "paintCanvas.range.low": "{label} (최소)",
+  "paintCanvas.range.high": "{label} (최대)",
   "paintCanvas.tool.brush": "브러시",
   "paintCanvas.tool.eraser": "지우개",
   "paintCanvas.tool.move": "이동, 크기 조절 및 회전",

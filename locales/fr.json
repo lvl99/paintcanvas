@@ -17,6 +17,8 @@
   "paintCanvas.common.height": "Hauteur",
   "paintCanvas.common.size": "Taille",
   "paintCanvas.common.opacity": "Opacité",
+  "paintCanvas.range.low": "{label} (min)",
+  "paintCanvas.range.high": "{label} (max)",
   "paintCanvas.tool.brush": "Pinceau",
   "paintCanvas.tool.eraser": "Gomme",
   "paintCanvas.tool.move": "Déplacer, redimensionner et faire pivoter",
