@@ -379,6 +379,10 @@ export class PcCanvas extends PcElement {
   }
 
   override firstUpdated(): void {
+    // The scene is drawn from layers kept in regular memory (see `createMemoryCanvas`): keeping the screen canvas there
+    // too means each frame copies only the area that changed, instead of sending whole layers to the GPU. Its first
+    // context decides that; later `getContext("2d")` calls get this one.
+    this.canvas?.getContext("2d", { willReadFrequently: true });
     if (typeof ResizeObserver !== "undefined") {
       this.resizeObserver = new ResizeObserver(() => this.syncSize());
       this.resizeObserver.observe(this);

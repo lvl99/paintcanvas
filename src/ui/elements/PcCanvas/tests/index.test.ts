@@ -353,6 +353,18 @@ describe("pc-canvas", () => {
     expect(cancel).toHaveBeenCalled();
   });
 
+  it("should keep the screen canvas's pixels in regular memory, like the layers it draws", async () => {
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext");
+    const element = await mount<PcCanvas>("pc-canvas", { app: createApp() });
+    expect(getContext.mock.contexts[0]).toBe(element.canvas);
+    expect(getContext.mock.calls[0]).toEqual([
+      "2d",
+      { willReadFrequently: true },
+    ]);
+    getContext.mockRestore();
+    element.remove();
+  });
+
   it("should use the device pixel ratio by default, up to the most", () => {
     const element = document.createElement("pc-canvas") as PcCanvas;
     vi.stubGlobal("devicePixelRatio", 3);
