@@ -11,6 +11,7 @@ describe("@lvl99dotcom/paintcanvas/ui", () => {
       "pc-toggle-checkbox",
       "pc-slider",
       "pc-slider-range",
+      "pc-profile-graph",
       "pc-menu",
       "pc-context-menu",
       "pc-dialog",
