@@ -2,6 +2,8 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import type { PcDialogWindow } from "../../PcDialogWindow";
 import type { PcSliderRange } from "../../PcSliderRange";
+import type { PcProfileEditor } from "../../PcProfileEditor";
+import { PROFILE_PRESETS, linearPoints } from "../../../../lib/profiles";
 import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
 import { OK_CHOICE } from "../../../ask";
 import type { PcBrushConfig } from "..";
@@ -228,6 +230,76 @@ describe("pc-brush-config", () => {
       ["Tilt", "icon-tilt@2x.png", "Width: Tilt"],
       ["Randomize", "icon-randomise@2x.png", "Width: Randomize"],
     ]);
+  });
+
+  it("should edit a varying setting's profile graph, storing it unless it's a straight line", async () => {
+    const { app, element } = await setup();
+    const button = () =>
+      query<HTMLButtonElement>(element, "button.profile.width");
+    expect(button().disabled).toBe(true);
+    expect(button().title).toBe("Width: profile graph");
+    await click(element, "input.width.pressure");
+    expect(button().disabled).toBe(false);
+    await click(element, "button.profile.width");
+    const editor = () => query<PcProfileEditor>(element, "pc-profile-editor");
+    expect([editor().label, editor().profileId, editor().profiles]).toEqual([
+      "Width",
+      "linear",
+      app.profiles,
+    ]);
+    const overweight = PROFILE_PRESETS[1]!.points;
+    editor().dispatchEvent(
+      new CustomEvent("pc-save", {
+        detail: { points: overweight, profileId: "overweight" },
+      }),
+    );
+    await element.updateComplete;
+    expect(queryAll(element, "pc-profile-editor")).toHaveLength(0);
+    expect(draft(element).widthConfig).toMatchObject({
+      usePressure: true,
+      profile: overweight,
+      profileId: "overweight",
+    });
+    // The height follows while constrained
+    expect(draft(element).heightConfig?.profileId).toBe("overweight");
+
+    // Opened again: its graph; a straight line isn't stored
+    await click(element, "button.profile.width");
+    expect([editor().points, editor().profileId]).toEqual([
+      overweight,
+      "overweight",
+    ]);
+    editor().dispatchEvent(
+      new CustomEvent("pc-save", {
+        detail: { points: linearPoints(), profileId: "linear" },
+      }),
+    );
+    await element.updateComplete;
+    expect(draft(element).widthConfig?.profile).toBeUndefined();
+    expect(draft(element).widthConfig?.profileId).toBeUndefined();
+
+    // Points without an ID; closing changes nothing
+    element.draft = {
+      ...draft(element),
+      alphaConfig: { useTilt: true, profile: overweight },
+    };
+    await element.updateComplete;
+    await click(element, "button.profile.alpha");
+    expect(editor().profileId).toBeUndefined();
+    editor().dispatchEvent(new CustomEvent("pc-close"));
+    await element.updateComplete;
+    expect(queryAll(element, "pc-profile-editor")).toHaveLength(0);
+    expect(draft(element).alphaConfig?.profile).toEqual(overweight);
+  });
+
+  it("should keep profile graphs of its own without a canvas", async () => {
+    const element = await mount<PcBrushConfig>("pc-brush-config", {
+      config: { id: "a", heightConfig: { useRandomise: true } },
+    });
+    await click(element, "button.profile.height");
+    expect(
+      query<PcProfileEditor>(element, "pc-profile-editor").profiles.graphs,
+    ).toEqual([]);
   });
 
   it("should only let offsets change while they vary", async () => {

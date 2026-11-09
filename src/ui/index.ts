@@ -17,6 +17,10 @@ export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
 export { PcNumberSlider, fitNumber } from "./elements/PcNumberSlider";
 export {
+  PcProfileEditor,
+  type ProfileSaveDetail,
+} from "./elements/PcProfileEditor";
+export {
   PcProfileGraph,
   curvePath,
   movePoint,

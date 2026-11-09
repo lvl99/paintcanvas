@@ -12,6 +12,7 @@ describe("@lvl99dotcom/paintcanvas/ui", () => {
       "pc-slider",
       "pc-slider-range",
       "pc-profile-graph",
+      "pc-profile-editor",
       "pc-menu",
       "pc-context-menu",
       "pc-dialog",

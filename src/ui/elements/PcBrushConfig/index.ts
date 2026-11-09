@@ -17,12 +17,21 @@ import { PcElement, defineElement } from "../../base";
 import "../PcBrushTest";
 import "../PcDialogWindow";
 import "../PcSliderRange";
+import "../PcProfileEditor";
+import type { ProfileSaveDetail } from "../PcProfileEditor";
+import ProfileGraphs from "../../../lib/classes/ProfileGraphs";
+import { isLinear, LINEAR_PROFILE_ID } from "../../../lib/profiles";
 import type { RangeDetail } from "../PcSliderRange";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
-import { SmoothingType, type BrushConfig } from "../../../lib/brushes/types";
+import {
+  SmoothingType,
+  type BrushConfig,
+  type BrushParamConfig,
+} from "../../../lib/brushes/types";
 import {
   PARAM_LIMITS,
   VARIATION_SOURCES,
+  configKey,
   readRange,
   selectSource,
   writeRange,
@@ -68,6 +77,16 @@ const SOURCE_ICONS: Record<VariationSource, string> = {
   pressure: "pressure",
   tilt: "tilt",
   randomise: "randomise",
+};
+
+/** Translation keys of the varying settings' names */
+const PARAM_LABELS: Record<VaryingParam, string> = {
+  width: "paintCanvas.common.width",
+  height: "paintCanvas.common.height",
+  alpha: "paintCanvas.common.opacity",
+  rotation: "paintCanvas.brushConfig.rotation",
+  offsetX: "paintCanvas.brushConfig.offsetX",
+  offsetY: "paintCanvas.brushConfig.offsetY",
 };
 
 /** Translation keys of the variation sources' names */
@@ -121,6 +140,7 @@ export class PcBrushConfig extends PcElement {
     editingId: { type: String },
     draft: { state: true },
     busy: { state: true },
+    editingProfile: { state: true },
   };
 
   static override styles = [
@@ -148,6 +168,9 @@ export class PcBrushConfig extends PcElement {
 
   /** Whether a preset is being saved or deleted */
   declare busy: boolean;
+
+  /** The setting whose profile graph is being edited, if any */
+  declare editingProfile?: VaryingParam;
 
   /** Asks the user to confirm, in a dialog (replaceable for tests) */
   confirm: ConfirmFn = (options) => askConfirm(this.renderRoot, options);
@@ -435,6 +458,16 @@ export class PcBrushConfig extends PcElement {
             </label>`,
         )}
       </fieldset>
+      <button
+        type="button"
+        class=${`icon-button profile ${param}`}
+        title=${this.t("paintCanvas.profileEditor.button", { param: label })}
+        aria-haspopup="dialog"
+        ?disabled=${!active || disabled || this.busy}
+        @click=${() => (this.editingProfile = param)}
+      >
+        ${iconLabel(this.iconUrl("profileGraph"), this.t("paintCanvas.profileEditor.button", { param: label }))}
+      </button>
     </div>`;
   }
 
@@ -560,112 +593,153 @@ export class PcBrushConfig extends PcElement {
     const spacingLimits = { min: 0, max: MAX_SPACING };
     // Not closed by a press outside it, which would lose the changes
     return html`<pc-dialog-window
-      open
-      shaded
-      dismissible="false"
-      label=${this.t(this.kind === "eraser" ? "paintCanvas.brushConfig.eraserTitle" : "paintCanvas.brushConfig.brushTitle")}
-      @pc-dismiss=${(event: Event) => {
-        event.preventDefault();
-        this.close();
-      }}
-    >
-      <label slot="header-start" class="name-field">
-        ${this.t("paintCanvas.brushConfig.name")}
-        <input
-          class="name"
-          .value=${draft.name ?? ""}
-          ?disabled=${this.busy}
-          @input=${(e: Event) =>
-            this.change({ name: (e.target as HTMLInputElement).value })}
-        />
-      </label>
-      <div slot="body" class="settings">
-        <pc-brush-test .config=${draft} .tips=${this.app?.tips}></pc-brush-test>
-        ${this.renderShape(draft)}
-        ${this.renderParam(draft, "width", this.t("paintCanvas.common.width"))}
-        <div class="row">
-          <span class="label"></span>
-          <label
-            class="icon-toggle"
-            title=${this.t("paintCanvas.toolSettings.constrainProportions")}
-          >
+        open
+        shaded
+        dismissible="false"
+        label=${this.t(this.kind === "eraser" ? "paintCanvas.brushConfig.eraserTitle" : "paintCanvas.brushConfig.brushTitle")}
+        @pc-dismiss=${(event: Event) => {
+          event.preventDefault();
+          this.close();
+        }}
+      >
+        <label slot="header-start" class="name-field">
+          ${this.t("paintCanvas.brushConfig.name")}
+          <input
+            class="name"
+            .value=${draft.name ?? ""}
+            ?disabled=${this.busy}
+            @input=${(e: Event) =>
+              this.change({ name: (e.target as HTMLInputElement).value })}
+          />
+        </label>
+        <div slot="body" class="settings">
+          <pc-brush-test
+            .config=${draft}
+            .tips=${this.app?.tips}
+          ></pc-brush-test>
+          ${this.renderShape(draft)}
+          ${this.renderParam(draft, "width", this.t(PARAM_LABELS.width))}
+          <div class="row">
+            <span class="label"></span>
+            <label
+              class="icon-toggle"
+              title=${this.t("paintCanvas.toolSettings.constrainProportions")}
+            >
+              <input
+                type="checkbox"
+                class="constrain"
+                .checked=${constrained}
+                ?disabled=${this.busy}
+                @change=${(e: Event) =>
+                  this.change({
+                    constrainProportions: (e.target as HTMLInputElement)
+                      .checked,
+                  })}
+              />
+              ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
+            </label>
+          </div>
+          ${this.renderParam(draft, "height", this.t(PARAM_LABELS.height), constrained)}
+          ${this.renderParam(draft, "alpha", this.t(PARAM_LABELS.alpha))}
+          ${this.renderParam(draft, "rotation", this.t(PARAM_LABELS.rotation))}
+          ${this.renderParam(draft, "offsetX", this.t(PARAM_LABELS.offsetX))}
+          ${this.renderParam(draft, "offsetY", this.t(PARAM_LABELS.offsetY))}
+          <div class="row">
+            <span class="label"
+              >${this.t("paintCanvas.brushConfig.sampleRate")}</span
+            >
+            ${this.number("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
+            ${this.slider("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
+            <span class="label"
+              >${this.t("paintCanvas.brushConfig.spacing")}</span
+            >
+            ${this.number("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
+            ${this.slider("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
+          </div>
+          <label>
             <input
               type="checkbox"
-              class="constrain"
-              .checked=${constrained}
+              class="snap"
+              .checked=${draft.snapToPixelGrid ?? false}
               ?disabled=${this.busy}
               @change=${(e: Event) =>
                 this.change({
-                  constrainProportions: (e.target as HTMLInputElement).checked,
+                  snapToPixelGrid: (e.target as HTMLInputElement).checked,
                 })}
             />
-            ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
+            ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
           </label>
         </div>
-        ${this.renderParam(draft, "height", this.t("paintCanvas.common.height"), constrained)}
-        ${this.renderParam(draft, "alpha", this.t("paintCanvas.common.opacity"))}
-        ${this.renderParam(draft, "rotation", this.t("paintCanvas.brushConfig.rotation"))}
-        ${this.renderParam(draft, "offsetX", this.t("paintCanvas.brushConfig.offsetX"))}
-        ${this.renderParam(draft, "offsetY", this.t("paintCanvas.brushConfig.offsetY"))}
-        <div class="row">
-          <span class="label"
-            >${this.t("paintCanvas.brushConfig.sampleRate")}</span
-          >
-          ${this.number("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
-          ${this.slider("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
-          <span class="label"
-            >${this.t("paintCanvas.brushConfig.spacing")}</span
-          >
-          ${this.number("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
-          ${this.slider("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
-        </div>
-        <label>
-          <input
-            type="checkbox"
-            class="snap"
-            .checked=${draft.snapToPixelGrid ?? false}
+        ${
+          this.editingId
+            ? html`<button
+                slot="footer-start"
+                type="button"
+                class="cancel delete"
+                ?disabled=${this.busy}
+                @click=${() => void this.deletePreset()}
+              >
+                ${this.t("paintCanvas.brushConfig.deletePreset")}
+              </button>`
+            : nothing
+        }
+        <div slot="footer-end" class="actions">
+          <button
+            type="button"
+            class="add affirmative"
             ?disabled=${this.busy}
-            @change=${(e: Event) =>
-              this.change({
-                snapToPixelGrid: (e.target as HTMLInputElement).checked,
-              })}
-          />
-          ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
-        </label>
-      </div>
-      ${
-        this.editingId
-          ? html`<button
-              slot="footer-start"
-              type="button"
-              class="cancel delete"
-              ?disabled=${this.busy}
-              @click=${() => void this.deletePreset()}
-            >
-              ${this.t("paintCanvas.brushConfig.deletePreset")}
-            </button>`
-          : nothing
-      }
-      <div slot="footer-end" class="actions">
-        <button
-          type="button"
-          class="add affirmative"
-          ?disabled=${this.busy}
-          @click=${() => void this.addToPresets()}
-        >
-          ${this.t("paintCanvas.brushConfig.addToPresets")}
-        </button>
-        <button
-          type="button"
-          class="save affirmative"
-          ?disabled=${this.busy}
-          @click=${() => this.save()}
-        >
-          ${this.t("paintCanvas.common.save")}
-        </button>
-      </div>
-    </pc-dialog-window>`;
+            @click=${() => void this.addToPresets()}
+          >
+            ${this.t("paintCanvas.brushConfig.addToPresets")}
+          </button>
+          <button
+            type="button"
+            class="save affirmative"
+            ?disabled=${this.busy}
+            @click=${() => this.save()}
+          >
+            ${this.t("paintCanvas.common.save")}
+          </button>
+        </div>
+      </pc-dialog-window>
+      ${this.renderProfileEditor(draft)}`;
   }
+
+  /** The profile graph editor for the setting being edited, while open */
+  private renderProfileEditor(draft: BrushConfig) {
+    const param = this.editingProfile;
+    if (!param) return nothing;
+    const key = configKey(param);
+    // Only open for a setting that varies, so it has a variation
+    const variation = draft[key] as BrushParamConfig;
+    return html`<pc-profile-editor
+      .profiles=${this.app?.profiles ?? this.profiles}
+      .points=${variation.profile}
+      profile-id=${variation.profileId ?? (variation.profile ? nothing : LINEAR_PROFILE_ID)}
+      label=${this.t(PARAM_LABELS[param])}
+      @pc-save=${(event: CustomEvent<ProfileSaveDetail>) => {
+        event.stopPropagation();
+        const { points, profileId } = event.detail;
+        // A straight line changes nothing, so it isn't stored
+        const linear = isLinear(points);
+        this.changeParam(param, {
+          [key]: {
+            ...variation,
+            profile: linear ? undefined : points,
+            profileId: linear ? undefined : profileId,
+          },
+        });
+        this.editingProfile = undefined;
+      }}
+      @pc-close=${(event: Event) => {
+        event.stopPropagation();
+        this.editingProfile = undefined;
+      }}
+    ></pc-profile-editor>`;
+  }
+
+  /** Profile graphs, when there's no canvas to keep them */
+  private readonly profiles = new ProfileGraphs();
 }
 
 defineElement("pc-brush-config", PcBrushConfig);

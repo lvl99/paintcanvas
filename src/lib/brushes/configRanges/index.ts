@@ -66,7 +66,13 @@ const SOURCE_DEFAULTS: Record<VariationSource, [number, number]> = {
   randomise: [1, 1],
 };
 
-const configKey = (param: VaryingParam) =>
+/**
+ * The config key of a setting's variation.
+ *
+ * @example
+ * configKey("width"); // "widthConfig"
+ */
+export const configKey = (param: VaryingParam) =>
   `${param}Config` as `${VaryingParam}Config`;
 
 const clamp = (value: number, min: number, max: number) =>
