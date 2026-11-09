@@ -2,6 +2,36 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.6.0 (2026-11-09)
+
+Smooth drawing on phones, a dialog window for every window and prompt, range sliders, profile graphs for pressure, tilt and randomness, Copy merged, and one set of pill button sizes.
+
+### Fixed
+
+- Drawing on phones no longer lags, freezes or crashes. Reading the colour under the pointer read every whole layer on each pointer move; autosave read every changed layer's pixels to tell what changed; and encoding and copying layers waited on the GPU, for up to 15 seconds on an iPhone. Colour readouts now read only the pixels they need, `pc-stats` reads the colour at most every 100ms and not while drawing, autosave knows what changed from each layer's change count (`LayerStack.pixelVersion`), PNGs are encoded in a background worker (`PngEncoder`), and the engine's canvases keep their pixels in regular memory.
+- iOS no longer zooms the page in when a form field is focused: fields have at least 16px text on touch screens (`touchFields`).
+- Escape in a window over another (e.g. a name prompt over brush configuration) closes only the top one, and focus goes back to where it was.
+
+### Added
+
+- `<pc-dialog-window>`: a window over the page built on `<dialog>`, centred and never bigger than the screen, with `header-start`, `header-middle`, `header-end`, `body`, `footer-start`, `footer-middle` and `footer-end` slots (only the body scrolls), and `closable`, `shaded`, `dismissible` and `inline` options. It locks page scroll while open and fires `pc-dismiss`.
+- `askConfirm` and `askText` show a `pc-dialog` until the user answers; `pc-dialog` can ask for text (`field`).
+- `<pc-slider-range>`: a range slider with two handles that can't cross and a number slider at each end, or one value with `single` (and `number-position`).
+- Profile graphs (`lib/profiles`): curves with linear and bezier cubic points that shape how pressure, tilt and randomness move a brush setting between its min and max (`applyProfile`, the `profile` and `profileId` of `BrushParamConfig`), with Linear, Overweight and Underweight presets. The user's own graphs are kept with the app settings (`canvas.profiles`, `ProfileGraphs`, the settings file's `profiles` part). `<pc-profile-graph>` edits a graph and `<pc-profile-editor>` is the window around it (New graph, Duplicate…, Rename…, Delete…, Save, Reset).
+- "Copy merged" in `<pc-clipboard-tools>` (`copyMerged()`): the masked part of the shown layers, mixed as shown.
+- Pill button sizes `pill-s`, `pill`, `pill-l`, `pill-xl` and `pill-xxl`, as classes and as `<pc-button size>` (`PILL_SIZES`, `PILL_SIZE_STYLES`).
+- `createMemoryCanvas`, `MAX_PIXEL_RATIO`, and a profile graph icon.
+- The layout guide shows how to hide the layout and show a loading bar until the elements load; the demo does.
+
+### Changed
+
+- **Breaking:** PaintCanvas makes its canvases with `createMemoryCanvas` by default, keeping their pixels in regular memory (pass `createOffscreenCanvas` as `createCanvas` for GPU canvases), and the screen canvas does too. The on-screen canvases use at most 2 device pixels per CSS pixel.
+- **Breaking:** brush configuration's pressure, tilt and randomise are radio buttons: a setting varies with one source at a time (`selectSource`), and each has a profile graph button.
+- **Breaking:** `pc-dialog` is built on `pc-dialog-window`: Escape and a press outside it choose `cancel` unless it's not `dismissible`. Brush configuration and keyboard shortcuts are `pc-dialog-window`s (brush configuration isn't closed by a press outside it), and brush presets are confirmed and named in dialogs instead of `confirm()` and `prompt()` (`ConfirmFn` and `PromptFn` take options and may return promises).
+- The `pill` variant of `<pc-button>` is now the same as `accent`.
+- Pill buttons follow the new sizes; those inside panes and panels are `pill-s`.
+- Brush configuration uses `pc-slider-range` for every value and range.
+
 ## 0.5.0 (2026-11-06)
 
 A narrow layout with the interface over the canvas, number sliders that are dragged or typed, the system clipboard, and a system theme by default.
