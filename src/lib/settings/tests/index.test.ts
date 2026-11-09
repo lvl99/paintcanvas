@@ -19,6 +19,7 @@ import PaintCanvas from "../../classes/PaintCanvas";
 import { createFakeCanvasFactory } from "../../../testing/fakeCanvas";
 import { defaultShortcutBindings } from "../../utils/shortcuts";
 import { DEFAULT_PALETTE } from "../../palette";
+import { PROFILE_PRESETS, linearPoints } from "../../profiles";
 
 const createApp = () =>
   new PaintCanvas({
@@ -47,6 +48,14 @@ describe("settings schemas", () => {
     expect(validateSettings(settings)).toBe(true);
     expect(validateFile(file(settings))).toBe(true);
     expect(validateSettings({ palette: ["red"] })).toBe(false);
+    expect(
+      validateSettings({
+        profiles: [{ id: "a", name: "Soft", points: linearPoints() }],
+      }),
+    ).toBe(true);
+    expect(
+      validateSettings({ profiles: [{ id: "a", name: "", points: [] }] }),
+    ).toBe(false);
     expect(validateFile(file({ shortcuts: { cut: { key: "" } } }))).toBe(false);
   });
 });
@@ -127,13 +136,14 @@ describe("isValidSettings", () => {
 });
 
 describe("collectSettings and applySettings", () => {
-  it("should collect a canvas's input settings, shortcuts, palette, colours, theme and language", () => {
+  it("should collect a canvas's input settings, shortcuts, palette, colours, profile graphs, theme and language", () => {
     const app = createApp();
     expect(collectSettings(app)).toEqual({
       input: app.input.data,
       shortcuts: defaultShortcutBindings(),
       palette: DEFAULT_PALETTE,
       colours: { foreground: "#000000", background: "#ffffff" },
+      profiles: [],
       ui: { theme: "system" },
     });
   });
@@ -143,7 +153,9 @@ describe("collectSettings and applySettings", () => {
     const settings = collectSettings(app);
     app.palette.add("#123456");
     app.shortcuts.set("deselect", null);
+    app.profiles.save({ name: "Soft", points: linearPoints() });
     expect(settings.palette).toEqual(DEFAULT_PALETTE);
+    expect(settings.profiles).toEqual([]);
     expect(settings.shortcuts?.deselect).toEqual({ key: "d", cmd: true });
   });
 
@@ -155,6 +167,7 @@ describe("collectSettings and applySettings", () => {
     source.setColour("#ff0000");
     source.setColour("#00ff00", "background");
     source.ui.update({ theme: "dark", locale: "fr" });
+    source.profiles.save({ name: "Soft", points: PROFILE_PRESETS[1]!.points });
     const target = createApp();
     applySettings(target, collectSettings(source));
     expect(collectSettings(target)).toEqual(collectSettings(source));

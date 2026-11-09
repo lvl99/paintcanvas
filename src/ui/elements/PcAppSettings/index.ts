@@ -33,7 +33,7 @@ const SETTINGS_FILE_ERROR_KEYS: Record<string, string> = {
 /**
  * Buttons for the user's app settings: "Keyboard shortcuts", which opens a window to change them (see
  * `pc-shortcut-settings`), and "Import settings" and "Export settings", which read and write a settings JSON file (input
- * settings, keyboard shortcuts, colour palette, colours, theme and language). The window is a shaded
+ * settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and language). The window is a shaded
  * `<pc-dialog-window>` over the whole page; it closes with its ⨉ button, Escape or a press outside it, and focus goes
  * back to the button. Fires `pc-toast` after importing, or when importing or exporting fails.
  *

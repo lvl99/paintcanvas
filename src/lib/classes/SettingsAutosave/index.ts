@@ -19,7 +19,7 @@ export interface SettingsAutosaveOptions {
 }
 
 /**
- * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palette, colours, theme and language) in a
+ * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and language) in a
  * store: the saved settings are restored when it starts (invalid ones are ignored), then changes are saved soon after
  * they happen.
  *
@@ -66,7 +66,7 @@ export default class SettingsAutosave extends EventTarget {
   /** The canvas parts whose changes are saved */
   private get sources(): EventTarget[] {
     const { app } = this;
-    return [app, app.input, app.shortcuts, app.palette, app.ui];
+    return [app, app.input, app.shortcuts, app.palette, app.profiles, app.ui];
   }
 
   /**

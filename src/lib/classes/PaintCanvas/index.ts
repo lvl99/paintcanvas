@@ -43,6 +43,7 @@ import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
 import InputSettings from "../InputSettings";
 import UiSettings from "../UiSettings";
 import Palette from "../Palette";
+import ProfileGraphs from "../ProfileGraphs";
 import ShortcutSettings from "../ShortcutSettings";
 import { PALETTE_FILE_FORMAT } from "../../palette";
 import { SETTINGS_FILE_FORMAT } from "../../settings/schema";
@@ -310,6 +311,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** The user's saved colours, shown as swatches */
   readonly palette = new Palette();
+
+  /** The user's own profile graphs (and the presets), for shaping how brush settings vary */
+  readonly profiles = new ProfileGraphs();
 
   /** The user's keyboard shortcuts: each configurable action's key combination */
   readonly shortcuts = new ShortcutSettings();

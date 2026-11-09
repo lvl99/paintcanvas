@@ -125,7 +125,7 @@ Key presses are matched on keyboards with any layout:
 
 ## Keeping the user's settings
 
-With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette, the foreground and background colours, and the theme and language (`canvas.ui`, a `UiSettings`). Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
+With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette, the foreground and background colours, the user's own profile graphs (`canvas.profiles`, a `ProfileGraphs`), and the theme and language (`canvas.ui`, a `UiSettings`). Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
 
 ```html
 <paint-canvas settings-store="default"></paint-canvas>
