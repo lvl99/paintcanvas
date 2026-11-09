@@ -1,6 +1,12 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { html } from "lit";
-import { PcElement, defineElement, emit } from "..";
+import {
+  PcElement,
+  TOUCH_FIELD_FONT_SIZE,
+  defineElement,
+  emit,
+  touchFields,
+} from "..";
 import Translations, { translations } from "../../../lib/i18n";
 import { IconRegistry, icons } from "../../icons";
 import { mount, shadow } from "../../../testing/elements";
@@ -74,5 +80,14 @@ describe("PcElement", () => {
     const update = vi.spyOn(element, "requestUpdate");
     ownIcons.register({ brush: "/d.svg" });
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("touchFields", () => {
+  it("should make form fields' text at least 16px on touch screens, in every element", () => {
+    expect(TOUCH_FIELD_FONT_SIZE).toBe("16px");
+    expect(touchFields.cssText).toContain("@media (pointer: coarse)");
+    expect(touchFields.cssText).toContain("max(16px, 1em) !important");
+    expect(PcElement.styles).toContain(touchFields);
   });
 });
