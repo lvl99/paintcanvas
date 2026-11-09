@@ -1,7 +1,6 @@
 /* "New Layer": a full-width purple pill */
 button.new {
   width: 100%;
-  min-height: 40px;
 }
 /* Where a dragged layer would land: a full-width block with its name, as tall as the row (set by the menu) */
 .ghost {

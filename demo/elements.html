@@ -38,11 +38,31 @@
     </section>
     <section>
       <pc-button id="dialog-button">Open dialog</pc-button>
+      <pc-button id="window-button">Open window</pc-button>
       <pc-button variant="cancel">Cancel</pc-button>
       <pc-button variant="dismiss">Dismiss</pc-button>
       <pc-button variant="pill">Pill</pc-button>
       <pc-button variant="icon" icon="undo" label="Undo"></pc-button>
       <pc-button disabled>Disabled</pc-button>
+    </section>
+    <pc-dialog-window id="window" shaded>
+      <strong slot="header-start">Window</strong>
+      <p slot="body">
+        A window with a header, a body and a footer. Its body scrolls when it's
+        taller than the screen; the header and footer stay in view.
+      </p>
+      <ol slot="body" id="window-lines"></ol>
+      <pc-button slot="footer-start" variant="dismiss" id="window-dismiss"
+        >Dismiss</pc-button
+      >
+      <pc-button slot="footer-end" id="window-done">Done</pc-button>
+    </pc-dialog-window>
+    <section>
+      <pc-button size="pill-s">Pill S</pc-button>
+      <pc-button>Pill</pc-button>
+      <pc-button size="pill-l">Pill L</pc-button>
+      <pc-button size="pill-xl">Pill XL</pc-button>
+      <pc-button size="pill-xxl">Pill XXL</pc-button>
     </section>
     <section>
       <pc-button-group label="Tools">
@@ -56,6 +76,21 @@
       </pc-button-group>
       <pc-toggle-checkbox checked>Pinch to zoom</pc-toggle-checkbox>
       <pc-slider label="Opacity" value="50" unit="%"></pc-slider>
+      <pc-slider-range
+        label="Width"
+        min="1"
+        max="256"
+        low="10"
+        high="40"
+        unit="px"
+      ></pc-slider-range>
+      <pc-slider-range
+        single
+        label="Size"
+        value="30"
+        number-position="end"
+      ></pc-slider-range>
+      <pc-profile-graph label="Profile"></pc-profile-graph>
       <pc-number-slider
         label="Opacity"
         min="0"

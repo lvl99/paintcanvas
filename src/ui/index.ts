@@ -16,6 +16,21 @@ export { PcIconToggle } from "./elements/PcIconToggle";
 export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
 export { PcNumberSlider, fitNumber } from "./elements/PcNumberSlider";
+export {
+  PcProfileEditor,
+  type ProfileSaveDetail,
+} from "./elements/PcProfileEditor";
+export {
+  PcProfileGraph,
+  curvePath,
+  movePoint,
+} from "./elements/PcProfileGraph";
+export {
+  PcSliderRange,
+  rangeFraction,
+  type RangeDetail,
+  type RangeEnd,
+} from "./elements/PcSliderRange";
 export { PcBrushSize, sizeText } from "./elements/PcBrushSize";
 export { PointerDrag, DRAG_THRESHOLD, dragDelta } from "./drag";
 export { markDismissingPress, isDismissingPress } from "./dismiss";
@@ -37,10 +52,27 @@ export {
   type MenuPlacement,
 } from "./elements/PcContextMenu";
 export {
+  PcDialogWindow,
+  DIALOG_DISMISS_EVENT,
+  type DialogCloseReason,
+} from "./elements/PcDialogWindow";
+export {
   PcDialog,
   CANCEL_CHOICE,
   type DialogChoice,
+  type DialogChoiceDetail,
+  type DialogField,
 } from "./elements/PcDialog";
+export {
+  askConfirm,
+  askText,
+  deletePresetQuestion,
+  OK_CHOICE,
+  type AskOptions,
+  type AskTextOptions,
+  type ConfirmFn,
+  type PromptFn,
+} from "./ask";
 export { PcToast, TOAST_DURATION_MS, type ToastKind } from "./elements/PcToast";
 export { PcInfoTip } from "./elements/PcInfoTip";
 export { PcPopover } from "./elements/PcPopover";

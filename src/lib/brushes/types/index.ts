@@ -1,4 +1,5 @@
 // Types describing brush and eraser presets, and the brush strokes they are applied along.
+import type { ProfilePoint } from "../../profiles";
 
 export interface AssetAuthorDetails {
   /** Author's name */
@@ -100,6 +101,13 @@ export interface BrushParamConfig {
    * @default 1
    */
   maxTilt?: number;
+  /**
+   * The profile graph the input (pressure, tilt or the random number) goes through before setting the factor between
+   * its min and max, e.g. so a light touch goes most of the way (see `applyProfile`). A straight line by default.
+   */
+  profile?: ProfilePoint[];
+  /** The ID of the profile graph `profile` came from (a preset's or one of the user's), to show its name */
+  profileId?: string;
 }
 
 export interface BrushConfig {

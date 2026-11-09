@@ -1,4 +1,4 @@
-import { LitElement, type CSSResultGroup } from "lit";
+import { LitElement, css, unsafeCSS, type CSSResultGroup } from "lit";
 import { installTokens, tokens } from "../tokens";
 import { icons, type IconRegistry } from "../icons";
 import Translations, { translations } from "../../lib/i18n";
@@ -37,8 +37,25 @@ export const emit = <T>(
     }),
   );
 
+/** The least font size of form fields on touch screens: iOS zooms the page in on fields with smaller text */
+export const TOUCH_FIELD_FONT_SIZE = "16px";
+
 /**
- * The base of PaintCanvas's elements: the design tokens, the translations and icons they use (shared ones unless
+ * Form fields' text on touch screens: at least 16px, so iOS doesn't zoom the page in when one is focused (which is
+ * hard to undo). It wins over elements' own field sizes, as zooming makes the whole interface hard to use.
+ */
+export const touchFields = css`
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: max(${unsafeCSS(TOUCH_FIELD_FONT_SIZE)}, 1em) !important;
+    }
+  }
+`;
+
+/**
+ * The base of PaintCanvas's elements: the design tokens, 16px form fields on touch screens (see `touchFields`), the translations and icons they use (shared ones unless
  * given others), and re-rendering when either changes.
  *
  * @example
@@ -49,7 +66,7 @@ export const emit = <T>(
  * }
  */
 export class PcElement extends LitElement {
-  static override styles: CSSResultGroup = [tokens];
+  static override styles: CSSResultGroup = [tokens, touchFields];
 
   static override properties = {
     translations: { attribute: false },

@@ -1,5 +1,5 @@
-// JSON schemas for the user's app settings (input settings, keyboard shortcuts, colour palette, colours, theme and
-// language), as kept in the browser and in exported settings files.
+// JSON schemas for the user's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs,
+// theme and language), as kept in the browser and in exported settings files.
 import type { InputSettingsData } from "../classes/InputSettings";
 import {
   LOCALE_PATTERN,
@@ -13,6 +13,8 @@ import {
   MAX_PALETTE_COLOURS,
   paletteFileSchema,
 } from "../palette/schema.ts";
+import type { ProfileGraph } from "../profiles/index.ts";
+import { MAX_SAVED_PROFILES, profileGraphSchema } from "../profiles/schema.ts";
 
 /** The `format` of a settings file, unless the implementer names their own (see `PaintCanvasNames`) */
 export const SETTINGS_FILE_FORMAT = "paintcanvas-settings";
@@ -39,6 +41,8 @@ export interface AppSettings {
   palette?: string[];
   /** The foreground and background colours, as `#rrggbb` */
   colours?: { foreground: string; background: string };
+  /** The user's own profile graphs */
+  profiles?: ProfileGraph[];
   /** The theme and language */
   ui?: Partial<UiSettingsData>;
 }
@@ -109,6 +113,11 @@ export const settingsSchema = {
       additionalProperties: false,
       required: ["foreground", "background"],
       properties: { foreground: hexColour, background: hexColour },
+    },
+    profiles: {
+      type: "array",
+      maxItems: MAX_SAVED_PROFILES,
+      items: profileGraphSchema,
     },
     ui: {
       type: "object",

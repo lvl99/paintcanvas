@@ -18,6 +18,14 @@ describe("pc-button", () => {
     expect(inner.hasAttribute("aria-pressed")).toBe(false);
   });
 
+  it("should be a pill of the usual size unless given another", async () => {
+    const button = await mount<PcButton>("pc-button", {}, "Save");
+    expect(button.getAttribute("size")).toBe("pill");
+    button.size = "pill-l";
+    await button.updateComplete;
+    expect(button.getAttribute("size")).toBe("pill-l");
+  });
+
   it("should name an icon button for screen readers and show whether it's pressed", async () => {
     const button = await mount<PcButton>("pc-button", {
       variant: "icon",

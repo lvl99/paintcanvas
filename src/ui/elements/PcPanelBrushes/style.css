@@ -67,9 +67,6 @@ ul {
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
-.actions button.pill {
-  padding: 4px 8px;
-}
 .visually-hidden {
   position: absolute;
   width: 1px;

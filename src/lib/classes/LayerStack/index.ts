@@ -45,6 +45,9 @@ export default class LayerStack extends EventTarget {
 
   private readonly createCanvas: CanvasFactory;
 
+  /** How many times each layer's image data has been changed through the stack (see `pixelVersion`) */
+  private readonly versions = new WeakMap<Layer, number>();
+
   /** Most layers the stack can have */
   readonly maxLayers: number;
 
@@ -163,10 +166,24 @@ export default class LayerStack extends EventTarget {
   }
 
   /**
+   * How many times a layer's image data has been changed through the stack (`markChanged`, `changeImage`, `clear`,
+   * merging into it, and undoing or redoing those), to tell whether it changed since some point without reading its
+   * pixels (which is slow on phones). A new layer starts at 0.
+   *
+   * @example
+   * const before = stack.pixelVersion(id);
+   * stack.markChanged(id);
+   * stack.pixelVersion(id) > before; // true
+   */
+  pixelVersion(id: string): number {
+    return this.versions.get(this.get(id)) ?? 0;
+  }
+
+  /**
    * Tell listeners a layer's image data changed (e.g. after a brush stroke), so thumbnails and the map redraw.
    */
   markChanged(id: string): void {
-    this.get(id);
+    this.touch(this.get(id));
     this.onlyChanged = id;
     try {
       this.notify();
@@ -184,6 +201,7 @@ export default class LayerStack extends EventTarget {
     const area = contentBounds(data, this.width, this.height);
     if (area) this.recordImage(id, area);
     layer.clear();
+    this.touch(layer);
     this.notify();
   }
 
@@ -215,7 +233,9 @@ export default class LayerStack extends EventTarget {
     change: (ctx: OffscreenCanvasRenderingContext2D) => void,
   ): void {
     this.recordImage(id, area);
-    change(this.get(id).context);
+    const layer = this.get(id);
+    change(layer.context);
+    this.touch(layer);
     this.notify();
   }
 
@@ -253,6 +273,7 @@ export default class LayerStack extends EventTarget {
         ctx.globalCompositeOperation = layer.blendMode;
         ctx.drawImage(layer.canvas, x, y, width, height, x, y, width, height);
         ctx.restore();
+        this.touch(below);
       }
       this.items = this.items.filter((l) => l !== layer);
       this.activeId = below.id;
@@ -400,9 +421,15 @@ export default class LayerStack extends EventTarget {
       ctx.clearRect(area.x, area.y, area.width, area.height);
       ctx.drawImage(stored, area.x, area.y);
       stored = current;
+      this.touch(layer);
       this.select(id);
     };
     return { undo: swap, redo: swap };
+  }
+
+  /** Count a change to a layer's image data */
+  private touch(layer: Layer): void {
+    this.versions.set(layer, this.pixelVersion(layer.id) + 1);
   }
 
   /**

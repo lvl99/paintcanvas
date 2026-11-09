@@ -419,7 +419,7 @@ export class PcToolSettings extends PcElement {
         )}
         <button
           type="button"
-          class="configure"
+          class="configure pill-s"
           @click=${() => this.emit("pc-configure-brush", kind)}
         >
           ${this.t("paintCanvas.toolSettings.configure")}
@@ -513,14 +513,14 @@ export class PcToolSettings extends PcElement {
       label: this.t("paintCanvas.toolSettings.maskSettings"),
       start: html`<button
           type="button"
-          class="pill select-all"
+          class="pill-s select-all"
           @click=${() => app.selection.selectAll()}
         >
           ${this.t("paintCanvas.toolSettings.selectAll")}
         </button>
         <button
           type="button"
-          class="pill invert"
+          class="pill-s invert"
           ?disabled=${!app.selection.active}
           @click=${() => app.selection.invert()}
         >
@@ -528,7 +528,7 @@ export class PcToolSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill deselect"
+          class="pill-s deselect"
           ?disabled=${!app.selection.active}
           @click=${() => app.selection.clear()}
         >
@@ -674,7 +674,7 @@ export class PcToolSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill reset"
+          class="pill-s reset"
           ?disabled=${disabled}
           @click=${() => app.cancelTransform()}
         >
@@ -730,7 +730,7 @@ export class PcToolSettings extends PcElement {
         </label>
         <button
           type="button"
-          class="pill reset"
+          class="pill-s reset"
           @click=${() => view.zoomAt(centre, 1)}
         >
           ${this.t("paintCanvas.toolSettings.reset")}

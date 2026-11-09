@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { userEvent } from "vitest/browser";
 import "..";
 import type { PcAppSettings } from "..";
+import type { PcDialogWindow } from "../../PcDialogWindow";
 import PaintCanvas, { Tool } from "../../../../lib/classes/PaintCanvas";
 import KeyboardShortcuts from "../../../../lib/classes/KeyboardShortcuts";
 
@@ -19,9 +20,16 @@ describe("app settings in a real browser", () => {
     button.focus();
     button.click();
     await element.updateComplete;
-    const dialog = root.querySelector("dialog")!;
+    const dialogWindow =
+      root.querySelector<PcDialogWindow>("pc-dialog-window")!;
+    await dialogWindow.updateComplete;
+    const windowRoot = dialogWindow.shadowRoot!;
+    const dialog = windowRoot.querySelector("dialog")!;
     expect(dialog.matches(":modal")).toBe(true);
-    expect(root.activeElement).toBe(root.querySelector("button.close"));
+    // Focus moves to its first control, the ⨉ button
+    expect(windowRoot.activeElement).toBe(
+      windowRoot.querySelector("button.close"),
+    );
     // Shortcuts don't run inside the window
     await userEvent.keyboard("e");
     expect(app.tool).toBe(Tool.Brush);

@@ -1,4 +1,8 @@
 // JSON schemas for brush presets saved by users, and for the files they are exported to and imported from.
+import {
+  MAX_PROFILE_TEXT_LENGTH,
+  profilePointsSchema,
+} from "../profiles/schema.ts";
 
 /** Matches a lowercase UUID */
 export const UUID_PATTERN =
@@ -58,6 +62,12 @@ const paramConfig = {
     useTilt: { type: "boolean" },
     minTilt: factor,
     maxTilt: factor,
+    profile: profilePointsSchema,
+    profileId: {
+      type: "string",
+      minLength: 1,
+      maxLength: MAX_PROFILE_TEXT_LENGTH,
+    },
   },
 } as const;
 

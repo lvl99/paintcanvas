@@ -1,4 +1,4 @@
-import { css, html, nothing, unsafeCSS, type PropertyValues } from "lit";
+import { css, html, nothing, unsafeCSS } from "lit";
 import {
   PILLS_CSS as pills,
   WINDOWS_CSS as windows,
@@ -6,6 +6,7 @@ import {
 } from "../../styles";
 import { PcElement, defineElement, emit } from "../../base";
 import "../PcShortcutSettings";
+import "../PcDialogWindow";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import {
   SETTINGS_FILE_ERRORS,
@@ -32,9 +33,9 @@ const SETTINGS_FILE_ERROR_KEYS: Record<string, string> = {
 /**
  * Buttons for the user's app settings: "Keyboard shortcuts", which opens a window to change them (see
  * `pc-shortcut-settings`), and "Import settings" and "Export settings", which read and write a settings JSON file (input
- * settings, keyboard shortcuts, colour palette, colours, theme and language). The window is a modal `<dialog>` above the whole page; it
- * closes with its Close button, Escape, or a press on the backdrop, and the browser gives focus back to the button. Fires `pc-toast` after importing, or when importing or
- * exporting fails.
+ * settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and language). The window is a shaded
+ * `<pc-dialog-window>` over the whole page; it closes with its ⨉ button, Escape or a press outside it, and focus goes
+ * back to the button. Fires `pc-toast` after importing, or when importing or exporting fails.
  *
  * @example
  * html`<pc-app-settings .app=${canvas}></pc-app-settings>`
@@ -64,32 +65,8 @@ export class PcAppSettings extends PcElement {
         flex-wrap: wrap;
         gap: var(--pc-space-2);
       }
-      /* A modal window in the browser's top layer, above everything on the page */
-      dialog {
-        box-sizing: border-box;
-        width: min(480px, calc(100vw - 2 * var(--pc-space-3)));
-        max-height: calc(100vh - 2 * var(--pc-space-3));
-        padding: 0;
-        border: 0;
-        border-radius: var(--pc-radius);
-        background: var(--pc-surface-raised);
-        color: var(--pc-text);
-        box-shadow: var(--pc-shadow);
-      }
-      dialog::backdrop {
-        background: var(--pc-backdrop);
-      }
-      .window {
-        display: flex;
-        flex-direction: column;
-        gap: var(--pc-space-3);
-        box-shadow: none;
-      }
-      .header {
-        display: flex;
-        gap: var(--pc-space-2);
-        align-items: center;
-        justify-content: space-between;
+      pc-dialog-window {
+        --pc-dialog-width: 480px;
       }
       h2 {
         margin: 0;
@@ -112,15 +89,6 @@ export class PcAppSettings extends PcElement {
   constructor() {
     super();
     this.shortcutsOpen = false;
-  }
-
-  protected override updated(changed: PropertyValues<this>): void {
-    if (!changed.has("shortcutsOpen")) return;
-    const dialog = this.renderRoot.querySelector("dialog");
-    if (!dialog) return;
-    // The browser makes the rest of the page inert, closes it on Escape and gives focus back when it closes
-    if (this.shortcutsOpen && !dialog.open) dialog.showModal();
-    else if (!this.shortcutsOpen && dialog.open) dialog.close();
   }
 
   /** Close the keyboard shortcuts window */
@@ -197,39 +165,24 @@ export class PcAppSettings extends PcElement {
     });
   }
 
-  /** The keyboard shortcuts window: a modal dialog, with its contents only while open */
+  /** The keyboard shortcuts window, with its contents only while open */
   private renderShortcuts(app: PaintCanvas) {
-    return html`<dialog
-      aria-labelledby="shortcuts-title"
-      @close=${() => this.closeShortcuts()}
-      @click=${(e: MouseEvent) => {
-        // A press on the backdrop is a press on the dialog itself
-        if (e.target === e.currentTarget) this.closeShortcuts();
-      }}
+    return html`<pc-dialog-window
+      class="shortcuts-window"
+      shaded
+      ?open=${this.shortcutsOpen}
+      @pc-dismiss=${() => this.closeShortcuts()}
     >
+      <h2 slot="header-middle">${this.t("paintCanvas.shortcuts.title")}</h2>
       ${
         this.shortcutsOpen
-          ? html`<div class="window">
-              <div class="header">
-                <h2 id="shortcuts-title">
-                  ${this.t("paintCanvas.shortcuts.title")}
-                </h2>
-                <button
-                  type="button"
-                  class="close dismiss"
-                  autofocus
-                  @click=${() => this.closeShortcuts()}
-                >
-                  ${this.t("paintCanvas.common.close")}
-                </button>
-              </div>
-              <pc-shortcut-settings
-                .settings=${app.shortcuts}
-              ></pc-shortcut-settings>
-            </div>`
+          ? html`<pc-shortcut-settings
+              slot="body"
+              .settings=${app.shortcuts}
+            ></pc-shortcut-settings>`
           : nothing
       }
-    </dialog>`;
+    </pc-dialog-window>`;
   }
 
   override render() {
@@ -238,7 +191,7 @@ export class PcAppSettings extends PcElement {
     return html`<div class="actions">
         <button
           type="button"
-          class="pill shortcuts"
+          class="pill-s shortcuts"
           aria-haspopup="dialog"
           @click=${() => (this.shortcutsOpen = true)}
         >
@@ -246,7 +199,7 @@ export class PcAppSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill import"
+          class="pill-s import"
           @click=${() =>
             this.renderRoot
               .querySelector<HTMLInputElement>(".import-file")
@@ -256,7 +209,7 @@ export class PcAppSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill export"
+          class="pill-s export"
           @click=${() => void this.exportFile()}
         >
           ${this.t("paintCanvas.settings.export")}

@@ -12,7 +12,13 @@
   "widthConfig": {
     "useRandomise": true,
     "minRandomise": 0.5,
-    "maxRandomise": 1
+    "maxRandomise": 1,
+    "profileId": "overweight",
+    "profile": [
+      { "x": 0, "y": -10, "i": "linear" },
+      { "x": 3, "y": -3, "i": "bezier-cubic" },
+      { "x": 10, "y": 0, "i": "linear" }
+    ]
   },
   "constrainProportions": true,
   "rotation": 45,

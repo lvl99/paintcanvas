@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { flattenArea, readPixels } from "..";
+import { describe, it, expect, vi } from "vitest";
+import { copyPixels, flattenArea, readPixels } from "..";
 import { BlendMode, createOffscreenCanvas } from "../../../classes/Layer";
 import type { DrawableLayer } from "../../compositing";
 
@@ -19,6 +19,18 @@ const layer = (
     blendMode: options.blendMode ?? BlendMode.Normal,
   };
 };
+
+describe("copyPixels", () => {
+  it("should copy an area of a canvas onto a canvas its size", () => {
+    const piece = copyPixels(
+      layer("#ff0000").canvas,
+      { x: 9, y: 5, width: 2, height: 1 },
+      createOffscreenCanvas,
+    );
+    expect([piece.width, piece.height]).toEqual([2, 1]);
+    expect([...readPixels(piece)]).toEqual([255, 0, 0, 255, 0, 0, 0, 0]);
+  });
+});
 
 describe("flattenArea", () => {
   it("should draw an area as shown: white background, every layer mixed, transparent outside the canvas", () => {
@@ -59,5 +71,48 @@ describe("flattenArea", () => {
     const pixels = readPixels(flat);
     expect([...pixels.slice(0, 4)]).toEqual([0, 0, 0, 255]);
     expect([...pixels.slice(4, 8)]).toEqual([255, 255, 255, 255]);
+  });
+
+  it("should read only the area's pixels from the shown layers, cut to the canvas", () => {
+    const shown = layer("#ff0000");
+    const hidden = { ...layer("#00ff00"), visible: false };
+    const clear = { ...layer("#0000ff"), opacity: 0 };
+    const read = (item: DrawableLayer) =>
+      vi.spyOn(
+        item.canvas.getContext("2d") as OffscreenCanvasRenderingContext2D,
+        "getImageData",
+      );
+    const [shownRead, hiddenRead, clearRead] = [shown, hidden, clear].map(read);
+    const flat = flattenArea(
+      [shown, hidden, clear],
+      createOffscreenCanvas,
+      20,
+      20,
+      { x: 18, y: -1, width: 4, height: 2 },
+    );
+    expect(shownRead).toHaveBeenCalledExactlyOnceWith(18, 0, 2, 1);
+    expect(hiddenRead).not.toHaveBeenCalled();
+    expect(clearRead).not.toHaveBeenCalled();
+    const pixels = [...readPixels(flat)];
+    // Above the canvas, then the white background where nothing's drawn, then right of the canvas
+    expect(pixels.slice(0, 16)).toEqual(Array(16).fill(0));
+    expect(pixels.slice(16, 24)).toEqual(Array(8).fill(255));
+    expect(pixels.slice(24)).toEqual(Array(8).fill(0));
+  });
+
+  it("should leave an area outside the canvas transparent", () => {
+    const flat = flattenArea(
+      [layer("#ff0000")],
+      createOffscreenCanvas,
+      20,
+      20,
+      {
+        x: 30,
+        y: 30,
+        width: 2,
+        height: 2,
+      },
+    );
+    expect([...readPixels(flat)]).toEqual(Array(16).fill(0));
   });
 });

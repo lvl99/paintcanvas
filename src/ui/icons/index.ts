@@ -27,6 +27,7 @@ import pressure from "./images/icon-pressure@2x.png?url";
 import focusPen from "./images/icon-focus-pen@2x.png?url";
 import tilt from "./images/icon-tilt@2x.png?url";
 import randomise from "./images/icon-randomise@2x.png?url";
+import profileGraph from "./images/icon-profile-graph@2x.png?url";
 import flipHorizontal from "./images/icon-flip-horizontal@2x.png?url";
 import flipVertical from "./images/icon-flip-vertical@2x.png?url";
 import rotate90Left from "./images/icon-rotate-90-left@2x.png?url";
@@ -72,6 +73,7 @@ export type IconName =
   | "focusPen"
   | "tilt"
   | "randomise"
+  | "profileGraph"
   | "flipHorizontal"
   | "flipVertical"
   | "rotate90Left"
@@ -117,6 +119,7 @@ export const DEFAULT_ICONS: Readonly<Record<IconName, string>> = {
   focusPen,
   tilt,
   randomise,
+  profileGraph,
   flipHorizontal,
   flipVertical,
   rotate90Left,

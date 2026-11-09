@@ -287,7 +287,7 @@ export class PcPanelLayers extends PcPanel {
       ${this.renderRows(layers)}
       <button
         type="button"
-        class="pill new ${this.drag?.action === "duplicate" ? "drop-target" : ""}"
+        class="pill-s new ${this.drag?.action === "duplicate" ? "drop-target" : ""}"
         ?disabled=${!layers.canCreate}
         @click=${() => layers.create()}
       >

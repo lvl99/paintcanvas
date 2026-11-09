@@ -1,5 +1,6 @@
 import type { BrushConfig, BrushParamConfig, BrushStrokePoint } from "../types";
 import type { RandomFn } from "../../utils/random";
+import { applyProfile } from "../../profiles";
 
 /** A stamp's final size, rotation, offset and alpha after variation */
 export interface StampParams {
@@ -63,7 +64,8 @@ export const tiltDirection = (tiltX = 0, tiltY = 0): number =>
 
 /**
  * Combine a parameter's randomise, pressure and tilt factors into one factor (they multiply). Returns 1 when nothing is enabled.
- * Pressure and tilt only apply to pens; for other devices they count as full (`maxPressure`/`maxTilt`).
+ * Pressure and tilt only apply to pens; for other devices they count as full (`maxPressure`/`maxTilt`). Each input goes
+ * through the parameter's profile graph (see `applyProfile`) before it sets the factor between its min and max.
  *
  * @example
  * variationFactor({ useRandomise: true, minRandomise: 0.5, maxRandomise: 1 }, { isPen: false }, () => 0); // 0.5
@@ -74,21 +76,30 @@ export const variationFactor = (
   random: RandomFn = Math.random,
 ): number => {
   if (!config) return 1;
+  const { profile } = config;
   let factor = 1;
   if (config.useRandomise) {
     factor *= lerp(
       config.minRandomise ?? 1,
       config.maxRandomise ?? 1,
-      random(),
+      applyProfile(profile, random()),
     );
   }
   if (config.usePressure) {
     const pressure = input.isPen ? clamp01(input.pressure ?? 1) : 1;
-    factor *= lerp(config.minPressure ?? 0, config.maxPressure ?? 1, pressure);
+    factor *= lerp(
+      config.minPressure ?? 0,
+      config.maxPressure ?? 1,
+      applyProfile(profile, pressure),
+    );
   }
   if (config.useTilt) {
     const tilt = input.isPen ? tiltAmount(input.tiltX, input.tiltY) : 1;
-    factor *= lerp(config.minTilt ?? 0, config.maxTilt ?? 1, tilt);
+    factor *= lerp(
+      config.minTilt ?? 0,
+      config.maxTilt ?? 1,
+      applyProfile(profile, tilt),
+    );
   }
   return factor;
 };

@@ -127,11 +127,21 @@ describe("PaintCanvas", () => {
     expect(app.brush.preset).not.toBe(app.eraser.preset);
   });
 
-  it("should create real canvases by default", () => {
-    vi.stubGlobal("OffscreenCanvas", class {});
+  it("should create real canvases that keep their pixels in regular memory by default", () => {
+    const options: unknown[] = [];
+    vi.stubGlobal(
+      "OffscreenCanvas",
+      class {
+        getContext(_type: string, settings?: unknown) {
+          options.push(settings);
+          return {};
+        }
+      },
+    );
     expect(new PaintCanvas().layers.active.canvas).toBeInstanceOf(
       OffscreenCanvas,
     );
+    expect(options[0]).toEqual({ willReadFrequently: true });
     vi.unstubAllGlobals();
   });
 

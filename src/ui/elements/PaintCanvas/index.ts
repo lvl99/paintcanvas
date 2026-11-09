@@ -615,7 +615,7 @@ export class PaintCanvasElement extends PcElement {
         // The open panel (the layout's floating ones), and dialogs
         ((target.classList.contains("panel") &&
           target.getRootNode() === this.renderRoot) ||
-          target.matches("dialog, pc-dialog") ||
+          target.matches("dialog, pc-dialog, pc-dialog-window") ||
           target.getAttribute("data-panel") === panel ||
           (panel === Panel.Palette && target.localName === "pc-colour-pair")),
     );
@@ -682,13 +682,15 @@ export class PaintCanvasElement extends PcElement {
         label: this.t("paintCanvas.autosave.takeOver"),
       },
     ];
+    // Over the layout only (not the whole page), and not dismissed: this window can't draw until it takes over
     return html`<pc-dialog
       class="elsewhere"
+      inline
+      .dismissible=${false}
       heading=${this.t("paintCanvas.autosave.elsewhere")}
       message=${this.t("paintCanvas.autosave.elsewhereMessage")}
       .choices=${choices}
       @pc-choose=${(event: CustomEvent<{ value: string }>) => {
-        // Escape leaves the message showing: this window can't draw until it takes over
         if (event.detail.value === TAKE_OVER_CHOICE) app.autosave?.takeOver();
       }}
     ></pc-dialog>`;

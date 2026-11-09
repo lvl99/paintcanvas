@@ -389,3 +389,28 @@ describe("LayerStack", () => {
     expect(() => stack.create()).toThrow("Cannot have more than 2 layers");
   });
 });
+
+describe("LayerStack pixel versions", () => {
+  it("should count changes to a layer's image data, including undoing and redoing them, but not other changes", () => {
+    const stack = createStack();
+    const id = stack.active.id;
+    const version = () => stack.pixelVersion(id);
+    expect(version()).toBe(0);
+    stack.markChanged(id);
+    expect(version()).toBe(1);
+    stack.changeImage(id, { x: 0, y: 0, width: 5, height: 5 }, () => {});
+    expect(version()).toBe(2);
+    stack.history.undo();
+    expect(version()).toBe(3);
+    stack.history.redo();
+    expect(version()).toBe(4);
+    // Renaming or selecting doesn't change pixels
+    stack.rename(id, "Sketch");
+    stack.select(id);
+    expect(version()).toBe(4);
+    const above = stack.create();
+    expect(stack.pixelVersion(above.id)).toBe(0);
+    stack.clear(above.id);
+    expect(stack.pixelVersion(above.id)).toBe(1);
+  });
+});

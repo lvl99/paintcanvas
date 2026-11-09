@@ -716,7 +716,7 @@ export class PcPanelColours extends PcPanel {
         <div class="actions">
           <button
             type="button"
-            class="pill import"
+            class="pill-s import"
             @click=${() =>
               this.renderRoot
                 .querySelector<HTMLInputElement>(".import-file")
@@ -726,7 +726,7 @@ export class PcPanelColours extends PcPanel {
           </button>
           <button
             type="button"
-            class="pill export"
+            class="pill-s export"
             @click=${() => void this.exportFile()}
           >
             ${this.t("paintCanvas.palette.export")}

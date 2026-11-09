@@ -5,6 +5,12 @@ import ChangeController from "../../ChangeController";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import { zoomPercent } from "../PcToolSettings";
 
+/**
+ * The least time between reads of the colour under the pointer, in milliseconds. Each read draws every layer's pixels
+ * there, which is slow on phones.
+ */
+export const COLOUR_INTERVAL_MS = 100;
+
 /** Units for sizes in bytes, each 1000 times the one before */
 const BYTE_UNITS = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
 
@@ -31,8 +37,9 @@ export const formatBytes = (bytes: number, locale?: string): string => {
 /**
  * A line of small text about the canvas: its size; while the drawing is kept in the browser, how much its layer
  * images take there; the zoom level; and the colour under the pointer (with a swatch; a dash when the pointer isn't
- * over the canvas). The colour follows the pointer at most once a frame. It's not announced to screen readers as it
- * changes, as it changes with every pointer move.
+ * over the canvas). The colour follows the pointer at most every `COLOUR_INTERVAL_MS`, and isn't read while a stroke is
+ * drawn (the next pointer move after it reads it). It's not announced to screen readers as it changes, as it changes
+ * with every pointer move.
  *
  * @example
  * html`<pc-stats .app=${app}></pc-stats>`
@@ -41,6 +48,7 @@ export class PcStats extends PcElement {
   static override properties = {
     ...PcElement.properties,
     app: { attribute: false },
+    colour: { state: true },
   };
 
   static override styles = [
@@ -87,19 +95,31 @@ export class PcStats extends PcElement {
     this.app?.autosave,
   ]);
 
+  /** The colour under the pointer when it was last read, if it's over the canvas */
+  declare colour?: string;
+
   /** The canvas whose pointer is followed */
   private followed?: PaintCanvas;
 
-  /** The animation frame the next update waits for, if any */
-  private frame?: number;
+  /** The timer the next read of the colour waits for, if any */
+  private timer?: ReturnType<typeof setTimeout>;
 
-  // Show the colour under the pointer at most once a frame
+  // Read the colour under the pointer at most every `COLOUR_INTERVAL_MS`
   private readonly onPointer = () => {
-    this.frame ??= requestAnimationFrame(() => {
-      this.frame = undefined;
-      this.requestUpdate();
-    });
+    this.timer ??= setTimeout(() => {
+      this.timer = undefined;
+      this.readColour();
+    }, COLOUR_INTERVAL_MS);
   };
+
+  /**
+   * Read the colour under the followed canvas's pointer, unless a stroke is being drawn (reading would slow it down).
+   */
+  private readColour(): void {
+    const app = this.followed;
+    if (!app || app.strokes.drawing) return;
+    this.colour = app.pointer && app.sampleColour(app.pointer);
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -109,8 +129,6 @@ export class PcStats extends PcElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.follow(undefined);
-    if (this.frame !== undefined) cancelAnimationFrame(this.frame);
-    this.frame = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -123,6 +141,9 @@ export class PcStats extends PcElement {
    */
   private follow(app: PaintCanvas | undefined): void {
     this.followed?.removeEventListener("pointer", this.onPointer);
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    this.colour = undefined;
     this.followed = app;
     app?.addEventListener("pointer", this.onPointer);
   }
@@ -130,7 +151,7 @@ export class PcStats extends PcElement {
   override render() {
     const app = this.app;
     if (!app) return nothing;
-    const colour = app.pointer && app.sampleColour(app.pointer);
+    const colour = this.colour;
     const autosave = app.autosave;
     return html`<ul
       part="stats"

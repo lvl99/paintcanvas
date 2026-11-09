@@ -41,6 +41,28 @@ While the layout is narrow (below `narrow-width`, 600px by default), toolbars in
 </paint-canvas>
 ```
 
+## Before the elements load
+
+Until the scripts load, `<paint-canvas>` and the content you put in its slots (e.g. menu buttons' text) show as plain, unstyled HTML. Hide them with CSS in the page's `<head>`, which applies from the first paint, and show something small in their place until `<paint-canvas>` is defined:
+
+```html
+<style>
+  :root {
+    color-scheme: light dark; /* the device's light or dark background straight away */
+  }
+  paint-canvas:not(:defined) {
+    visibility: hidden;
+  }
+  paint-canvas:defined ~ .loading {
+    display: none;
+  }
+</style>
+<paint-canvas>…</paint-canvas>
+<div class="loading" role="status">Loading…</div>
+```
+
+The demo does this with a thin bar across the top.
+
 ## Panes, panels and menus
 
 The layout's areas are built from a few kinds of elements, each sharing its look and behaviour with the others of its kind:
@@ -125,7 +147,7 @@ Key presses are matched on keyboards with any layout:
 
 ## Keeping the user's settings
 
-With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette, the foreground and background colours, and the theme and language (`canvas.ui`, a `UiSettings`). Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
+With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette, the foreground and background colours, the user's own profile graphs (`canvas.profiles`, a `ProfileGraphs`), and the theme and language (`canvas.ui`, a `UiSettings`). Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
 
 ```html
 <paint-canvas settings-store="default"></paint-canvas>

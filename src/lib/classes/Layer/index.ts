@@ -36,6 +36,22 @@ export const createOffscreenCanvas: CanvasFactory = (width, height) =>
   new OffscreenCanvas(width, height);
 
 /**
+ * Create an `OffscreenCanvas` whose pixels are kept in regular memory rather than on the GPU (its 2D context is made
+ * with `willReadFrequently`). Reading its pixels, encoding it and copying it are then plain memory copies, which on
+ * phones avoids long stalls waiting for the GPU (up to 15 seconds were seen on an iPhone), at the cost of drawing on
+ * the CPU. PaintCanvas makes its canvases this way by default.
+ *
+ * @example
+ * const canvas = createMemoryCanvas(2000, 2000);
+ */
+export const createMemoryCanvas: CanvasFactory = (width, height) => {
+  const canvas = new OffscreenCanvas(width, height);
+  // The first context made decides where the pixels live; later `getContext("2d")` calls get this one
+  canvas.getContext("2d", { willReadFrequently: true });
+  return canvas;
+};
+
+/**
  * Clamp an opacity value to 0–1.
  *
  * @example

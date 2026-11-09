@@ -1,23 +1,35 @@
-import { css, html, nothing } from "lit";
+import { css, html, nothing, unsafeCSS } from "lit";
 import { PcElement, defineElement } from "../../base";
+import { PILL_SIZES, pillSizeDeclarations, type PillSize } from "../../styles";
 import "../PcIcon";
 
 /** How a button looks */
 export type ButtonVariant = "accent" | "cancel" | "dismiss" | "pill" | "icon";
 
+/** Each pill size, for the buttons that are pills (all but icon buttons) */
+const SIZE_STYLES = unsafeCSS(
+  PILL_SIZES.map(
+    (size) =>
+      `:host([size="${size}"]) button { ${pillSizeDeclarations(size)} }`,
+  ).join("\n"),
+);
+
 /**
- * A button: affirmative (`accent`, the default), cancelling (`cancel`), a quiet text button (`dismiss`), a small pill
- * (`pill`), or a boxed icon button (`icon`, which needs a `label` for screen readers). Its text goes in its content.
- * Clicks reach listeners on the element; a disabled button sends none.
+ * A button: affirmative (`accent`, the default), cancelling (`cancel`), a quiet text button (`dismiss`), a pill (`pill`,
+ * the same as `accent`), or a boxed icon button (`icon`, which needs a `label` for screen readers). Its text goes in its
+ * content. All but icon buttons are pills, of the `size` given (`pill` by default; see `PILL_SIZE_STYLES`). Clicks
+ * reach listeners on the element; a disabled button sends none.
  *
  * @example
  * html`<pc-button variant="cancel" @click=${close}>Cancel</pc-button>`
+ * html`<pc-button size="pill-l">Start</pc-button>`
  * html`<pc-button variant="icon" icon="undo" label="Undo"></pc-button>`
  */
 export class PcButton extends PcElement {
   static override properties = {
     ...PcElement.properties,
     variant: { type: String, reflect: true },
+    size: { type: String, reflect: true },
     icon: { type: String },
     label: { type: String },
     disabled: { type: Boolean, reflect: true },
@@ -38,9 +50,8 @@ export class PcButton extends PcElement {
         flex: 1;
         align-items: center;
         justify-content: center;
+        box-sizing: border-box;
         gap: var(--pc-space-1);
-        min-height: var(--pc-control-size);
-        padding: var(--pc-space-1) var(--pc-space-3);
         border: 0;
         /* A joined button group gives each button its corners */
         border-radius: var(--pc-group-radius, var(--pc-radius-pill));
@@ -48,10 +59,11 @@ export class PcButton extends PcElement {
         color: var(--pc-accent-text);
         font: inherit;
         font-family: var(--pc-font);
-        font-size: var(--pc-font-size);
+        ${unsafeCSS(pillSizeDeclarations("pill"))}
         font-weight: bold;
         cursor: pointer;
       }
+      ${SIZE_STYLES}
       button:hover:not(:disabled) {
         filter: brightness(1.15);
       }
@@ -76,12 +88,10 @@ export class PcButton extends PcElement {
         filter: none;
         text-decoration: underline;
       }
-      :host([variant="pill"]) button {
-        min-height: 30px;
-      }
       :host([variant="icon"]) button {
         min-height: 0;
         padding: 2px;
+        line-height: normal;
         border: 1px solid var(--pc-border);
         border-radius: var(--pc-group-radius, var(--pc-radius-small));
         background: var(--pc-surface);
@@ -102,6 +112,9 @@ export class PcButton extends PcElement {
 
   declare variant: ButtonVariant;
 
+  /** How big the pill is (not for icon buttons) */
+  declare size: PillSize;
+
   /** Name of an icon to show before the text (or alone, for an icon button) */
   declare icon?: string;
 
@@ -116,6 +129,7 @@ export class PcButton extends PcElement {
   constructor() {
     super();
     this.variant = "accent";
+    this.size = "pill";
     this.disabled = false;
   }
 

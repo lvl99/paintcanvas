@@ -39,7 +39,8 @@ export const isValidSettings = (input: unknown): SettingsValidationResult =>
     : { valid: false, errors: formatErrors(validateSettings.errors) };
 
 /**
- * The app settings of a canvas: its input settings, keyboard shortcuts, colour palette, colours, theme and language.
+ * The app settings of a canvas: its input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme
+ * and language.
  *
  * @example
  * collectSettings(canvas).palette; // ["#2c6bff", ...]
@@ -49,6 +50,7 @@ export const collectSettings = (app: PaintCanvas): AppSettings => ({
   shortcuts: structuredClone(app.shortcuts.bindings),
   palette: [...app.palette.colours],
   colours: { ...app.colours },
+  profiles: structuredClone([...app.profiles.graphs]),
   ui: { ...app.ui.data },
 });
 
@@ -70,6 +72,7 @@ export const applySettings = (
     app.setColour(settings.colours.foreground, "foreground");
     app.setColour(settings.colours.background, "background");
   }
+  if (settings.profiles) app.profiles.set(settings.profiles);
   if (settings.ui) app.ui.update(settings.ui);
 };
 

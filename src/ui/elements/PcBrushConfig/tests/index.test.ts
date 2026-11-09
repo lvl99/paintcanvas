@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
+import type { PcDialogWindow } from "../../PcDialogWindow";
+import type { PcSliderRange } from "../../PcSliderRange";
+import type { PcProfileEditor } from "../../PcProfileEditor";
+import { PROFILE_PRESETS, linearPoints } from "../../../../lib/profiles";
+import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
+import { OK_CHOICE } from "../../../ask";
 import type { PcBrushConfig } from "..";
 import { SmoothingType, type BrushConfig } from "../../../../lib/brushes/types";
 import {
@@ -62,6 +68,16 @@ const enter = async (
   await element.updateComplete;
 };
 
+/** Set a single slider's value, as dragging it does, and wait for the window to update */
+const slide = async (element: PcBrushConfig, name: string, value: number) => {
+  query<PcSliderRange>(element, `pc-slider-range.${name}`).setEnd(
+    "high",
+    value,
+    "pc-input",
+  );
+  await element.updateComplete;
+};
+
 /** Click a button and wait for the window to update */
 const click = async (element: PcBrushConfig, selector: string) => {
   query(element, selector).click();
@@ -72,26 +88,30 @@ const click = async (element: PcBrushConfig, selector: string) => {
 describe("pc-brush-config", () => {
   it("should show nothing without settings", async () => {
     const element = await mount<PcBrushConfig>("pc-brush-config");
-    expect(queryAll(element, "[role=dialog]")).toHaveLength(0);
+    expect(queryAll(element, "pc-dialog-window")).toHaveLength(0);
   });
 
-  it("should edit a copy of the settings, and close with Dismiss or Escape", async () => {
+  it("should edit a copy of the settings in a shaded window, closed with ⨉ or Escape but not a press outside", async () => {
     const { element, events } = await setup();
     const config = element.config as BrushConfig;
-    expect(query(element, "[role=dialog]").getAttribute("aria-label")).toBe(
-      "Brush configuration",
-    );
+    const dialogWindow = query<PcDialogWindow>(element, "pc-dialog-window");
+    expect([
+      dialogWindow.open,
+      dialogWindow.shaded,
+      dialogWindow.closable,
+      dialogWindow.dismissible,
+      dialogWindow.label,
+    ]).toEqual([true, true, true, false, "Brush configuration"]);
+    expect(query(element, ".name-field").slot).toBe("header-start");
+    expect(query(element, ".settings").slot).toBe("body");
+    expect(query(element, ".actions").slot).toBe("footer-end");
     await enter(element, "input.name", "Renamed", "input");
     expect(draft(element).name).toBe("Renamed");
     expect(config.name).toBe("Round 20px");
-    const dismiss = query(element, "button.close");
-    expect(dismiss.textContent?.trim()).toBe("Dismiss");
-    expect(dismiss.classList).toContain("dismiss");
-    await click(element, "button.close");
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-    element.remove();
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    // The window stays for the layout to remove
+    dialogWindow.requestClose("close");
+    dialogWindow.requestClose("escape");
+    expect(dialogWindow.open).toBe(true);
     expect(events).toEqual([
       ["pc-close", null],
       ["pc-close", null],
@@ -100,16 +120,15 @@ describe("pc-brush-config", () => {
 
   it("should name the eraser's window", async () => {
     const { element } = await setup({ kind: "eraser" });
-    expect(query(element, "[role=dialog]").getAttribute("aria-label")).toBe(
+    expect(query<PcDialogWindow>(element, "pc-dialog-window").label).toBe(
       "Eraser configuration",
     );
   });
 
   it("should save the changed settings to the current tool", async () => {
     const { element, events } = await setup();
-    await enter(element, "input[type=number].spacing", "9");
-    await enter(element, "input[type=range].sample-rate", "100", "input");
-    await enter(element, "input[type=number].sample-rate", "");
+    await slide(element, "spacing", 9);
+    await slide(element, "sample-rate", 100);
     await click(element, "button.save");
     expect(events).toEqual([
       ["pc-save", expect.objectContaining({ spacing: 9, sampleRate: 100 })],
@@ -118,10 +137,10 @@ describe("pc-brush-config", () => {
 
   it("should keep the height in proportion while constrained", async () => {
     const { element } = await setup();
-    await enter(element, "input[type=number].width", "40");
+    await slide(element, "width", 40);
     expect([draft(element).width, draft(element).height]).toEqual([40, 40]);
     expect(
-      query<HTMLInputElement>(element, "input[type=number].height").disabled,
+      query<PcSliderRange>(element, "pc-slider-range.height").disabled,
     ).toBe(true);
     const constrain = query<HTMLInputElement>(element, "input.constrain");
     // A link toggle: linked while constrained, unlinked otherwise
@@ -135,8 +154,8 @@ describe("pc-brush-config", () => {
     constrain.dispatchEvent(new Event("change"));
     await element.updateComplete;
     expect(icon()).toBe("icon-unlinked@2x.png");
-    await enter(element, "input[type=range].width", "10", "input");
-    await enter(element, "input[type=number].height", "30");
+    await slide(element, "width", 10);
+    await slide(element, "height", 30);
     expect([draft(element).width, draft(element).height]).toEqual([10, 30]);
   });
 
@@ -149,20 +168,65 @@ describe("pc-brush-config", () => {
     expect(
       query<HTMLInputElement>(element, "input.width.pressure").checked,
     ).toBe(true);
-    await enter(element, "input[type=number].width.min", "5");
-    await enter(element, "input[type=range].width.max", "30", "input");
+    // The min and max are a range slider's ends, changed while dragging and once let go
+    const range = () => query<PcSliderRange>(element, "pc-slider-range.width");
+    expect([range().label, range().min, range().max]).toEqual([
+      "Width",
+      1,
+      256,
+    ]);
+    expect([range().low, range().high]).toEqual([10, 20]);
+    range().setEnd("low", 5, "pc-input");
+    range().setEnd("high", 30);
+    await element.updateComplete;
     expect(draft(element).width).toBe(30);
-    await enter(element, "input[type=range].width.min", "15", "input");
-    await enter(element, "input[type=number].width.max", "15");
+    expect(draft(element).widthConfig?.minPressure).toBeCloseTo(5 / 30);
+    range().setEnd("low", 30);
+    await element.updateComplete;
     expect(draft(element).widthConfig?.minPressure).toBe(1);
+    // One source at a time: choosing tilt keeps the range; choosing it again turns variation off
     await click(element, "input.width.tilt");
-    await click(element, "input.width.pressure");
+    expect(draft(element).widthConfig).toMatchObject({
+      usePressure: false,
+      useTilt: true,
+      minTilt: 1,
+    });
+    expect(
+      ["pressure", "tilt", "randomise"].map(
+        (source) =>
+          query<HTMLInputElement>(element, `input.width.${source}`).checked,
+      ),
+    ).toEqual([false, true, false]);
     await click(element, "input.width.tilt");
-    expect(queryAll(element, "input.width.min")).toHaveLength(0);
+    expect(draft(element).widthConfig).toMatchObject({ useTilt: false });
+    expect(query<HTMLInputElement>(element, "input.width.tilt").checked).toBe(
+      false,
+    );
+    // Back to a single value
+    expect(query<PcSliderRange>(element, "pc-slider-range.width").single).toBe(
+      true,
+    );
   });
 
-  it("should show pressure, tilt and randomise as icon toggles on each setting that varies", async () => {
+  it("should show pressure, tilt and randomise as one group of icon radio buttons on each setting that varies", async () => {
     const { element } = await setup();
+    const group = query<HTMLFieldSetElement>(
+      element,
+      '[data-param="width"] fieldset.sources',
+    );
+    expect(group.querySelector("legend")?.textContent?.trim()).toBe(
+      "Width: vary with",
+    );
+    expect(
+      [...group.querySelectorAll("input")].map((input) => [
+        input.type,
+        input.name,
+      ]),
+    ).toEqual([
+      ["radio", "width-source"],
+      ["radio", "width-source"],
+      ["radio", "width-source"],
+    ]);
     const toggles = queryAll<HTMLLabelElement>(
       element,
       '[data-param="width"] label.icon-toggle',
@@ -180,13 +244,87 @@ describe("pc-brush-config", () => {
     ]);
   });
 
+  it("should edit a varying setting's profile graph, storing it unless it's a straight line", async () => {
+    const { app, element } = await setup();
+    const button = () =>
+      query<HTMLButtonElement>(element, "button.profile.width");
+    expect(button().disabled).toBe(true);
+    expect(button().title).toBe("Width: profile graph");
+    await click(element, "input.width.pressure");
+    expect(button().disabled).toBe(false);
+    await click(element, "button.profile.width");
+    const editor = () => query<PcProfileEditor>(element, "pc-profile-editor");
+    expect([editor().label, editor().profileId, editor().profiles]).toEqual([
+      "Width",
+      "linear",
+      app.profiles,
+    ]);
+    const overweight = PROFILE_PRESETS[1]!.points;
+    editor().dispatchEvent(
+      new CustomEvent("pc-save", {
+        detail: { points: overweight, profileId: "overweight" },
+      }),
+    );
+    await element.updateComplete;
+    expect(queryAll(element, "pc-profile-editor")).toHaveLength(0);
+    expect(draft(element).widthConfig).toMatchObject({
+      usePressure: true,
+      profile: overweight,
+      profileId: "overweight",
+    });
+    // The height follows while constrained
+    expect(draft(element).heightConfig?.profileId).toBe("overweight");
+    // Its button is purple while it has a profile graph
+    expect(button().classList).toContain("configured");
+
+    // Opened again: its graph; a straight line isn't stored
+    await click(element, "button.profile.width");
+    expect([editor().points, editor().profileId]).toEqual([
+      overweight,
+      "overweight",
+    ]);
+    editor().dispatchEvent(
+      new CustomEvent("pc-save", {
+        detail: { points: linearPoints(), profileId: "linear" },
+      }),
+    );
+    await element.updateComplete;
+    expect(draft(element).widthConfig?.profile).toBeUndefined();
+    expect(draft(element).widthConfig?.profileId).toBeUndefined();
+    expect(button().classList).not.toContain("configured");
+
+    // Points without an ID; closing changes nothing
+    element.draft = {
+      ...draft(element),
+      alphaConfig: { useTilt: true, profile: overweight },
+    };
+    await element.updateComplete;
+    await click(element, "button.profile.alpha");
+    expect(editor().profileId).toBeUndefined();
+    editor().dispatchEvent(new CustomEvent("pc-close"));
+    await element.updateComplete;
+    expect(queryAll(element, "pc-profile-editor")).toHaveLength(0);
+    expect(draft(element).alphaConfig?.profile).toEqual(overweight);
+  });
+
+  it("should keep profile graphs of its own without a canvas", async () => {
+    const element = await mount<PcBrushConfig>("pc-brush-config", {
+      config: { id: "a", heightConfig: { useRandomise: true } },
+    });
+    await click(element, "button.profile.height");
+    expect(
+      query<PcProfileEditor>(element, "pc-profile-editor").profiles.graphs,
+    ).toEqual([]);
+  });
+
   it("should only let offsets change while they vary", async () => {
     const { element } = await setup();
     expect(
-      query<HTMLInputElement>(element, "input[type=number].offsetX").disabled,
+      query<PcSliderRange>(element, "pc-slider-range.offsetX").disabled,
     ).toBe(true);
     await click(element, "input.offsetX.randomise");
-    await enter(element, "input[type=number].offsetX.max", "10");
+    query<PcSliderRange>(element, "pc-slider-range.offsetX").setEnd("high", 10);
+    await element.updateComplete;
     expect(draft(element).offsetXConfig).toMatchObject({
       useRandomise: true,
       maxRandomise: 0.5,
@@ -288,7 +426,7 @@ describe("pc-brush-config", () => {
     );
 
     // Picking one uses its image, square at the current width
-    await enter(element, "input[type=number].height", "5");
+    await slide(element, "height", 5);
     select().value = "splatter";
     select().dispatchEvent(new Event("change"));
     await element.updateComplete;
@@ -332,7 +470,7 @@ describe("pc-brush-config", () => {
 
   it("should add the settings to the user's presets, and select the new preset", async () => {
     const { app, element, events } = await setup();
-    await enter(element, "input[type=number].spacing", "7");
+    await slide(element, "spacing", 7);
     await element.addToPresets();
     const [saved] = app.customPresets.presets;
     expect(saved).toMatchObject({
@@ -341,10 +479,13 @@ describe("pc-brush-config", () => {
       author: { handle: TEST_HANDLE },
     });
     expect(app.brush.presetId).toBe(saved!.id);
-    expect(element.prompt).toHaveBeenCalledWith(
-      "Name of the preset",
-      "Round 20px",
-    );
+    expect(element.prompt).toHaveBeenCalledWith({
+      heading: "Add to presets",
+      label: "Name of the preset",
+      value: "Round 20px",
+      confirm: "Save",
+      cancel: "Cancel",
+    });
     expect(events).toEqual([
       ["pc-toast", 'success: Saved "My brush" to My presets'],
       ["pc-close", null],
@@ -359,9 +500,13 @@ describe("pc-brush-config", () => {
     await element.addToPresets();
     expect(app.customPresets.presets).toHaveLength(1);
     await element.addToPresets();
-    expect(element.confirm).toHaveBeenCalledWith(
-      'You already have a preset called "My brush". Replace it?',
-    );
+    expect(element.confirm).toHaveBeenCalledWith({
+      heading: "Replace preset",
+      message: 'You already have a preset called "My brush". Replace it?',
+      confirm: "Replace",
+      cancel: "Cancel",
+      cancelling: true,
+    });
     expect(app.customPresets.presets.map((preset) => preset.id)).toEqual([id]);
     expect(app.eraser.presetId).toBe(id);
   });
@@ -398,9 +543,13 @@ describe("pc-brush-config", () => {
     );
     await element.deletePreset();
     await element.deletePreset();
-    expect(element.confirm).toHaveBeenCalledWith(
-      'Delete "Old brush"? This can\'t be undone.',
-    );
+    expect(element.confirm).toHaveBeenCalledWith({
+      heading: "Delete preset",
+      message: 'Delete "Old brush"? This can\'t be undone.',
+      confirm: "Delete",
+      cancel: "Cancel",
+      cancelling: true,
+    });
     expect(app.customPresets.presets).toEqual([]);
     element.editingId = "gone";
     await element.deletePreset();
@@ -423,16 +572,25 @@ describe("pc-brush-config", () => {
     expect(element.busy).toBe(false);
   });
 
-  it("should use the browser's prompts and clipboard by default", async () => {
+  it("should ask in dialogs and use the clipboard by default", async () => {
     const element = await mount<PcBrushConfig>("pc-brush-config", {
       config: { id: "a" },
     });
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    const prompt = vi.spyOn(window, "prompt").mockReturnValue(null);
-    expect(element.confirm("Sure?")).toBe(false);
-    expect(element.prompt("Name", "x")).toBeNull();
-    expect(confirm).toHaveBeenCalledWith("Sure?");
-    expect(prompt).toHaveBeenCalledWith("Name", "x");
+    const question = { heading: "Sure?", confirm: "Yes", cancel: "No" };
+    /** The dialog asking, in the window */
+    const asking = async () => {
+      const dialog = await vi.waitFor(() =>
+        query<PcDialog>(element, "pc-dialog"),
+      );
+      await dialog.updateComplete;
+      return dialog;
+    };
+    const confirmed = element.confirm(question);
+    (await asking()).choose(CANCEL_CHOICE);
+    expect(await confirmed).toBe(false);
+    const named = element.prompt({ ...question, label: "Name", value: "x" });
+    (await asking()).choose(OK_CHOICE);
+    expect(await named).toBe("x");
     Object.defineProperty(navigator, "clipboard", {
       value: { read: async () => [] },
       configurable: true,
@@ -455,14 +613,16 @@ describe("pc-brush-config", () => {
     const { element } = await setup({
       config: { id: "a", constrainProportions: true },
     });
-    await enter(element, "input[type=number].width", "8");
+    await slide(element, "width", 8);
     expect([draft(element).width, draft(element).height]).toEqual([8, 8]);
     element.draft = { id: "b", constrainProportions: true };
     await element.updateComplete;
     await click(element, "input.width.randomise");
     expect(draft(element).height).toBe(1);
     await element.addToPresets();
-    expect(element.prompt).toHaveBeenLastCalledWith("Name of the preset", "");
+    expect(element.prompt).toHaveBeenLastCalledWith(
+      expect.objectContaining({ label: "Name of the preset", value: "" }),
+    );
   });
 
   it.each(["brush", "eraser"] as const)(
@@ -487,8 +647,8 @@ describe("pc-brush-config", () => {
 
   it("should change the sample rate and spacing with both inputs", async () => {
     const { element } = await setup();
-    await enter(element, "input[type=number].sample-rate", "40");
-    await enter(element, "input[type=range].spacing", "12", "input");
+    await slide(element, "sample-rate", 40);
+    await slide(element, "spacing", 12);
     expect(draft(element)).toMatchObject({ sampleRate: 40, spacing: 12 });
     element.save();
     element.draft = undefined;

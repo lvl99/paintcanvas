@@ -1,6 +1,43 @@
 // Styles shared by PaintCanvas's drawing elements, using the design tokens. Ported from the original app's shared
 // styles: windows and buttons, icon toggles and buttons, small pill buttons, and controls whose text can't be selected.
-import { css } from "lit";
+import { css, unsafeCSS } from "lit";
+
+/** The sizes of pill buttons, from small to extra extra large (`pill` is the usual size) */
+export const PILL_SIZES = [
+  "pill-s",
+  "pill",
+  "pill-l",
+  "pill-xl",
+  "pill-xxl",
+] as const;
+
+/** A pill button size */
+export type PillSize = (typeof PILL_SIZES)[number];
+
+/** Each pill size's least height, font size and padding, in pixels */
+export const PILL_SIZE_STYLES: Readonly<
+  Record<PillSize, { height: number; fontSize: number; padding: string }>
+> = {
+  "pill-s": { height: 24, fontSize: 14, padding: "2px 8px" },
+  pill: { height: 32, fontSize: 16, padding: "8px 16px" },
+  "pill-l": { height: 50, fontSize: 20, padding: "15px 25px" },
+  "pill-xl": { height: 75, fontSize: 24, padding: "25px 37px" },
+  "pill-xxl": { height: 100, fontSize: 28, padding: "36px 50px" },
+};
+
+/**
+ * CSS declarations giving a pill size (its least height, font size and padding), with text on one centred line.
+ *
+ * @example
+ * pillSizeDeclarations("pill-s"); // "min-height: 24px; font-size: 14px; padding: 2px 8px; line-height: 1;"
+ */
+export const pillSizeDeclarations = (size: PillSize): string => {
+  const { height, fontSize, padding } = PILL_SIZE_STYLES[size];
+  return `min-height: ${height}px; font-size: ${fontSize}px; padding: ${padding}; line-height: 1;`;
+};
+
+/** The usual pill size, for buttons shaped as pills without a size of their own */
+const PILL = unsafeCSS(pillSizeDeclarations("pill"));
 
 /** Windows, menus and dialog buttons: affirmative buttons purple, cancel and close buttons pink */
 export const windows = css`
@@ -27,12 +64,15 @@ export const windows = css`
   button[type="submit"],
   button.cancel,
   button.close {
-    min-height: var(--pc-control-size);
-    padding: var(--pc-space-1) var(--pc-space-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
     border: 0;
     border-radius: var(--pc-radius-pill);
     color: var(--pc-accent-text);
     font: inherit;
+    ${PILL}
     font-weight: bold;
     cursor: pointer;
   }
@@ -164,30 +204,46 @@ export const iconControls = css`
   }
 `;
 
-/** Small purple pill buttons, e.g. "Configure", "New Layer", "Import" */
+/** Pill buttons, of each size in `PILL_SIZES` as classes */
+const PILL_SELECTOR = unsafeCSS(
+  ["configure", ...PILL_SIZES].map((name) => `button.${name}`).join(", "),
+);
+
+/** Each pill size's class, giving it its height, font size and padding */
+const PILL_SIZE_CLASSES = unsafeCSS(
+  PILL_SIZES.map(
+    (size) => `button.${size} { ${pillSizeDeclarations(size)} }`,
+  ).join("\n"),
+);
+
+/**
+ * Purple pill buttons, e.g. "Configure", "New Layer", "Import": `pill` is the usual size; `pill-s`, `pill-l`, `pill-xl`
+ * and `pill-xxl` are the others (see `PILL_SIZE_STYLES`).
+ */
 export const pills = css`
-  button.configure,
-  button.pill {
-    min-height: 30px;
-    padding: var(--pc-space-1) var(--pc-space-3);
+  ${PILL_SELECTOR} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
     border: 0;
     border-radius: var(--pc-radius-pill);
     background: var(--pc-accent);
     color: var(--pc-accent-text);
     font: inherit;
+    ${PILL}
     font-weight: bold;
     cursor: pointer;
   }
-  button.configure:hover:not(:disabled),
-  button.pill:hover:not(:disabled) {
+  ${PILL_SIZE_CLASSES}
+  :is(${PILL_SELECTOR}):hover:not(:disabled) {
     filter: brightness(1.15);
   }
-  button.configure:focus-visible,
-  button.pill:focus-visible {
+  :is(${PILL_SELECTOR}):focus-visible {
     outline: var(--pc-focus-width) solid var(--pc-focus);
     outline-offset: 2px;
   }
-  button.pill:disabled {
+  :is(${PILL_SELECTOR}):disabled {
     background: var(--pc-disabled);
     cursor: default;
   }

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { PROFILE_PRESETS } from "../../../profiles";
 import {
   lerp,
   pointInput,
@@ -60,6 +61,37 @@ describe("variationFactor", () => {
       variationFactor({ useTilt: true, minTilt: 1, maxTilt: 0 }, pen(1, 90, 0)),
     ).toBe(0);
     expect(variationFactor({ useTilt: true }, mouse)).toBe(1);
+  });
+
+  it("should put each input through the profile graph before it sets the factor", () => {
+    const overweight = PROFILE_PRESETS[1]!.points;
+    // Overweight: 30% of the input goes 70% of the way from min to max
+    expect(
+      variationFactor(
+        {
+          usePressure: true,
+          minPressure: 0,
+          maxPressure: 1,
+          profile: overweight,
+        },
+        pen(0.3),
+      ),
+    ).toBeCloseTo(0.7);
+    expect(
+      variationFactor({ useTilt: true, profile: overweight }, pen(1, 27, 0)),
+    ).toBeCloseTo(0.7);
+    expect(
+      variationFactor(
+        {
+          useRandomise: true,
+          minRandomise: 0,
+          maxRandomise: 1,
+          profile: overweight,
+        },
+        mouse,
+        fixed(0.3),
+      ),
+    ).toBeCloseTo(0.7);
   });
 
   it("should multiply enabled factors", () => {

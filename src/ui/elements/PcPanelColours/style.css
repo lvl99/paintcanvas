@@ -206,8 +206,7 @@
   display: flex;
   gap: var(--pc-space-2);
 }
-/* Same size as the brush menu's Import and Export */
-.actions button.pill {
+/* Import and Export share the row */
+.actions button.pill-s {
   flex: 1;
-  padding: 4px 8px;
 }

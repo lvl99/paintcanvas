@@ -5,13 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PaintCanvas</title>
     <style>
+      /* The device's light or dark background from the first paint */
+      :root {
+        color-scheme: light dark;
+      }
       html,
       body {
         height: 100%;
         margin: 0;
+        background: Canvas;
       }
       paint-canvas {
         height: 100%;
+      }
+      /* Until the elements load, the layout and its content (e.g. "New drawing") stay hidden, and a loading bar shows */
+      paint-canvas:not(:defined) {
+        visibility: hidden;
+      }
+      .loading {
+        position: fixed;
+        inset: 0 0 auto;
+        overflow: hidden;
+        padding: 8px 16px;
+        background: #8f3de8;
+        color: #ffffff;
+        font:
+          bold 14px/1 system-ui,
+          sans-serif;
+      }
+      .loading::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 30%;
+        height: 3px;
+        background: rgb(255 255 255 / 0.7);
+        animation: loading 1.2s ease-in-out infinite;
+      }
+      @keyframes loading {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(340%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .loading::after {
+          animation: none;
+          width: 100%;
+        }
+      }
+      paint-canvas:defined ~ .loading {
+        display: none;
       }
       .menu {
         display: flex;
@@ -51,12 +98,13 @@
         <pc-input-settings id="settings"></pc-input-settings>
         <pc-app-settings id="app-settings"></pc-app-settings>
         <pc-theme-picker></pc-theme-picker>
-        <pc-button id="new-drawing">New drawing</pc-button>
+        <pc-button id="new-drawing" size="pill-s">New drawing</pc-button>
       </div>
       <div slot="overlay">
         <pc-canvas-map id="map"></pc-canvas-map>
       </div>
     </paint-canvas>
+    <div class="loading" role="status">Loading…</div>
     <div class="toasts" id="toasts"></div>
     <script type="module" src="./index.ts"></script>
   </body>

@@ -4,17 +4,36 @@ import { WINDOWS_CSS as theme } from "../../styles";
 import { PILLS_CSS as pill } from "../../styles";
 import { ICON_CONTROLS_CSS as iconToggle } from "../../styles";
 import { iconLabel } from "../../icons";
+import {
+  askConfirm,
+  askText,
+  deletePresetQuestion,
+  type ConfirmFn,
+  type PromptFn,
+} from "../../ask";
 import { live } from "lit/directives/live.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { PcElement, defineElement } from "../../base";
 import "../PcBrushTest";
+import "../PcDialogWindow";
+import "../PcSliderRange";
+import "../PcProfileEditor";
+import type { ProfileSaveDetail } from "../PcProfileEditor";
+import ProfileGraphs from "../../../lib/classes/ProfileGraphs";
+import { isLinear, LINEAR_PROFILE_ID } from "../../../lib/profiles";
+import type { RangeDetail } from "../PcSliderRange";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
-import { SmoothingType, type BrushConfig } from "../../../lib/brushes/types";
+import {
+  SmoothingType,
+  type BrushConfig,
+  type BrushParamConfig,
+} from "../../../lib/brushes/types";
 import {
   PARAM_LIMITS,
   VARIATION_SOURCES,
+  configKey,
   readRange,
-  toggleSource,
+  selectSource,
   writeRange,
   type VariationSource,
   type VaryingParam,
@@ -32,11 +51,7 @@ import {
   MIN_SAMPLE_RATE,
 } from "../../../lib/brushes/StrokeSampler";
 
-/** Asks the user to confirm; replaceable for tests */
-export type ConfirmFn = (message: string) => boolean;
-
-/** Asks the user for text; replaceable for tests */
-export type PromptFn = (message: string, value: string) => string | null;
+export type { ConfirmFn, PromptFn } from "../../ask";
 
 /** The smoothing choices, in the order shown: value, translation key of the name, and icon name */
 export const SMOOTHING_CHOICES = [
@@ -64,6 +79,16 @@ const SOURCE_ICONS: Record<VariationSource, string> = {
   randomise: "randomise",
 };
 
+/** Translation keys of the varying settings' names */
+const PARAM_LABELS: Record<VaryingParam, string> = {
+  width: "paintCanvas.common.width",
+  height: "paintCanvas.common.height",
+  alpha: "paintCanvas.common.opacity",
+  rotation: "paintCanvas.brushConfig.rotation",
+  offsetX: "paintCanvas.brushConfig.offsetX",
+  offsetY: "paintCanvas.brushConfig.offsetY",
+};
+
 /** Translation keys of the variation sources' names */
 const SOURCE_LABELS: Record<VariationSource, string> = {
   pressure: "paintCanvas.toolSettings.pressure",
@@ -85,22 +110,17 @@ const SHAPE_ERROR_KEYS: Record<string, string> = {
 /** Largest stamp spacing in pixels */
 const MAX_SPACING = 200;
 
-/** Read a number input, or undefined if it isn't a number */
-const numberValue = (event: Event): number | undefined => {
-  const value = (event.target as HTMLInputElement).valueAsNumber;
-  return Number.isFinite(value) ? value : undefined;
-};
-
 /**
  * The brush (or eraser) configuration window: a testing area, the shape (pressing it picks a built-in shape from the
  * device's own list, which says "Custom" for an uploaded or pasted one; or upload or paste one), smoothing, width, height,
  * opacity, rotation, offsets, sample rate, spacing and snapping to the pixel grid. Width, height, opacity, rotation and the offsets can vary with
- * pressure, tilt and randomness; when any is on, the setting has a min and max.
+ * pressure, tilt and randomness; when any is on, the setting has a min and max, set with a `<pc-slider-range>`.
  *
  * Changes stay in the window until "Save" (fires `pc-save` with the settings, to apply to the current tool) or "Add to
  * presets" (saves them as one of the user's presets, asking before replacing one with the same name, and selects it).
- * "Delete preset…" shows when editing one of the user's presets. Fires `pc-close` when closed, and `pc-toast` with a
- * message after adding or deleting a preset, or when a shape can't be used. Styling is structural only.
+ * "Delete preset…" shows when editing one of the user's presets. It's a shaded `<pc-dialog-window>`, closed with its ⨉
+ * button or Escape (not a press outside it, which would lose the changes). Fires `pc-close` when closed, and `pc-toast`
+ * with a message after adding or deleting a preset, or when a shape can't be used.
  *
  * @example
  * html`<pc-brush-config .app=${app} kind="brush" .config=${app.brush.preset} @pc-save=${apply}></pc-brush-config>`
@@ -114,6 +134,7 @@ export class PcBrushConfig extends PcElement {
     editingId: { type: String },
     draft: { state: true },
     busy: { state: true },
+    editingProfile: { state: true },
   };
 
   static override styles = [
@@ -142,9 +163,14 @@ export class PcBrushConfig extends PcElement {
   /** Whether a preset is being saved or deleted */
   declare busy: boolean;
 
-  confirm: ConfirmFn = (message) => window.confirm(message);
+  /** The setting whose profile graph is being edited, if any */
+  declare editingProfile?: VaryingParam;
 
-  prompt: PromptFn = (message, value) => window.prompt(message, value);
+  /** Asks the user to confirm, in a dialog (replaceable for tests) */
+  confirm: ConfirmFn = (options) => askConfirm(this.renderRoot, options);
+
+  /** Asks the user for text, in a dialog (replaceable for tests) */
+  prompt: PromptFn = (options) => askText(this.renderRoot, options);
 
   /** Turns files into brush shapes (replaceable for tests) */
   readShape: (file: File) => Promise<ShapeImage> = readShapeImage;
@@ -157,24 +183,10 @@ export class PcBrushConfig extends PcElement {
       this.app?.copiedPng(),
     );
 
-  private readonly onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") this.close();
-  };
-
   constructor() {
     super();
     this.kind = "brush";
     this.busy = false;
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.onKeyDown);
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    window.removeEventListener("keydown", this.onKeyDown);
   }
 
   protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
@@ -262,9 +274,14 @@ export class PcBrushConfig extends PcElement {
     const app = this.app;
     const draft = this.draft;
     if (!app || !draft) return;
-    const name = this.prompt(
-      this.t("paintCanvas.brushConfig.presetName"),
-      draft.name ?? "",
+    const name = (
+      await this.prompt({
+        heading: this.t("paintCanvas.brushConfig.addToPresets"),
+        label: this.t("paintCanvas.brushConfig.presetName"),
+        value: draft.name ?? "",
+        confirm: this.t("paintCanvas.common.save"),
+        cancel: this.t("paintCanvas.common.cancel"),
+      })
     )?.trim();
     if (!name) return;
     const existing = app.customPresets.findOwn(
@@ -274,7 +291,13 @@ export class PcBrushConfig extends PcElement {
     );
     if (
       existing &&
-      !this.confirm(this.t("paintCanvas.presets.replaceConfirm", { name }))
+      !(await this.confirm({
+        heading: this.t("paintCanvas.presets.replaceHeading"),
+        message: this.t("paintCanvas.presets.replaceConfirm", { name }),
+        confirm: this.t("paintCanvas.presets.replace"),
+        cancel: this.t("paintCanvas.common.cancel"),
+        cancelling: true,
+      }))
     )
       return;
     const preset = {
@@ -308,7 +331,7 @@ export class PcBrushConfig extends PcElement {
     const id = this.editingId;
     if (!app || !id) return;
     const name = app.customPresets.get(id)?.name ?? "this preset";
-    if (!this.confirm(this.t("paintCanvas.presets.deleteConfirm", { name })))
+    if (!(await this.confirm(deletePresetQuestion(this.translations, name))))
       return;
     this.busy = true;
     try {
@@ -328,45 +351,30 @@ export class PcBrushConfig extends PcElement {
     }
   }
 
-  /** Render a number input */
-  private number(
+  /**
+   * Render a slider for one value (a single `<pc-slider-range>`), the same as the ranges of settings that vary.
+   */
+  private single(
     className: string,
+    label: string,
     value: number,
     limits: { min: number; max: number },
     onChange: (value: number) => void,
     disabled = false,
   ) {
-    return html`<input
-      type="number"
+    const changed = (event: CustomEvent<RangeDetail>) =>
+      onChange(event.detail.value);
+    return html`<pc-slider-range
+      single
       class=${className}
+      label=${label}
       min=${limits.min}
       max=${limits.max}
+      .value=${live(Math.round(value))}
       ?disabled=${disabled || this.busy}
-      .value=${String(Math.round(value))}
-      @change=${(e: Event) => {
-        const next = numberValue(e);
-        if (next !== undefined) onChange(next);
-      }}
-    />`;
-  }
-
-  /** Render a range slider */
-  private slider(
-    className: string,
-    value: number,
-    limits: { min: number; max: number },
-    onChange: (value: number) => void,
-    disabled = false,
-  ) {
-    return html`<input
-      type="range"
-      class=${className}
-      min=${limits.min}
-      max=${limits.max}
-      ?disabled=${disabled || this.busy}
-      .value=${String(value)}
-      @input=${(e: Event) => onChange((e.target as HTMLInputElement).valueAsNumber)}
-    />`;
+      @pc-input=${changed}
+      @pc-change=${changed}
+    ></pc-slider-range>`;
   }
 
   /** Render a setting that can vary: its value (or min and max), and its pressure, tilt and randomise icon toggles */
@@ -381,42 +389,70 @@ export class PcBrushConfig extends PcElement {
     const isOffset = param === "offsetX" || param === "offsetY";
     const write = (values: { value?: number; min?: number; max?: number }) =>
       this.changeParam(param, writeRange(draft, param, values));
+    const writeEnds = (event: CustomEvent<RangeDetail>) =>
+      write({ min: event.detail.low, max: event.detail.high });
     const values = range.varies
-      ? html`${this.number(`${param} min`, range.min, limits, (min) => write({ min }), disabled)}
-        ${this.slider(`${param} min`, range.min, limits, (min) => write({ min }), disabled)}
-        ${this.slider(`${param} max`, range.max, limits, (max) => write({ max }), disabled)}
-        ${this.number(`${param} max`, range.max, limits, (max) => write({ max }), disabled)}`
-      : html`${this.number(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}
-        ${this.slider(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}`;
+      ? html`<pc-slider-range
+          class=${`${param} range`}
+          label=${label}
+          min=${limits.min}
+          max=${limits.max}
+          .low=${live(Math.round(range.min))}
+          .high=${live(Math.round(range.max))}
+          ?disabled=${disabled || this.busy}
+          @pc-input=${writeEnds}
+          @pc-change=${writeEnds}
+        ></pc-slider-range>`
+      : this.single(
+          param,
+          label,
+          range.value,
+          limits,
+          (value) => write({ value }),
+          disabled || isOffset,
+        );
+    // One source at a time: pressing the chosen one again turns variation off
+    const active = VARIATION_SOURCES.find((source) => range.sources[source]);
+    const select = (source: VariationSource | undefined) =>
+      this.changeParam(param, selectSource(draft, param, source));
     return html`<div class="row" data-param=${param}>
       <span class="label">${label}</span>
       ${values}
-      ${VARIATION_SOURCES.map(
-        (source) =>
-          html`<label
-            class="icon-toggle"
-            title=${this.t(SOURCE_LABELS[source])}
-          >
-            <input
-              type="checkbox"
-              class=${`${param} ${source}`}
-              aria-label=${this.t("paintCanvas.brushConfig.variation", { param: label, source: this.t(SOURCE_LABELS[source]) })}
-              .checked=${range.sources[source]}
-              ?disabled=${disabled || this.busy}
-              @change=${(e: Event) =>
-                this.changeParam(
-                  param,
-                  toggleSource(
-                    draft,
-                    param,
-                    source,
-                    (e.target as HTMLInputElement).checked,
-                  ),
-                )}
-            />
-            ${iconLabel(this.iconUrl(SOURCE_ICONS[source]), this.t(SOURCE_LABELS[source]))}
-          </label>`,
-      )}
+      <fieldset class="sources" ?disabled=${disabled || this.busy}>
+        <legend class="visually-hidden">
+          ${this.t("paintCanvas.brushConfig.varyWith", { param: label })}
+        </legend>
+        ${VARIATION_SOURCES.map(
+          (source) =>
+            html`<label
+              class="icon-toggle"
+              title=${this.t(SOURCE_LABELS[source])}
+            >
+              <input
+                type="radio"
+                name=${`${param}-source`}
+                class=${`${param} ${source}`}
+                aria-label=${this.t("paintCanvas.brushConfig.variation", { param: label, source: this.t(SOURCE_LABELS[source]) })}
+                .checked=${live(active === source)}
+                @change=${() => select(source)}
+                @click=${() => {
+                  if (active === source) select(undefined);
+                }}
+              />
+              ${iconLabel(this.iconUrl(SOURCE_ICONS[source]), this.t(SOURCE_LABELS[source]))}
+            </label>`,
+        )}
+      </fieldset>
+      <button
+        type="button"
+        class=${`icon-button profile ${param} ${draft[configKey(param)]?.profile ? "configured" : ""}`}
+        title=${this.t("paintCanvas.profileEditor.button", { param: label })}
+        aria-haspopup="dialog"
+        ?disabled=${!active || disabled || this.busy}
+        @click=${() => (this.editingProfile = param)}
+      >
+        ${iconLabel(this.iconUrl("profileGraph"), this.t("paintCanvas.profileEditor.button", { param: label }))}
+      </button>
     </div>`;
   }
 
@@ -540,13 +576,18 @@ export class PcBrushConfig extends PcElement {
     const constrained = draft.constrainProportions ?? false;
     const sampleLimits = { min: MIN_SAMPLE_RATE, max: MAX_SAMPLE_RATE };
     const spacingLimits = { min: 0, max: MAX_SPACING };
-    return html`<div
-      role="dialog"
-      aria-modal="true"
-      aria-label=${this.t(this.kind === "eraser" ? "paintCanvas.brushConfig.eraserTitle" : "paintCanvas.brushConfig.brushTitle")}
-    >
-      <div class="row header">
-        <label>
+    // Not closed by a press outside it, which would lose the changes
+    return html`<pc-dialog-window
+        open
+        shaded
+        dismissible="false"
+        label=${this.t(this.kind === "eraser" ? "paintCanvas.brushConfig.eraserTitle" : "paintCanvas.brushConfig.brushTitle")}
+        @pc-dismiss=${(event: Event) => {
+          event.preventDefault();
+          this.close();
+        }}
+      >
+        <label slot="header-start" class="name-field">
           ${this.t("paintCanvas.brushConfig.name")}
           <input
             class="name"
@@ -556,70 +597,70 @@ export class PcBrushConfig extends PcElement {
               this.change({ name: (e.target as HTMLInputElement).value })}
           />
         </label>
-        <button
-          type="button"
-          class="close dismiss"
-          @click=${() => this.close()}
-        >
-          ${this.t("paintCanvas.common.dismiss")}
-        </button>
-      </div>
-      <pc-brush-test .config=${draft} .tips=${this.app?.tips}></pc-brush-test>
-      ${this.renderShape(draft)}
-      ${this.renderParam(draft, "width", this.t("paintCanvas.common.width"))}
-      <div class="row">
-        <span class="label"></span>
-        <label
-          class="icon-toggle"
-          title=${this.t("paintCanvas.toolSettings.constrainProportions")}
-        >
-          <input
-            type="checkbox"
-            class="constrain"
-            .checked=${constrained}
-            ?disabled=${this.busy}
-            @change=${(e: Event) =>
-              this.change({
-                constrainProportions: (e.target as HTMLInputElement).checked,
-              })}
-          />
-          ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
-        </label>
-      </div>
-      ${this.renderParam(draft, "height", this.t("paintCanvas.common.height"), constrained)}
-      ${this.renderParam(draft, "alpha", this.t("paintCanvas.common.opacity"))}
-      ${this.renderParam(draft, "rotation", this.t("paintCanvas.brushConfig.rotation"))}
-      ${this.renderParam(draft, "offsetX", this.t("paintCanvas.brushConfig.offsetX"))}
-      ${this.renderParam(draft, "offsetY", this.t("paintCanvas.brushConfig.offsetY"))}
-      <div class="row">
-        <span class="label"
-          >${this.t("paintCanvas.brushConfig.sampleRate")}</span
-        >
-        ${this.number("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
-        ${this.slider("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
-        <span class="label">${this.t("paintCanvas.brushConfig.spacing")}</span>
-        ${this.number("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
-        ${this.slider("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
-      </div>
-      <label>
-        <input
-          type="checkbox"
-          class="snap"
-          .checked=${draft.snapToPixelGrid ?? false}
-          ?disabled=${this.busy}
-          @change=${(e: Event) =>
-            this.change({
-              snapToPixelGrid: (e.target as HTMLInputElement).checked,
-            })}
-        />
-        ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
-      </label>
-      <div class="row">
+        <div slot="body" class="settings">
+          <pc-brush-test
+            .config=${draft}
+            .tips=${this.app?.tips}
+          ></pc-brush-test>
+          ${this.renderShape(draft)}
+          ${this.renderParam(draft, "width", this.t(PARAM_LABELS.width))}
+          <div class="row">
+            <span class="label"></span>
+            <label
+              class="icon-toggle"
+              title=${this.t("paintCanvas.toolSettings.constrainProportions")}
+            >
+              <input
+                type="checkbox"
+                class="constrain"
+                .checked=${constrained}
+                ?disabled=${this.busy}
+                @change=${(e: Event) =>
+                  this.change({
+                    constrainProportions: (e.target as HTMLInputElement)
+                      .checked,
+                  })}
+              />
+              ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
+            </label>
+          </div>
+          ${this.renderParam(draft, "height", this.t(PARAM_LABELS.height), constrained)}
+          ${this.renderParam(draft, "alpha", this.t(PARAM_LABELS.alpha))}
+          ${this.renderParam(draft, "rotation", this.t(PARAM_LABELS.rotation))}
+          ${this.renderParam(draft, "offsetX", this.t(PARAM_LABELS.offsetX))}
+          ${this.renderParam(draft, "offsetY", this.t(PARAM_LABELS.offsetY))}
+          <div class="row">
+            <span class="label"
+              >${this.t("paintCanvas.brushConfig.sampleRate")}</span
+            >
+            ${this.single("sample-rate", this.t("paintCanvas.brushConfig.sampleRate"), draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
+          </div>
+          <div class="row">
+            <span class="label"
+              >${this.t("paintCanvas.brushConfig.spacing")}</span
+            >
+            ${this.single("spacing", this.t("paintCanvas.brushConfig.spacing"), draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
+          </div>
+          <label>
+            <input
+              type="checkbox"
+              class="snap"
+              .checked=${draft.snapToPixelGrid ?? false}
+              ?disabled=${this.busy}
+              @change=${(e: Event) =>
+                this.change({
+                  snapToPixelGrid: (e.target as HTMLInputElement).checked,
+                })}
+            />
+            ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
+          </label>
+        </div>
         ${
           this.editingId
             ? html`<button
+                slot="footer-start"
                 type="button"
-                class="delete"
+                class="cancel delete"
                 ?disabled=${this.busy}
                 @click=${() => void this.deletePreset()}
               >
@@ -627,25 +668,63 @@ export class PcBrushConfig extends PcElement {
               </button>`
             : nothing
         }
-        <button
-          type="button"
-          class="add affirmative"
-          ?disabled=${this.busy}
-          @click=${() => void this.addToPresets()}
-        >
-          ${this.t("paintCanvas.brushConfig.addToPresets")}
-        </button>
-        <button
-          type="button"
-          class="save affirmative"
-          ?disabled=${this.busy}
-          @click=${() => this.save()}
-        >
-          ${this.t("paintCanvas.common.save")}
-        </button>
-      </div>
-    </div>`;
+        <div slot="footer-end" class="actions">
+          <button
+            type="button"
+            class="add affirmative"
+            ?disabled=${this.busy}
+            @click=${() => void this.addToPresets()}
+          >
+            ${this.t("paintCanvas.brushConfig.addToPresets")}
+          </button>
+          <button
+            type="button"
+            class="save affirmative"
+            ?disabled=${this.busy}
+            @click=${() => this.save()}
+          >
+            ${this.t("paintCanvas.common.save")}
+          </button>
+        </div>
+      </pc-dialog-window>
+      ${this.renderProfileEditor(draft)}`;
   }
+
+  /** The profile graph editor for the setting being edited, while open */
+  private renderProfileEditor(draft: BrushConfig) {
+    const param = this.editingProfile;
+    if (!param) return nothing;
+    const key = configKey(param);
+    // Only open for a setting that varies, so it has a variation
+    const variation = draft[key] as BrushParamConfig;
+    return html`<pc-profile-editor
+      .profiles=${this.app?.profiles ?? this.profiles}
+      .points=${variation.profile}
+      profile-id=${variation.profileId ?? (variation.profile ? nothing : LINEAR_PROFILE_ID)}
+      label=${this.t(PARAM_LABELS[param])}
+      @pc-save=${(event: CustomEvent<ProfileSaveDetail>) => {
+        event.stopPropagation();
+        const { points, profileId } = event.detail;
+        // A straight line changes nothing, so it isn't stored
+        const linear = isLinear(points);
+        this.changeParam(param, {
+          [key]: {
+            ...variation,
+            profile: linear ? undefined : points,
+            profileId: linear ? undefined : profileId,
+          },
+        });
+        this.editingProfile = undefined;
+      }}
+      @pc-close=${(event: Event) => {
+        event.stopPropagation();
+        this.editingProfile = undefined;
+      }}
+    ></pc-profile-editor>`;
+  }
+
+  /** Profile graphs, when there's no canvas to keep them */
+  private readonly profiles = new ProfileGraphs();
 }
 
 defineElement("pc-brush-config", PcBrushConfig);

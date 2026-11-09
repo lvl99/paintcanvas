@@ -1,5 +1,6 @@
 import { html, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
+import { PILLS_CSS } from "../../styles";
 import { PcElement, defineElement } from "../../base";
 import type { BrushConfig } from "../../../lib/brushes/types";
 import type BrushTipCache from "../../../lib/brushes/BrushTipCache";
@@ -48,7 +49,11 @@ export class PcBrushTest extends PcElement {
     showPoints: { type: Boolean, attribute: "show-points" },
   };
 
-  static override styles = [PcElement.styles, unsafeCSS(styles)];
+  static override styles = [
+    PcElement.styles,
+    unsafeCSS(PILLS_CSS),
+    unsafeCSS(styles),
+  ];
 
   /** The settings to try */
   declare config?: BrushConfig;
@@ -236,7 +241,7 @@ export class PcBrushTest extends PcElement {
         @pointercancel=${this.onPointerUp}
       ></canvas>
       <div class="actions">
-        <button type="button" class="clear" @click=${() => this.clear()}>
+        <button type="button" class="pill clear" @click=${() => this.clear()}>
           ${this.t("paintCanvas.common.clear")}
         </button>
         <label class="show-points">

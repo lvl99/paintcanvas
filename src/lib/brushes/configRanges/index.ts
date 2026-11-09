@@ -66,7 +66,13 @@ const SOURCE_DEFAULTS: Record<VariationSource, [number, number]> = {
   randomise: [1, 1],
 };
 
-const configKey = (param: VaryingParam) =>
+/**
+ * The config key of a setting's variation.
+ *
+ * @example
+ * configKey("width"); // "widthConfig"
+ */
+export const configKey = (param: VaryingParam) =>
   `${param}Config` as `${VaryingParam}Config`;
 
 const clamp = (value: number, min: number, max: number) =>
@@ -217,6 +223,38 @@ export const toggleSource = (
   if (on) {
     const updated = { ...config, [key]: variation };
     return writeRange(updated, param, { min: current.min, max: current.max });
+  }
+  return { [key]: variation };
+};
+
+/**
+ * Make a setting vary with one source only (or none, with `undefined`), as config changes. Switching from another
+ * source keeps the setting's range; the first source takes a starting range (see `toggleSource`). The setting's profile
+ * graph is kept.
+ *
+ * @example
+ * selectSource({ id: "a", widthConfig: { usePressure: true, minPressure: 0.5 } }, "width", "tilt");
+ * // { widthConfig: { usePressure: false, useTilt: true, minTilt: 0.5, maxTilt: 1, useRandomise: false, … } }
+ */
+export const selectSource = (
+  config: BrushConfig,
+  param: VaryingParam,
+  source: VariationSource | undefined,
+): Partial<BrushConfig> => {
+  const key = configKey(param);
+  const previous = VARIATION_SOURCES.find(
+    (each) => readRange(config, param).sources[each],
+  );
+  if (source && !previous) return toggleSource(config, param, source, true);
+  const variation: BrushParamConfig = { ...config[key] };
+  for (const each of VARIATION_SOURCES)
+    variation[SOURCE_KEYS[each][0]] = each === source;
+  if (source && previous && source !== previous) {
+    const [, fromMin, fromMax] = SOURCE_KEYS[previous];
+    const [, toMin, toMax] = SOURCE_KEYS[source];
+    const [minDefault, maxDefault] = SOURCE_DEFAULTS[previous];
+    variation[toMin] = variation[fromMin] ?? minDefault;
+    variation[toMax] = variation[fromMax] ?? maxDefault;
   }
   return { [key]: variation };
 };

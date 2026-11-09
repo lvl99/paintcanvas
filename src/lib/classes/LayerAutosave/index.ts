@@ -1,6 +1,7 @@
+import PngEncoder from "../PngEncoder";
+import type Layer from "../Layer";
 import type LayerStack from "../LayerStack";
 import type BackgroundWork from "../BackgroundWork";
-import { pixelFingerprint } from "../../image";
 import {
   SAVED_DRAWING_VERSION,
   type LayerStoreLike,
@@ -57,7 +58,7 @@ export interface AutosaveOptions {
     Document,
     "visibilityState" | "addEventListener" | "removeEventListener"
   > | null;
-  /** Turns a layer's canvas into a PNG (replaceable for tests) */
+  /** Turns a layer's canvas into a PNG (in a background worker by default; replaceable for tests) */
   encode?: (canvas: OffscreenCanvas) => Promise<Blob>;
   /** Turns a saved PNG into an image to draw (replaceable for tests) */
   decode?: (image: Blob) => Promise<CanvasImageSource>;
@@ -65,13 +66,15 @@ export interface AutosaveOptions {
   delayMs?: number;
 }
 
+/** Encodes layers as PNGs in a background worker, shared by every autosave on the page (made on first use) */
+let sharedEncoder: PngEncoder | undefined;
+
 /**
- * Encode a canvas as a PNG.
+ * Encode a canvas as a PNG, in a background worker where one can be used, so saving doesn't freeze the page.
  */
 const encodePng = (canvas: OffscreenCanvas): Promise<Blob> => {
-  // A canvas that was never drawn on has no context yet, and can't be encoded without one
-  canvas.getContext("2d");
-  return canvas.convertToBlob({ type: "image/png" });
+  sharedEncoder ??= new PngEncoder();
+  return sharedEncoder.encode(canvas);
 };
 
 /**
@@ -89,8 +92,8 @@ const isComplete = (
 /**
  * Keeps a canvas's layers in a store, so the drawing survives reloading the page: restores the saved drawing when it
  * starts, then saves soon after the layers change (once drawing pauses), and straight away when the page is hidden.
- * Only layers whose pixels changed are encoded and saved again; a quick fingerprint of each layer's pixels tells
- * which.
+ * Only layers whose pixels changed are encoded and saved again: the layers' change counts tell which (see
+ * `LayerStack.pixelVersion`), without reading their pixels, which is slow on phones.
  *
  * Only one window draws on a drawing at a time: the first to start has it, and others wait in the `elsewhere` state
  * (the UI blocks drawing there). When the page is shown again it tries again, and `takeOver` takes the drawing from
@@ -129,17 +132,11 @@ export default class LayerAutosave extends EventTarget {
   /** The layers being watched for changes */
   private watched?: LayerStack;
 
-  /** Fingerprints of each layer's pixels as last saved, by layer ID */
-  private prints = new Map<string, number>();
+  /** Each layer as last saved, by layer ID: the layer itself and its change count (see `LayerStack.pixelVersion`) */
+  private saved = new Map<string, { layer: Layer; version: number }>();
 
   /** Size in bytes of each layer's image as last saved or restored, by layer ID */
   private sizes = new Map<string, number>();
-
-  /** Layers whose pixels changed since the last save */
-  private changed = new Set<string>();
-
-  /** Whether any layer may have changed since the last save (not only those in `changed`) */
-  private checkAll = false;
 
   private timer?: ReturnType<typeof setTimeout>;
 
@@ -152,13 +149,8 @@ export default class LayerAutosave extends EventTarget {
   /** Lets go of the drawing's lock, while held */
   private release?: () => void;
 
-  // Note which layer changed (when only one layer's pixels did), and save soon
-  private readonly onLayersChange = () => {
-    const id = this.watched?.changedLayerId;
-    if (id) this.changed.add(id);
-    else this.checkAll = true;
-    this.schedule();
-  };
+  // Save soon after the layers change
+  private readonly onLayersChange = () => this.schedule();
 
   // Follow the canvas's new layers when its size changes
   private readonly onCanvasChange = () => {
@@ -319,7 +311,7 @@ export default class LayerAutosave extends EventTarget {
       return;
     }
     if (this.currentState !== AutosaveState.Starting) return;
-    this.prints = new Map();
+    this.saved = new Map();
     this.watch();
     if (restored) this.remember();
     this.setState(AutosaveState.Ready);
@@ -361,33 +353,33 @@ export default class LayerAutosave extends EventTarget {
   }
 
   /**
-   * Remember each layer's pixels as saved (just restored).
+   * Remember each layer as saved (just restored).
    */
   private remember(): void {
-    for (const layer of this.canvas.layers.layers)
-      this.prints.set(layer.id, this.fingerprint(layer.id));
-    this.changed.clear();
-    this.checkAll = false;
+    const stack = this.canvas.layers;
+    for (const layer of stack.layers)
+      this.saved.set(layer.id, this.record(layer));
+  }
+
+  /** A layer and its change count, to tell later whether it changed */
+  private record(layer: Layer): { layer: Layer; version: number } {
+    return { layer, version: this.canvas.layers.pixelVersion(layer.id) };
   }
 
   /**
-   * Save the drawing, encoding only the layers whose pixels changed since they were last saved.
+   * Save the drawing, encoding only the layers whose pixels changed since they were last saved (or that are new).
    */
   private async write(): Promise<void> {
     const stack = this.canvas.layers;
-    const { checkAll, changed } = this;
-    this.checkAll = false;
-    this.changed = new Set();
-    const prints = new Map<string, number>();
+    const encoded = new Map<string, { layer: Layer; version: number }>();
     try {
       const encoding: Promise<readonly [string, Blob]>[] = [];
       for (const layer of stack.layers) {
-        const unsaved = !this.prints.has(layer.id);
-        if (!unsaved && !checkAll && !changed.has(layer.id)) continue;
-        const print = this.fingerprint(layer.id);
-        if (print === this.prints.get(layer.id)) continue;
-        prints.set(layer.id, print);
-        // Encoding starts now, so it has the pixels just fingerprinted
+        const record = this.record(layer);
+        const saved = this.saved.get(layer.id);
+        if (saved?.layer === layer && saved.version === record.version)
+          continue;
+        encoded.set(layer.id, record);
         encoding.push(
           this.encode(layer.canvas).then((image) => [layer.id, image] as const),
         );
@@ -404,15 +396,13 @@ export default class LayerAutosave extends EventTarget {
       if (this.currentState !== AutosaveState.Ready) return;
       await this.store.save(drawing, images);
       const kept = new Set(drawing.layers.map((layer) => layer.id));
-      for (const id of this.prints.keys())
-        if (!kept.has(id)) this.prints.delete(id);
-      for (const [id, print] of prints) this.prints.set(id, print);
+      for (const id of this.saved.keys())
+        if (!kept.has(id)) this.saved.delete(id);
+      for (const [id, record] of encoded) this.saved.set(id, record);
       this.error = undefined;
       this.rememberSizes(kept, images);
     } catch (error) {
-      // Check the same layers again with the next save
-      for (const id of [...changed, ...prints.keys()]) this.changed.add(id);
-      this.checkAll ||= checkAll;
+      // Not remembered as saved, so the next save tries those layers again
       this.fail(error);
     }
   }
@@ -430,16 +420,6 @@ export default class LayerAutosave extends EventTarget {
       if (!kept.has(id)) this.sizes.delete(id);
     for (const [id, image] of images) this.sizes.set(id, image.size);
     if (this.storedBytes !== before) this.dispatchEvent(new Event("change"));
-  }
-
-  /**
-   * A fingerprint of a layer's pixels.
-   */
-  private fingerprint(id: string): number {
-    const layer = this.canvas.layers.get(id);
-    return pixelFingerprint(
-      layer.context.getImageData(0, 0, layer.width, layer.height).data,
-    );
   }
 
   /**
