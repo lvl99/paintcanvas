@@ -1,3 +1,4 @@
+import PngEncoder from "../PngEncoder";
 import type Layer from "../Layer";
 import type LayerStack from "../LayerStack";
 import type BackgroundWork from "../BackgroundWork";
@@ -57,7 +58,7 @@ export interface AutosaveOptions {
     Document,
     "visibilityState" | "addEventListener" | "removeEventListener"
   > | null;
-  /** Turns a layer's canvas into a PNG (replaceable for tests) */
+  /** Turns a layer's canvas into a PNG (in a background worker by default; replaceable for tests) */
   encode?: (canvas: OffscreenCanvas) => Promise<Blob>;
   /** Turns a saved PNG into an image to draw (replaceable for tests) */
   decode?: (image: Blob) => Promise<CanvasImageSource>;
@@ -65,13 +66,15 @@ export interface AutosaveOptions {
   delayMs?: number;
 }
 
+/** Encodes layers as PNGs in a background worker, shared by every autosave on the page (made on first use) */
+let sharedEncoder: PngEncoder | undefined;
+
 /**
- * Encode a canvas as a PNG.
+ * Encode a canvas as a PNG, in a background worker where one can be used, so saving doesn't freeze the page.
  */
 const encodePng = (canvas: OffscreenCanvas): Promise<Blob> => {
-  // A canvas that was never drawn on has no context yet, and can't be encoded without one
-  canvas.getContext("2d");
-  return canvas.convertToBlob({ type: "image/png" });
+  sharedEncoder ??= new PngEncoder();
+  return sharedEncoder.encode(canvas);
 };
 
 /**
