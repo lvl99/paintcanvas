@@ -68,6 +68,16 @@ const enter = async (
   await element.updateComplete;
 };
 
+/** Set a single slider's value, as dragging it does, and wait for the window to update */
+const slide = async (element: PcBrushConfig, name: string, value: number) => {
+  query<PcSliderRange>(element, `pc-slider-range.${name}`).setEnd(
+    "high",
+    value,
+    "pc-input",
+  );
+  await element.updateComplete;
+};
+
 /** Click a button and wait for the window to update */
 const click = async (element: PcBrushConfig, selector: string) => {
   query(element, selector).click();
@@ -117,9 +127,8 @@ describe("pc-brush-config", () => {
 
   it("should save the changed settings to the current tool", async () => {
     const { element, events } = await setup();
-    await enter(element, "input[type=number].spacing", "9");
-    await enter(element, "input[type=range].sample-rate", "100", "input");
-    await enter(element, "input[type=number].sample-rate", "");
+    await slide(element, "spacing", 9);
+    await slide(element, "sample-rate", 100);
     await click(element, "button.save");
     expect(events).toEqual([
       ["pc-save", expect.objectContaining({ spacing: 9, sampleRate: 100 })],
@@ -128,10 +137,10 @@ describe("pc-brush-config", () => {
 
   it("should keep the height in proportion while constrained", async () => {
     const { element } = await setup();
-    await enter(element, "input[type=number].width", "40");
+    await slide(element, "width", 40);
     expect([draft(element).width, draft(element).height]).toEqual([40, 40]);
     expect(
-      query<HTMLInputElement>(element, "input[type=number].height").disabled,
+      query<PcSliderRange>(element, "pc-slider-range.height").disabled,
     ).toBe(true);
     const constrain = query<HTMLInputElement>(element, "input.constrain");
     // A link toggle: linked while constrained, unlinked otherwise
@@ -145,8 +154,8 @@ describe("pc-brush-config", () => {
     constrain.dispatchEvent(new Event("change"));
     await element.updateComplete;
     expect(icon()).toBe("icon-unlinked@2x.png");
-    await enter(element, "input[type=range].width", "10", "input");
-    await enter(element, "input[type=number].height", "30");
+    await slide(element, "width", 10);
+    await slide(element, "height", 30);
     expect([draft(element).width, draft(element).height]).toEqual([10, 30]);
   });
 
@@ -193,7 +202,10 @@ describe("pc-brush-config", () => {
     expect(query<HTMLInputElement>(element, "input.width.tilt").checked).toBe(
       false,
     );
-    expect(queryAll(element, "pc-slider-range.width")).toHaveLength(0);
+    // Back to a single value
+    expect(query<PcSliderRange>(element, "pc-slider-range.width").single).toBe(
+      true,
+    );
   });
 
   it("should show pressure, tilt and randomise as one group of icon radio buttons on each setting that varies", async () => {
@@ -305,7 +317,7 @@ describe("pc-brush-config", () => {
   it("should only let offsets change while they vary", async () => {
     const { element } = await setup();
     expect(
-      query<HTMLInputElement>(element, "input[type=number].offsetX").disabled,
+      query<PcSliderRange>(element, "pc-slider-range.offsetX").disabled,
     ).toBe(true);
     await click(element, "input.offsetX.randomise");
     query<PcSliderRange>(element, "pc-slider-range.offsetX").setEnd("high", 10);
@@ -411,7 +423,7 @@ describe("pc-brush-config", () => {
     );
 
     // Picking one uses its image, square at the current width
-    await enter(element, "input[type=number].height", "5");
+    await slide(element, "height", 5);
     select().value = "splatter";
     select().dispatchEvent(new Event("change"));
     await element.updateComplete;
@@ -455,7 +467,7 @@ describe("pc-brush-config", () => {
 
   it("should add the settings to the user's presets, and select the new preset", async () => {
     const { app, element, events } = await setup();
-    await enter(element, "input[type=number].spacing", "7");
+    await slide(element, "spacing", 7);
     await element.addToPresets();
     const [saved] = app.customPresets.presets;
     expect(saved).toMatchObject({
@@ -598,7 +610,7 @@ describe("pc-brush-config", () => {
     const { element } = await setup({
       config: { id: "a", constrainProportions: true },
     });
-    await enter(element, "input[type=number].width", "8");
+    await slide(element, "width", 8);
     expect([draft(element).width, draft(element).height]).toEqual([8, 8]);
     element.draft = { id: "b", constrainProportions: true };
     await element.updateComplete;
@@ -632,8 +644,8 @@ describe("pc-brush-config", () => {
 
   it("should change the sample rate and spacing with both inputs", async () => {
     const { element } = await setup();
-    await enter(element, "input[type=number].sample-rate", "40");
-    await enter(element, "input[type=range].spacing", "12", "input");
+    await slide(element, "sample-rate", 40);
+    await slide(element, "spacing", 12);
     expect(draft(element)).toMatchObject({ sampleRate: 40, spacing: 12 });
     element.save();
     element.draft = undefined;

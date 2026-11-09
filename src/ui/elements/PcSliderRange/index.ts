@@ -10,6 +10,8 @@ export type RangeEnd = "low" | "high";
 
 /** What `pc-input` and `pc-change` give: the range's lowest and highest values */
 export interface RangeDetail {
+  /** A single slider's value (the same as `high`) */
+  value: number;
   low: number;
   high: number;
 }
@@ -35,8 +37,12 @@ export const rangeFraction = (
  * Pressing the track moves the nearest handle there and drags it. With keyboard focus on a handle, the arrow keys move
  * it by `step`, Page Up and Page Down by `pageStep`, and Home and End as far as it can go. Touch, mouse and pen all work.
  *
+ * With `single`, it's a slider for one value (`value`, from `min`): one handle, and one number slider before the track,
+ * or after it with `number-position="end"`. Use it for single values too, so they look and work the same as ranges.
+ *
  * Fires `pc-input` (detail: `{ low, high }`) while a handle is dragged, and `pc-change` once it's let go, or when a value
- * is changed with the keyboard or a number slider, after changing `low` and `high` themselves.
+ * is changed with the keyboard or a number slider, after changing `low` and `high` themselves (and `value`, the same as
+ * `high`).
  *
  * @example
  * html`<pc-slider-range label="Width" min="1" max="256" .low=${10} .high=${40}
@@ -53,6 +59,8 @@ export class PcSliderRange extends PcElement {
     pageStep: { type: Number, attribute: "page-step" },
     unit: { type: String },
     label: { type: String },
+    single: { type: Boolean, reflect: true },
+    numberPosition: { type: String, attribute: "number-position" },
     disabled: { type: Boolean, reflect: true },
     dragging: { state: true },
   };
@@ -163,6 +171,39 @@ export class PcSliderRange extends PcElement {
 
   declare disabled: boolean;
 
+  /** Whether it's a slider for one value (`value`), with one handle and one number slider */
+  declare single: boolean;
+
+  /** Where a single slider's number slider goes: before the track (`start`, the default) or after it (`end`) */
+  declare numberPosition: "start" | "end";
+
+  /** A single slider's value: the same as `high` */
+  get value(): number {
+    return this.high;
+  }
+
+  set value(value: number) {
+    this.high = value;
+  }
+
+  /** What `pc-input` and `pc-change` give */
+  private get detail(): RangeDetail {
+    return { low: this.low, high: this.high, value: this.high };
+  }
+
+  /** How far an end can go: not past the other end (a single slider's value can go down to `min`) */
+  private limitsOf(end: RangeEnd): [number, number] {
+    if (end === "low") return [this.min, this.high];
+    return [this.single ? this.min : this.low, this.max];
+  }
+
+  /** An end's name for screen readers: a single slider's is its label */
+  private endLabel(end: RangeEnd): string {
+    return this.single
+      ? this.label
+      : this.t(`paintCanvas.range.${end}`, { label: this.label });
+  }
+
   /** The end being dragged, if any */
   declare dragging?: RangeEnd;
 
@@ -175,6 +216,8 @@ export class PcSliderRange extends PcElement {
     this.step = 1;
     this.unit = "";
     this.label = "";
+    this.single = false;
+    this.numberPosition = "start";
     this.disabled = false;
   }
 
@@ -186,15 +229,14 @@ export class PcSliderRange extends PcElement {
    * range.setEnd("high", 40); // high is 40, unless low is above it (then it's low)
    */
   setEnd(end: RangeEnd, value: number, type = "pc-change"): void {
-    const [lowest, highest] =
-      end === "low" ? [this.min, this.high] : [this.low, this.max];
+    const [lowest, highest] = this.limitsOf(end);
     const next = Math.min(
       highest,
       Math.max(lowest, fitNumber(value, this.min, this.max, this.step)),
     );
     if (next === this[end]) return;
     this[end] = next;
-    emit<RangeDetail>(this, type, { low: this.low, high: this.high });
+    emit<RangeDetail>(this, type, this.detail);
   }
 
   /** The value at a pointer's position along the track */
@@ -209,6 +251,7 @@ export class PcSliderRange extends PcElement {
 
   /** The end nearest a value: the high end when it's above both, or past the middle of two that meet */
   private nearestEnd(value: number): RangeEnd {
+    if (this.single) return "high";
     if (value > this.high) return "high";
     if (value < this.low) return "low";
     return value - this.low > this.high - value ? "high" : "low";
@@ -235,7 +278,7 @@ export class PcSliderRange extends PcElement {
   private onPointerUp(): void {
     if (!this.dragging) return;
     this.dragging = undefined;
-    emit<RangeDetail>(this, "pc-change", { low: this.low, high: this.high });
+    emit<RangeDetail>(this, "pc-change", this.detail);
   }
 
   /** Move a handle with the arrow keys, Page Up and Page Down, Home and End */
@@ -262,14 +305,13 @@ export class PcSliderRange extends PcElement {
   /** One end's handle */
   private renderHandle(end: RangeEnd) {
     const value = this[end];
-    const [lowest, highest] =
-      end === "low" ? [this.min, this.high] : [this.low, this.max];
+    const [lowest, highest] = this.limitsOf(end);
     return html`<div
       class="handle ${end} ${this.dragging === end ? "active" : ""}"
       part="handle"
       role="slider"
       tabindex=${this.disabled ? -1 : 0}
-      aria-label=${this.t(`paintCanvas.range.${end}`, { label: this.label })}
+      aria-label=${this.endLabel(end)}
       aria-valuemin=${lowest}
       aria-valuemax=${highest}
       aria-valuenow=${value}
@@ -284,12 +326,11 @@ export class PcSliderRange extends PcElement {
 
   /** One end's number slider: it can't go past the other end */
   private renderNumber(end: RangeEnd) {
-    const [lowest, highest] =
-      end === "low" ? [this.min, this.high] : [this.low, this.max];
+    const [lowest, highest] = this.limitsOf(end);
     return html`<pc-number-slider
       class=${end}
       part="number"
-      label=${this.t(`paintCanvas.range.${end}`, { label: this.label })}
+      label=${this.endLabel(end)}
       min=${lowest}
       max=${highest}
       step=${this.step}
@@ -305,9 +346,20 @@ export class PcSliderRange extends PcElement {
   }
 
   override render() {
-    const from = rangeFraction(this.low, this.min, this.max) * 100;
+    const from = this.single
+      ? 0
+      : rangeFraction(this.low, this.min, this.max) * 100;
     const to = rangeFraction(this.high, this.min, this.max) * 100;
-    return html`${this.renderNumber("low")}
+    const before = this.single
+      ? this.numberPosition === "end"
+        ? nothing
+        : this.renderNumber("high")
+      : this.renderNumber("low");
+    const after =
+      !this.single || this.numberPosition === "end"
+        ? this.renderNumber("high")
+        : nothing;
+    return html`${before}
       <div
         class="track"
         part="track"
@@ -322,9 +374,10 @@ export class PcSliderRange extends PcElement {
           part="fill"
           style=${styleMap({ left: `${from}%`, right: `${100 - to}%` })}
         ></div>
-        ${this.renderHandle("low")} ${this.renderHandle("high")}
+        ${this.single ? nothing : this.renderHandle("low")}
+        ${this.renderHandle("high")}
       </div>
-      ${this.renderNumber("high")}`;
+      ${after}`;
   }
 }
 

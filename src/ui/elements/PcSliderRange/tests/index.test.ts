@@ -7,6 +7,7 @@ import {
   mount,
   pointerEvent,
   query,
+  queryAll,
 } from "../../../../testing/elements";
 
 afterEach(() => document.body.replaceChildren());
@@ -91,10 +92,10 @@ describe("pc-slider-range", () => {
     track.dispatchEvent(pointerEvent("pointermove", 90, 5));
     track.dispatchEvent(pointerEvent("pointerup", 90, 5));
     expect(inputs).toEqual([
-      { low: 20, high: 70 },
-      { low: 20, high: 20 },
+      { low: 20, high: 70, value: 70 },
+      { low: 20, high: 20, value: 20 },
     ]);
-    expect(changes).toEqual([{ low: 20, high: 20 }]);
+    expect(changes).toEqual([{ low: 20, high: 20, value: 20 }]);
 
     // Below both ends, the low one; off the track, its end
     track.dispatchEvent(pointerEvent("pointerdown", -30, 5));
@@ -162,7 +163,7 @@ describe("pc-slider-range", () => {
     element.pageStep = 6;
     press("high", "PageDown");
     expect(element.high).toBe(94);
-    expect(changes.at(-1)).toEqual({ low: 60, high: 94 });
+    expect(changes.at(-1)).toEqual({ low: 60, high: 94, value: 94 });
     // Nothing while disabled
     element.disabled = true;
     await element.updateComplete;
@@ -185,8 +186,8 @@ describe("pc-slider-range", () => {
       }),
     );
     expect(element.high).toBe(45);
-    expect(changes).toEqual([{ low: 20, high: 45 }]);
-    expect(values).toEqual([{ low: 20, high: 45 }]);
+    expect(changes).toEqual([{ low: 20, high: 45, value: 45 }]);
+    expect(values).toEqual([{ low: 20, high: 45, value: 45 }]);
   });
 
   it("should round values to the step, keep them within the limits, and not tell listeners when nothing changed", async () => {
@@ -197,5 +198,41 @@ describe("pc-slider-range", () => {
     expect(changes).toHaveLength(1);
     element.setEnd("high", 500);
     expect(element.high).toBe(100);
+  });
+
+  it("should be a slider for one value, from the minimum, with its number slider before or after the track", async () => {
+    const { element, track, handle, number, changes } = await setup({
+      single: true,
+      value: 30,
+      unit: "%",
+    });
+    expect(element.high).toBe(30);
+    expect(queryAll(element, ".handle")).toHaveLength(1);
+    expect(queryAll(element, "pc-number-slider")).toHaveLength(1);
+    const high = handle("high");
+    expect([
+      high.getAttribute("aria-label"),
+      high.getAttribute("aria-valuemin"),
+      high.getAttribute("aria-valuemax"),
+    ]).toEqual(["Width", "0", "100"]);
+    expect([number("high").label, number("high").min]).toEqual(["Width", 0]);
+    const fill = query(element, ".fill");
+    expect([fill.style.left, fill.style.right]).toEqual(["0%", "70%"]);
+    // The number slider comes first by default
+    const order = () =>
+      [...element.shadowRoot!.children]
+        .map((child) => child.localName)
+        .filter((name) => name !== "style");
+    expect(order()).toEqual(["pc-number-slider", "div"]);
+    element.numberPosition = "end";
+    await element.updateComplete;
+    expect(order()).toEqual(["div", "pc-number-slider"]);
+    // Below the old low end: the one handle moves, as far as the minimum
+    track.dispatchEvent(pointerEvent("pointerdown", 5, 5));
+    track.dispatchEvent(pointerEvent("pointerup", 5, 5));
+    expect(element.value).toBe(5);
+    expect(changes.at(-1)).toEqual({ low: 20, high: 5, value: 5 });
+    element.setEnd("high", -10);
+    expect(element.value).toBe(0);
   });
 });

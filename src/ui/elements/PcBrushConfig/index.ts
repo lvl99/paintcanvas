@@ -110,12 +110,6 @@ const SHAPE_ERROR_KEYS: Record<string, string> = {
 /** Largest stamp spacing in pixels */
 const MAX_SPACING = 200;
 
-/** Read a number input, or undefined if it isn't a number */
-const numberValue = (event: Event): number | undefined => {
-  const value = (event.target as HTMLInputElement).valueAsNumber;
-  return Number.isFinite(value) ? value : undefined;
-};
-
 /**
  * The brush (or eraser) configuration window: a testing area, the shape (pressing it picks a built-in shape from the
  * device's own list, which says "Custom" for an uploaded or pasted one; or upload or paste one), smoothing, width, height,
@@ -357,45 +351,30 @@ export class PcBrushConfig extends PcElement {
     }
   }
 
-  /** Render a number input */
-  private number(
+  /**
+   * Render a slider for one value (a single `<pc-slider-range>`), the same as the ranges of settings that vary.
+   */
+  private single(
     className: string,
+    label: string,
     value: number,
     limits: { min: number; max: number },
     onChange: (value: number) => void,
     disabled = false,
   ) {
-    return html`<input
-      type="number"
+    const changed = (event: CustomEvent<RangeDetail>) =>
+      onChange(event.detail.value);
+    return html`<pc-slider-range
+      single
       class=${className}
+      label=${label}
       min=${limits.min}
       max=${limits.max}
+      .value=${live(Math.round(value))}
       ?disabled=${disabled || this.busy}
-      .value=${String(Math.round(value))}
-      @change=${(e: Event) => {
-        const next = numberValue(e);
-        if (next !== undefined) onChange(next);
-      }}
-    />`;
-  }
-
-  /** Render a range slider */
-  private slider(
-    className: string,
-    value: number,
-    limits: { min: number; max: number },
-    onChange: (value: number) => void,
-    disabled = false,
-  ) {
-    return html`<input
-      type="range"
-      class=${className}
-      min=${limits.min}
-      max=${limits.max}
-      ?disabled=${disabled || this.busy}
-      .value=${String(value)}
-      @input=${(e: Event) => onChange((e.target as HTMLInputElement).valueAsNumber)}
-    />`;
+      @pc-input=${changed}
+      @pc-change=${changed}
+    ></pc-slider-range>`;
   }
 
   /** Render a setting that can vary: its value (or min and max), and its pressure, tilt and randomise icon toggles */
@@ -424,8 +403,14 @@ export class PcBrushConfig extends PcElement {
           @pc-input=${writeEnds}
           @pc-change=${writeEnds}
         ></pc-slider-range>`
-      : html`${this.number(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}
-        ${this.slider(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}`;
+      : this.single(
+          param,
+          label,
+          range.value,
+          limits,
+          (value) => write({ value }),
+          disabled || isOffset,
+        );
     // One source at a time: pressing the chosen one again turns variation off
     const active = VARIATION_SOURCES.find((source) => range.sources[source]);
     const select = (source: VariationSource | undefined) =>
@@ -648,13 +633,13 @@ export class PcBrushConfig extends PcElement {
             <span class="label"
               >${this.t("paintCanvas.brushConfig.sampleRate")}</span
             >
-            ${this.number("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
-            ${this.slider("sample-rate", draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
+            ${this.single("sample-rate", this.t("paintCanvas.brushConfig.sampleRate"), draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
+          </div>
+          <div class="row">
             <span class="label"
               >${this.t("paintCanvas.brushConfig.spacing")}</span
             >
-            ${this.number("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
-            ${this.slider("spacing", draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
+            ${this.single("spacing", this.t("paintCanvas.brushConfig.spacing"), draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
           </div>
           <label>
             <input
