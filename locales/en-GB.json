@@ -187,6 +187,7 @@
   "paintCanvas.brushConfig.snapToPixelGrid": "Snap to pixel grid",
   "paintCanvas.brushConfig.addToPresets": "Add to presets",
   "paintCanvas.brushConfig.variation": "{param}: {source}",
+  "paintCanvas.brushConfig.varyWith": "{param}: vary with",
   "paintCanvas.layers.mergeDownTitle": "Merge down",
   "paintCanvas.layers.clear": "Clear…",
   "paintCanvas.layers.delete": "Delete…",

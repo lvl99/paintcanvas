@@ -187,6 +187,7 @@
   "paintCanvas.brushConfig.snapToPixelGrid": "Aligner sur la grille de pixels",
   "paintCanvas.brushConfig.addToPresets": "Ajouter aux préréglages",
   "paintCanvas.brushConfig.variation": "{param} : {source}",
+  "paintCanvas.brushConfig.varyWith": "{param} : varier selon",
   "paintCanvas.layers.mergeDownTitle": "Fusionner avec le calque inférieur",
   "paintCanvas.layers.clear": "Effacer…",
   "paintCanvas.layers.delete": "Supprimer…",

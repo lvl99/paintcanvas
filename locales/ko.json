@@ -187,6 +187,7 @@
   "paintCanvas.brushConfig.snapToPixelGrid": "픽셀 격자에 맞추기",
   "paintCanvas.brushConfig.addToPresets": "프리셋에 추가",
   "paintCanvas.brushConfig.variation": "{param}: {source}",
+  "paintCanvas.brushConfig.varyWith": "{param}: 변화 기준",
   "paintCanvas.layers.mergeDownTitle": "아래 레이어와 병합",
   "paintCanvas.layers.clear": "지우기…",
   "paintCanvas.layers.delete": "삭제…",

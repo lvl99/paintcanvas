@@ -187,6 +187,7 @@
   "paintCanvas.brushConfig.snapToPixelGrid": "对齐像素网格",
   "paintCanvas.brushConfig.addToPresets": "添加到预设",
   "paintCanvas.brushConfig.variation": "{param}：{source}",
+  "paintCanvas.brushConfig.varyWith": "{param}：变化依据",
   "paintCanvas.layers.mergeDownTitle": "向下合并",
   "paintCanvas.layers.clear": "清除…",
   "paintCanvas.layers.delete": "删除…",

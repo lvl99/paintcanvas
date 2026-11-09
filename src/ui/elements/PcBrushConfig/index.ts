@@ -24,7 +24,7 @@ import {
   PARAM_LIMITS,
   VARIATION_SOURCES,
   readRange,
-  toggleSource,
+  selectSource,
   writeRange,
   type VariationSource,
   type VaryingParam,
@@ -403,35 +403,38 @@ export class PcBrushConfig extends PcElement {
         ></pc-slider-range>`
       : html`${this.number(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}
         ${this.slider(param, range.value, limits, (value) => write({ value }), disabled || isOffset)}`;
+    // One source at a time: pressing the chosen one again turns variation off
+    const active = VARIATION_SOURCES.find((source) => range.sources[source]);
+    const select = (source: VariationSource | undefined) =>
+      this.changeParam(param, selectSource(draft, param, source));
     return html`<div class="row" data-param=${param}>
       <span class="label">${label}</span>
       ${values}
-      ${VARIATION_SOURCES.map(
-        (source) =>
-          html`<label
-            class="icon-toggle"
-            title=${this.t(SOURCE_LABELS[source])}
-          >
-            <input
-              type="checkbox"
-              class=${`${param} ${source}`}
-              aria-label=${this.t("paintCanvas.brushConfig.variation", { param: label, source: this.t(SOURCE_LABELS[source]) })}
-              .checked=${range.sources[source]}
-              ?disabled=${disabled || this.busy}
-              @change=${(e: Event) =>
-                this.changeParam(
-                  param,
-                  toggleSource(
-                    draft,
-                    param,
-                    source,
-                    (e.target as HTMLInputElement).checked,
-                  ),
-                )}
-            />
-            ${iconLabel(this.iconUrl(SOURCE_ICONS[source]), this.t(SOURCE_LABELS[source]))}
-          </label>`,
-      )}
+      <fieldset class="sources" ?disabled=${disabled || this.busy}>
+        <legend class="visually-hidden">
+          ${this.t("paintCanvas.brushConfig.varyWith", { param: label })}
+        </legend>
+        ${VARIATION_SOURCES.map(
+          (source) =>
+            html`<label
+              class="icon-toggle"
+              title=${this.t(SOURCE_LABELS[source])}
+            >
+              <input
+                type="radio"
+                name=${`${param}-source`}
+                class=${`${param} ${source}`}
+                aria-label=${this.t("paintCanvas.brushConfig.variation", { param: label, source: this.t(SOURCE_LABELS[source]) })}
+                .checked=${live(active === source)}
+                @change=${() => select(source)}
+                @click=${() => {
+                  if (active === source) select(undefined);
+                }}
+              />
+              ${iconLabel(this.iconUrl(SOURCE_ICONS[source]), this.t(SOURCE_LABELS[source]))}
+            </label>`,
+        )}
+      </fieldset>
     </div>`;
   }
 

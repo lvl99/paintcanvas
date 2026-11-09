@@ -90,3 +90,11 @@ fieldset.smoothing legend {
   margin-right: 4px;
   padding: 0;
 }
+/* Pressure, tilt and randomise: one at a time, side by side */
+fieldset.sources {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

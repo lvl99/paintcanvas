@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { PROFILE_PRESETS } from "../../../profiles";
 import type { BrushConfig } from "../../types";
-import { readRange, toggleSource, writeRange } from "..";
+import { readRange, selectSource, toggleSource, writeRange } from "..";
 
 const none = { pressure: false, tilt: false, randomise: false };
 
@@ -206,5 +207,64 @@ describe("toggleSource", () => {
     expect(toggleSource(config, "width", "pressure", false)).toEqual({
       widthConfig: { usePressure: false, minPressure: 0.25, maxPressure: 1 },
     });
+  });
+});
+
+describe("selectSource", () => {
+  it("should give the first source a starting range, with only that source on", () => {
+    expect(selectSource({ id: "a", width: 40 }, "width", "pressure")).toEqual({
+      widthConfig: { usePressure: true, minPressure: 0.5, maxPressure: 1 },
+    });
+  });
+
+  it("should switch to another source keeping the range and the profile graph, or turn variation off", () => {
+    const profile = PROFILE_PRESETS[1]!.points;
+    const config: BrushConfig = {
+      id: "a",
+      width: 40,
+      widthConfig: {
+        usePressure: true,
+        minPressure: 0.25,
+        useTilt: true,
+        profile,
+        profileId: "overweight",
+      },
+    };
+    const tilt = selectSource(config, "width", "tilt");
+    expect(tilt.widthConfig).toEqual({
+      usePressure: false,
+      minPressure: 0.25,
+      useTilt: true,
+      minTilt: 0.25,
+      maxTilt: 1,
+      useRandomise: false,
+      profile,
+      profileId: "overweight",
+    });
+    expect(readRange({ ...config, ...tilt }, "width")).toMatchObject({
+      min: 10,
+      max: 40,
+    });
+    // Choosing the source it already varies with turns the others off
+    expect(selectSource(config, "width", "pressure").widthConfig).toMatchObject(
+      {
+        usePressure: true,
+        useTilt: false,
+        useRandomise: false,
+      },
+    );
+    expect(selectSource(config, "width", undefined).widthConfig).toMatchObject({
+      usePressure: false,
+      useTilt: false,
+      useRandomise: false,
+      profile,
+    });
+    expect(
+      selectSource(
+        { id: "a", rotationConfig: { useRandomise: true } },
+        "rotation",
+        "tilt",
+      ).rotationConfig,
+    ).toMatchObject({ useTilt: true, minTilt: 1, maxTilt: 1 });
   });
 });

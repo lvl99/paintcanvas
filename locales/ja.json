@@ -187,6 +187,7 @@
   "paintCanvas.brushConfig.snapToPixelGrid": "ピクセルグリッドに吸着",
   "paintCanvas.brushConfig.addToPresets": "プリセットに追加",
   "paintCanvas.brushConfig.variation": "{param}：{source}",
+  "paintCanvas.brushConfig.varyWith": "{param}：変化の元",
   "paintCanvas.layers.mergeDownTitle": "下のレイヤーと結合",
   "paintCanvas.layers.clear": "クリア…",
   "paintCanvas.layers.delete": "削除…",

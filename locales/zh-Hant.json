@@ -187,6 +187,7 @@
   "paintCanvas.brushConfig.snapToPixelGrid": "對齊像素格線",
   "paintCanvas.brushConfig.addToPresets": "加入預設",
   "paintCanvas.brushConfig.variation": "{param}：{source}",
+  "paintCanvas.brushConfig.varyWith": "{param}：變化依據",
   "paintCanvas.layers.mergeDownTitle": "向下合併",
   "paintCanvas.layers.clear": "清除…",
   "paintCanvas.layers.delete": "刪除…",

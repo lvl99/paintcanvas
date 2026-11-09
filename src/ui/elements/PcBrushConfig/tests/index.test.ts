@@ -173,14 +173,46 @@ describe("pc-brush-config", () => {
     range().setEnd("low", 30);
     await element.updateComplete;
     expect(draft(element).widthConfig?.minPressure).toBe(1);
+    // One source at a time: choosing tilt keeps the range; choosing it again turns variation off
     await click(element, "input.width.tilt");
-    await click(element, "input.width.pressure");
+    expect(draft(element).widthConfig).toMatchObject({
+      usePressure: false,
+      useTilt: true,
+      minTilt: 1,
+    });
+    expect(
+      ["pressure", "tilt", "randomise"].map(
+        (source) =>
+          query<HTMLInputElement>(element, `input.width.${source}`).checked,
+      ),
+    ).toEqual([false, true, false]);
     await click(element, "input.width.tilt");
+    expect(draft(element).widthConfig).toMatchObject({ useTilt: false });
+    expect(query<HTMLInputElement>(element, "input.width.tilt").checked).toBe(
+      false,
+    );
     expect(queryAll(element, "pc-slider-range.width")).toHaveLength(0);
   });
 
-  it("should show pressure, tilt and randomise as icon toggles on each setting that varies", async () => {
+  it("should show pressure, tilt and randomise as one group of icon radio buttons on each setting that varies", async () => {
     const { element } = await setup();
+    const group = query<HTMLFieldSetElement>(
+      element,
+      '[data-param="width"] fieldset.sources',
+    );
+    expect(group.querySelector("legend")?.textContent?.trim()).toBe(
+      "Width: vary with",
+    );
+    expect(
+      [...group.querySelectorAll("input")].map((input) => [
+        input.type,
+        input.name,
+      ]),
+    ).toEqual([
+      ["radio", "width-source"],
+      ["radio", "width-source"],
+      ["radio", "width-source"],
+    ]);
     const toggles = queryAll<HTMLLabelElement>(
       element,
       '[data-param="width"] label.icon-toggle',
