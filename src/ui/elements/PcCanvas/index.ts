@@ -75,6 +75,9 @@ export const ANTS_INTERVAL = 100;
 /** In focus pen mode, how long after a pen lifts touches are still ignored (milliseconds) */
 export const PEN_LIFT_GRACE_MS = 500;
 
+/** The most device pixels per CSS pixel the canvases on screen use (see `PcCanvas.pixelRatio`) */
+export const MAX_PIXEL_RATIO = 2;
+
 /**
  * Space covered by the toolbar and chat on a screen of the given width.
  *
@@ -205,8 +208,11 @@ export class PcCanvas extends PcElement {
     );
   }
 
-  /** Device pixels per CSS pixel (replaceable for tests) */
-  pixelRatio = () => window.devicePixelRatio || 1;
+  /**
+   * Device pixels per CSS pixel for the canvases on screen, at most `MAX_PIXEL_RATIO`: phones with 3 have 2.25 times
+   * the pixels to draw and put on screen for little visible difference (replaceable for tests).
+   */
+  pixelRatio = () => Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
 
   // Redraw when the app, layers, view, stroke in progress, a loaded brush shape or the brush or eraser settings change
   // (so the brush cursor outline follows a new size or preset without the pointer moving)
@@ -1175,6 +1181,8 @@ export class PcCanvas extends PcElement {
     if (!ctx) return;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     const sampling = this.sampling;
+    // Hidden while not sampling, so the browser doesn't spend time putting an empty layer on screen
+    (this.sampler as HTMLCanvasElement).hidden = !sampling;
     if (!sampling) return;
     const ratio = this.pixelRatio();
     ctx.save();

@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import "..";
 import {
+  MAX_PIXEL_RATIO,
   ANTS_INTERVAL,
   CHAT_WIDTH_RATIO,
   PEN_LIFT_GRACE_MS,
@@ -352,10 +353,12 @@ describe("pc-canvas", () => {
     expect(cancel).toHaveBeenCalled();
   });
 
-  it("should use the device pixel ratio by default", () => {
+  it("should use the device pixel ratio by default, up to the most", () => {
     const element = document.createElement("pc-canvas") as PcCanvas;
     vi.stubGlobal("devicePixelRatio", 3);
-    expect(element.pixelRatio()).toBe(3);
+    expect(element.pixelRatio()).toBe(MAX_PIXEL_RATIO);
+    vi.stubGlobal("devicePixelRatio", 1.5);
+    expect(element.pixelRatio()).toBe(1.5);
     vi.stubGlobal("devicePixelRatio", 0);
     expect(element.pixelRatio()).toBe(1);
   });
@@ -1508,12 +1511,15 @@ describe("pc-canvas colour sampling", () => {
   });
 
   it("should set the background colour when it is selected", async () => {
-    const { app, canvas } = await setup();
+    const { app, element, canvas } = await setup();
     const foreground = app.colours.foreground;
     app.selectColour("background");
     canvas.dispatchEvent(pointer("pointerdown", 100, 200));
+    // The sampling window shows only while sampling
+    expect(element.sampler!.hidden).toBe(false);
     canvas.dispatchEvent(pointer("pointerup", 100, 200));
     expect(app.colours).toEqual({ foreground, background: "#123456" });
+    expect(element.sampler!.hidden).toBe(true);
   });
 
   it("should still sample without a sampling window to draw on", async () => {
