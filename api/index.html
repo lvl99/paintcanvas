@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">API | PaintCanvas</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://lvl99.github.io/paintcanvas/api/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="API | PaintCanvas"><meta data-rh="true" name="description" content="Modules"><meta data-rh="true" property="og:description" content="Modules"><link data-rh="true" rel="canonical" href="https://lvl99.github.io/paintcanvas/api/"><link data-rh="true" rel="alternate" href="https://lvl99.github.io/paintcanvas/api/" hreflang="en"><link data-rh="true" rel="alternate" href="https://lvl99.github.io/paintcanvas/api/" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"API","item":"https://lvl99.github.io/paintcanvas/api/"}]}</script><link rel="stylesheet" href="/paintcanvas/assets/css/styles.ca101478.css">
-<script src="/paintcanvas/assets/js/runtime~main.770f7bb2.js" defer="defer"></script>
-<script src="/paintcanvas/assets/js/main.847809ec.js" defer="defer"></script>
+<script src="/paintcanvas/assets/js/runtime~main.7debc035.js" defer="defer"></script>
+<script src="/paintcanvas/assets/js/main.ae288fa2.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -47,6 +47,8 @@
 <li class=""><a class="" href="/paintcanvas/api/lib/classes/LayerStack/">lib/classes/LayerStack</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/classes/PaintCanvas/">lib/classes/PaintCanvas</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/classes/Palette/">lib/classes/Palette</a></li>
+<li class=""><a class="" href="/paintcanvas/api/lib/classes/PngEncoder/">lib/classes/PngEncoder</a></li>
+<li class=""><a class="" href="/paintcanvas/api/lib/classes/ProfileGraphs/">lib/classes/ProfileGraphs</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/classes/SettingsAutosave/">lib/classes/SettingsAutosave</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/classes/ShortcutSettings/">lib/classes/ShortcutSettings</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/classes/StrokeLog/">lib/classes/StrokeLog</a></li>
@@ -59,6 +61,7 @@
 <li class=""><a class="" href="/paintcanvas/api/lib/messages/PatchSender/">lib/messages/PatchSender</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/palette/">lib/palette</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/presets/">lib/presets</a></li>
+<li class=""><a class="" href="/paintcanvas/api/lib/profiles/">lib/profiles</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/rendering/BrushTip/">lib/rendering/BrushTip</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/rendering/checkerboard/">lib/rendering/checkerboard</a></li>
 <li class=""><a class="" href="/paintcanvas/api/lib/rendering/compositing/">lib/rendering/compositing</a></li>
@@ -90,6 +93,7 @@
 <li class=""><a class="" href="/paintcanvas/api/testing/recordingCanvas/">testing/recordingCanvas</a></li>
 <li class=""><a class="" href="/paintcanvas/api/testing/recordingContext/">testing/recordingContext</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/">ui</a></li>
+<li class=""><a class="" href="/paintcanvas/api/ui/ask/">ui/ask</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/base/">ui/base</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/ChangeController/">ui/ChangeController</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/dismiss/">ui/dismiss</a></li>
@@ -107,6 +111,7 @@
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcColourPair/">ui/elements/PcColourPair</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcContextMenu/">ui/elements/PcContextMenu</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcDialog/">ui/elements/PcDialog</a></li>
+<li class=""><a class="" href="/paintcanvas/api/ui/elements/PcDialogWindow/">ui/elements/PcDialogWindow</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcIcon/">ui/elements/PcIcon</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcIconToggle/">ui/elements/PcIconToggle</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcInfoTip/">ui/elements/PcInfoTip</a></li>
@@ -121,8 +126,11 @@
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcPanelColours/">ui/elements/PcPanelColours</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcPanelLayers/">ui/elements/PcPanelLayers</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcPopover/">ui/elements/PcPopover</a></li>
+<li class=""><a class="" href="/paintcanvas/api/ui/elements/PcProfileEditor/">ui/elements/PcProfileEditor</a></li>
+<li class=""><a class="" href="/paintcanvas/api/ui/elements/PcProfileGraph/">ui/elements/PcProfileGraph</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcShortcutSettings/">ui/elements/PcShortcutSettings</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcSlider/">ui/elements/PcSlider</a></li>
+<li class=""><a class="" href="/paintcanvas/api/ui/elements/PcSliderRange/">ui/elements/PcSliderRange</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcStats/">ui/elements/PcStats</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcThemePicker/">ui/elements/PcThemePicker</a></li>
 <li class=""><a class="" href="/paintcanvas/api/ui/elements/PcToast/">ui/elements/PcToast</a></li>
