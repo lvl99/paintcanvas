@@ -51,11 +51,16 @@ describe("pc-app-settings", () => {
     expect(toggle.checked).toBe(true);
     expect(hint().textContent).toContain("Reload the page");
     expect(hint().classList.contains("pending")).toBe(true);
-    // Imported or restored choices show too
-    app.ui.update({ rendering: "cpu" });
+    toggle.dispatchEvent(
+      new CustomEvent("change", { detail: { checked: false } }),
+    );
     await element.updateComplete;
-    expect(toggle.checked).toBe(false);
+    expect(app.ui.data.rendering).toBe("cpu");
     expect(hint().textContent).toContain("Try this if drawing is slow");
+    // Imported or restored choices show too
+    app.ui.update({ rendering: "gpu" });
+    await element.updateComplete;
+    expect(toggle.checked).toBe(true);
   });
 
   it("should show its buttons at the usual pill size, each on its own full-width row", async () => {
