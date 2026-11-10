@@ -22,6 +22,26 @@ canvas.addEventListener("change", () => render(canvas));
 document.querySelector("#undo").addEventListener("click", () => canvas.undo());
 ```
 
+## Drawing on the CPU or the GPU
+
+By default the canvases keep their pixels in regular memory and draw on the CPU (`rendering: "cpu"`), so saving and copying never wait for the GPU (which stalled phones for up to 15 seconds). Pass `rendering: "gpu"` to ask the browser to keep them on the GPU instead; drawing may be quicker on some devices, and the browser can still choose the CPU.
+
+Browsers fix where a canvas draws when it's made, so `canvas.rendering` can't change while the canvas runs. The user's choice for next time is `canvas.ui.data.rendering` (shown by `<pc-app-settings>` as "Draw with the GPU"); pass it when you next make the canvas. `loadRenderingChoice` and `saveRenderingChoice` (`@lvl99dotcom/paintcanvas/lib/storage`) keep it in `localStorage`, which can be read before the canvas is made:
+
+```ts
+import {
+  loadRenderingChoice,
+  saveRenderingChoice,
+} from "@lvl99dotcom/paintcanvas/lib/storage";
+
+const canvas = new PaintCanvas({ rendering: loadRenderingChoice("my-app") });
+canvas.ui.addEventListener("change", () =>
+  saveRenderingChoice("my-app", canvas.ui.data.rendering),
+);
+```
+
+`<paint-canvas settings-store="…">` does this for the canvas it makes.
+
 ## Foreground and background colours
 
 The engine has two colours, read with `canvas.colours` (`canvas.colour` is the foreground colour):

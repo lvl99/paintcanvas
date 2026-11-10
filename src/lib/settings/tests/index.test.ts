@@ -109,6 +109,11 @@ describe("isValidSettings", () => {
       "/ui/locale must match",
     ],
     [
+      "an unknown rendering",
+      { ui: { rendering: "webgl" } },
+      "/ui/rendering must be equal",
+    ],
+    [
       "an unknown UI setting",
       { ui: { fontSize: 20 } },
       "additional properties",
@@ -136,7 +141,7 @@ describe("isValidSettings", () => {
 });
 
 describe("collectSettings and applySettings", () => {
-  it("should collect a canvas's input settings, shortcuts, palette, colours, profile graphs, theme and language", () => {
+  it("should collect a canvas's input settings, shortcuts, palette, colours, profile graphs, theme, language and rendering", () => {
     const app = createApp();
     expect(collectSettings(app)).toEqual({
       input: app.input.data,
@@ -144,7 +149,7 @@ describe("collectSettings and applySettings", () => {
       palette: DEFAULT_PALETTE,
       colours: { foreground: "#000000", background: "#ffffff" },
       profiles: [],
-      ui: { theme: "system" },
+      ui: { theme: "system", rendering: "cpu" },
     });
   });
 
@@ -166,7 +171,7 @@ describe("collectSettings and applySettings", () => {
     source.palette.set(["#123456"]);
     source.setColour("#ff0000");
     source.setColour("#00ff00", "background");
-    source.ui.update({ theme: "dark", locale: "fr" });
+    source.ui.update({ theme: "dark", locale: "fr", rendering: "gpu" });
     source.profiles.save({ name: "Soft", points: PROFILE_PRESETS[1]!.points });
     const target = createApp();
     applySettings(target, collectSettings(source));

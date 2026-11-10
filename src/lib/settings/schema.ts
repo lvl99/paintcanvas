@@ -4,6 +4,7 @@ import type { InputSettingsData } from "../classes/InputSettings";
 import {
   LOCALE_PATTERN,
   MAX_LOCALE_LENGTH,
+  RENDERINGS,
   THEMES,
   type UiSettingsData,
 } from "../classes/UiSettings/index.ts";
@@ -43,7 +44,7 @@ export interface AppSettings {
   colours?: { foreground: string; background: string };
   /** The user's own profile graphs */
   profiles?: ProfileGraph[];
-  /** The theme and language */
+  /** The theme, language and where canvases draw */
   ui?: Partial<UiSettingsData>;
 }
 
@@ -130,6 +131,7 @@ export const settingsSchema = {
           maxLength: MAX_LOCALE_LENGTH,
           pattern: LOCALE_PATTERN,
         },
+        rendering: { enum: RENDERINGS },
       },
     },
   },

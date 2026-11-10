@@ -145,6 +145,29 @@ describe("PaintCanvas", () => {
     vi.unstubAllGlobals();
   });
 
+  it("should draw where asked, starting the user's choice there", () => {
+    const options: unknown[] = [];
+    vi.stubGlobal(
+      "OffscreenCanvas",
+      class {
+        getContext(_type: string, settings?: unknown) {
+          options.push(settings);
+          return {};
+        }
+      },
+    );
+    const cpu = new PaintCanvas();
+    expect([cpu.rendering, cpu.ui.data.rendering]).toEqual(["cpu", "cpu"]);
+    options.length = 0;
+    const gpu = new PaintCanvas({ rendering: "gpu" });
+    expect([gpu.rendering, gpu.ui.data.rendering]).toEqual(["gpu", "gpu"]);
+    // Canvases on the GPU get no context until drawn on
+    expect(options).toEqual([]);
+    gpu.ui.update({ rendering: "cpu" });
+    expect(gpu.rendering).toBe("gpu");
+    vi.unstubAllGlobals();
+  });
+
   it("should accept a canvas size option", () => {
     expect(createApp({ width: 800 })).toMatchObject({
       width: 800,

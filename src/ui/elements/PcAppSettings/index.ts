@@ -5,7 +5,9 @@ import {
   ICON_CONTROLS_CSS as iconControls,
 } from "../../styles";
 import { PcElement, defineElement, emit } from "../../base";
+import ChangeController from "../../ChangeController";
 import "../PcShortcutSettings";
+import "../PcToggleCheckbox";
 import "../PcDialogWindow";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import {
@@ -31,9 +33,10 @@ const SETTINGS_FILE_ERROR_KEYS: Record<string, string> = {
 };
 
 /**
- * Buttons for the user's app settings: "Keyboard shortcuts", which opens a window to change them (see
+ * The user's app settings: a "Draw with the GPU" switch (the user's `ui.data.rendering`, used from the next start, so it
+ * says when the page needs reloading), and buttons: "Keyboard shortcuts", which opens a window to change them (see
  * `pc-shortcut-settings`), and "Import settings" and "Export settings", which read and write a settings JSON file (input
- * settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and language). The window is a shaded
+ * settings, keyboard shortcuts, colour palette, colours, profile graphs, theme, language and rendering). The window is a shaded
  * `<pc-dialog-window>` over the whole page; it closes with its ⨉ button, Escape or a press outside it, and focus goes
  * back to the button. Fires `pc-toast` after importing, or when importing or exporting fails.
  *
@@ -65,6 +68,14 @@ export class PcAppSettings extends PcElement {
         flex-wrap: wrap;
         gap: var(--pc-space-2);
       }
+      .hint {
+        display: block;
+        color: var(--pc-text-muted);
+        font-size: 0.85em;
+      }
+      .pending {
+        color: var(--pc-text);
+      }
       pc-dialog-window {
         --pc-dialog-width: 480px;
       }
@@ -85,6 +96,9 @@ export class PcAppSettings extends PcElement {
     blob,
     name,
   ) => saveFile(blob, name, undefined, JSON_FILE_TYPE);
+
+  // Show the user's choices as they change (e.g. when settings are imported)
+  private changes = new ChangeController(this, () => [this.app?.ui]);
 
   constructor() {
     super();
@@ -185,10 +199,35 @@ export class PcAppSettings extends PcElement {
     </pc-dialog-window>`;
   }
 
+  /**
+   * The switch that draws with the GPU (or the CPU) from the next start, saying when the page needs reloading to use
+   * the choice (see `PaintCanvas.rendering`).
+   */
+  private renderRendering(app: PaintCanvas) {
+    const chosen = app.ui.data.rendering;
+    const pending = chosen !== app.rendering;
+    return html`<pc-toggle-checkbox
+      class="gpu"
+      .checked=${chosen === "gpu"}
+      @change=${(e: CustomEvent<{ checked: boolean }>) =>
+        app.ui.update({ rendering: e.detail.checked ? "gpu" : "cpu" })}
+    >
+      ${this.t("paintCanvas.settings.gpu")}
+      <span class="hint ${pending ? "pending" : ""}" aria-live="polite">
+        ${this.t(
+          pending
+            ? "paintCanvas.settings.reloadToApply"
+            : "paintCanvas.settings.gpuHint",
+        )}
+      </span>
+    </pc-toggle-checkbox>`;
+  }
+
   override render() {
     const app = this.app;
     if (!app) return nothing;
-    return html`<div class="actions">
+    return html`${this.renderRendering(app)}
+      <div class="actions">
         <button
           type="button"
           class="pill-s shortcuts"

@@ -13,8 +13,10 @@ import type { PcPanelLayers } from "../../PcPanelLayers";
 import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { createFakeLocks } from "../../../../testing/locks";
+import { createRecordingContext } from "../../../../testing/recordingContext";
 import IndexedDbLayerStore, {
   IndexedDbSettingsStore,
+  loadRenderingChoice,
 } from "../../../../lib/storage";
 import {
   AUTOSAVE_ERROR_EVENT,
@@ -510,6 +512,39 @@ describe("paint-canvas", () => {
     await second.layout.settingsAutosave?.ready;
     expect(second.app.palette.colours).toEqual(["#123456"]);
     expect(second.app.shortcuts.combo("tool-brush")).toEqual({ key: "p" });
+  });
+
+  it("should keep the rendering chosen with the app settings, and make its own canvas draw there", async () => {
+    const name = `rendering-${crypto.randomUUID()}`;
+    const { layout, app } = await setup();
+    layout.settingsStore = name;
+    await layout.updateComplete;
+    app.ui.update({ rendering: "gpu" });
+    expect(loadRenderingChoice(name)).toBe("gpu");
+    // Removing the name stops keeping it
+    layout.settingsStore = undefined;
+    await layout.updateComplete;
+    app.ui.update({ rendering: "cpu" });
+    expect(loadRenderingChoice(name)).toBe("gpu");
+    layout.remove();
+    vi.stubGlobal(
+      "OffscreenCanvas",
+      class {
+        getContext() {
+          return createRecordingContext().ctx;
+        }
+      },
+    );
+    const own = document.createElement("paint-canvas") as PaintCanvasElement;
+    own.setAttribute("settings-store", name);
+    document.body.append(own);
+    expect(own.app?.rendering).toBe("gpu");
+    own.remove();
+    const plain = document.createElement("paint-canvas") as PaintCanvasElement;
+    document.body.append(plain);
+    expect(plain.app?.rendering).toBe("cpu");
+    plain.remove();
+    vi.unstubAllGlobals();
   });
 
   it("should show a toast when the app settings can't be kept", async () => {

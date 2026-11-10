@@ -1,4 +1,5 @@
 import { html, unsafeCSS, type PropertyValues } from "lit";
+import { keyed } from "lit/directives/keyed.js";
 import { unionRect } from "../../../lib/brushes/StrokeEngine";
 import styles from "./style.css?inline";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
@@ -272,6 +273,9 @@ export class PcCanvas extends PcElement {
   /** Viewport that has been fitted once (so resizing doesn't refit) */
   private fittedViewport?: object;
 
+  /** The screen canvas whose 2D context has been made (see `prepareScene`) */
+  private preparedCanvas?: HTMLCanvasElement;
+
   private frame = 0;
 
   /** Animation frame drawing only the brush cursor, if requested */
@@ -379,15 +383,27 @@ export class PcCanvas extends PcElement {
   }
 
   override firstUpdated(): void {
-    // The scene is drawn from layers kept in regular memory (see `createMemoryCanvas`): keeping the screen canvas there
-    // too means each frame copies only the area that changed, instead of sending whole layers to the GPU. Its first
-    // context decides that; later `getContext("2d")` calls get this one.
-    this.canvas?.getContext("2d", { willReadFrequently: true });
+    this.prepareScene();
     if (typeof ResizeObserver !== "undefined") {
       this.resizeObserver = new ResizeObserver(() => this.syncSize());
       this.resizeObserver.observe(this);
     }
     this.syncSize();
+  }
+
+  /**
+   * Make a new screen canvas's 2D context where the app's canvases draw (see `PaintCanvas.rendering`). Drawn from layers
+   * kept in regular memory (`cpu`), keeping the screen canvas there too means each frame copies only the area that
+   * changed, instead of sending whole layers to the GPU. The first context decides that; later `getContext("2d")` calls
+   * get this one, so the screen canvas is made again when the app's rendering differs (see `render`).
+   */
+  private prepareScene(): void {
+    const canvas = this.canvas;
+    if (!canvas || canvas === this.preparedCanvas) return;
+    this.preparedCanvas = canvas;
+    canvas.getContext("2d", {
+      willReadFrequently: this.app?.rendering !== "gpu",
+    });
   }
 
   /**
@@ -404,6 +420,7 @@ export class PcCanvas extends PcElement {
   }
 
   override updated(changed: PropertyValues): void {
+    this.prepareScene();
     // Any app, layer or viewport change re-renders this component; redraw the canvas too. When only the stroke in
     // progress changed, redraw just the area it changed (much quicker with many layers)
     const resized = this.syncSize();
@@ -1377,22 +1394,26 @@ export class PcCanvas extends PcElement {
   }
 
   override render() {
-    return html`<canvas
-        class="scene"
-        aria-label=${this.t("paintCanvas.canvas.label")}
-        @pointerdown=${this.onPointerDown}
-        @pointermove=${this.onPointerMove}
-        @pointerup=${this.onPointerUp}
-        @pointercancel=${this.onPointerCancel}
-        @touchstart=${this.onTouchStart}
-        @pointerleave=${this.onPointerLeave}
-        @wheel=${this.onWheel}
-        @gesturestart=${this.onGestureStart}
-        @gesturechange=${this.onGestureChange}
-        @gestureend=${(e: Event) => e.preventDefault()}
-        @dblclick=${() => this.app?.applyLasso(this.app.lasso.close())}
-        @contextmenu=${(e: Event) => e.preventDefault()}
-      ></canvas>
+    // A new screen canvas for each rendering, as its first context decides where it draws (see `prepareScene`)
+    return html`${keyed(
+        this.app?.rendering ?? "cpu",
+        html`<canvas
+          class="scene"
+          aria-label=${this.t("paintCanvas.canvas.label")}
+          @pointerdown=${this.onPointerDown}
+          @pointermove=${this.onPointerMove}
+          @pointerup=${this.onPointerUp}
+          @pointercancel=${this.onPointerCancel}
+          @touchstart=${this.onTouchStart}
+          @pointerleave=${this.onPointerLeave}
+          @wheel=${this.onWheel}
+          @gesturestart=${this.onGestureStart}
+          @gesturechange=${this.onGestureChange}
+          @gestureend=${(e: Event) => e.preventDefault()}
+          @dblclick=${() => this.app?.applyLasso(this.app.lasso.close())}
+          @contextmenu=${(e: Event) => e.preventDefault()}
+        ></canvas>`,
+      )}
       <canvas class="outlines" aria-hidden="true"></canvas>
       <canvas class="overlay" aria-hidden="true"></canvas>
       <canvas class="sampler" aria-hidden="true"></canvas>`;
