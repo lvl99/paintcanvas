@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
-import type { PcAppSettings } from "..";
+import { PcAppSettings } from "..";
 import type { PcShortcutSettings } from "../../PcShortcutSettings";
 import type { PcDialogWindow } from "../../PcDialogWindow";
 import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
@@ -56,6 +56,17 @@ describe("pc-app-settings", () => {
     await element.updateComplete;
     expect(toggle.checked).toBe(false);
     expect(hint().textContent).toContain("Try this if drawing is slow");
+  });
+
+  it("should show its buttons at the usual pill size, each on its own full-width row", async () => {
+    const { element } = await setup();
+    const buttons = [".shortcuts", ".import", ".export"].map((selector) =>
+      query(element, selector),
+    );
+    for (const button of buttons) expect(button.classList).toContain("pill");
+    const styles = PcAppSettings.styles.map(String).join("");
+    expect(styles).toMatch(/\.actions \{[^}]*flex-direction: column/);
+    expect(styles).toMatch(/\.actions button \{[^}]*width: 100%/);
   });
 
   it("should open the keyboard shortcuts in a shaded window", async () => {

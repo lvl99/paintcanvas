@@ -63,10 +63,14 @@ export class PcAppSettings extends PcElement {
         font-family: var(--pc-font);
         font-size: var(--pc-font-size);
       }
+      /* One full-width button per row */
       .actions {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: var(--pc-space-2);
+      }
+      .actions button {
+        width: 100%;
       }
       .hint {
         display: block;
@@ -230,7 +234,7 @@ export class PcAppSettings extends PcElement {
       <div class="actions">
         <button
           type="button"
-          class="pill-s shortcuts"
+          class="pill shortcuts"
           aria-haspopup="dialog"
           @click=${() => (this.shortcutsOpen = true)}
         >
@@ -238,7 +242,7 @@ export class PcAppSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill-s import"
+          class="pill import"
           @click=${() =>
             this.renderRoot
               .querySelector<HTMLInputElement>(".import-file")
@@ -248,7 +252,7 @@ export class PcAppSettings extends PcElement {
         </button>
         <button
           type="button"
-          class="pill-s export"
+          class="pill export"
           @click=${() => void this.exportFile()}
         >
           ${this.t("paintCanvas.settings.export")}

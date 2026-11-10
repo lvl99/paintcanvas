@@ -101,6 +101,7 @@ export {
   type ColourModel,
 } from "./elements/PcPanelColours";
 export { PcStats, formatBytes } from "./elements/PcStats";
+export { PcVersion } from "./elements/PcVersion";
 export {
   PcThemePicker,
   THEMES,

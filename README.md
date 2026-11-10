@@ -89,9 +89,9 @@ The demo is published at https://lvl99.github.io/paintcanvas/app/. To run it loc
 pnpm dev
 ```
 
-Starts a development server and opens the demo in your browser. It uses the source directly, so saving a change to `src/`, `demo/` or `locales/` reloads the page with the change straight away. (The whole page reloads because custom elements can't be redefined in a running page, so the drawing starts again.)
+Starts a development server and opens the demo in your browser. It uses the source directly, so saving a change to `src/`, `demo/` or `locales/` reloads the page with the change straight away. (The whole page reloads because custom elements can't be redefined in a running page, so the drawing starts again.) It uses vite.demo.config.ts, which also gives the demo the commit it was built from (see scripts/build-info.ts).
 
-- http://localhost:5190/: a full-page PaintCanvas with a layers panel, the colour palette (from the colours at the top of the toolbar), a menu with input settings, keyboard shortcuts, settings import and export, a theme picker (light, dark or system) and a "New drawing" button. The drawing and the settings, including the theme, language and rendering (CPU or GPU), are kept in the browser, so they survive reloads. Below 600px wide, the toolbar and the layers rail sit over the canvas.
+- http://localhost:5190/: a full-page PaintCanvas with a layers panel, the colour palette (from the colours at the top of the toolbar), a menu with PaintCanvas's version, input settings, a "Draw with the GPU" switch, keyboard shortcuts, settings import and export, a theme picker (light, dark or system) and a "New drawing" button. The drawing and the settings, including the theme, language and rendering (CPU or GPU), are kept in the browser, so they survive reloads. Below 600px wide, the toolbar and the layers rail sit over the canvas.
 - http://localhost:5190/elements.html: the base elements.
 
 To try it with a pen or touch on another device (e.g. a tablet) on the same network, run `pnpm dev --host` and open the network address it prints. This makes the server reachable by anyone on that network.

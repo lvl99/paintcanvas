@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { keepSideEffectImports } from "./vite.config.ts";
+import { buildInfo } from "./scripts/build-info.ts";
 
 /**
  * Resolve a path relative to this file.
@@ -8,12 +9,12 @@ import { keepSideEffectImports } from "./vite.config.ts";
 const fromHere = (path: string) =>
   fileURLToPath(new URL(path, import.meta.url));
 
-// Builds the demo pages (the PaintCanvas app and the UI elements page) as a static site in `.pages/app/`, for GitHub
-// Pages (see scripts/build-pages.ts). Paths are relative, so the site works from any address.
+// Serves the demo pages (`pnpm dev`), and builds them (the PaintCanvas app and the UI elements page) as a static site in
+// `.pages/app/`, for GitHub Pages (see scripts/build-pages.ts). Paths are relative, so the site works from any address.
 export default defineConfig({
   root: fromHere("demo"),
   base: "./",
-  plugins: [keepSideEffectImports()],
+  plugins: [keepSideEffectImports(), buildInfo()],
   build: {
     outDir: fromHere(".pages/app"),
     emptyOutDir: true,
