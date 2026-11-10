@@ -4,6 +4,8 @@ import {
   PAINTCANVAS_COMMIT,
   PAINTCANVAS_REPOSITORY_URL,
   PAINTCANVAS_VERSION,
+  UNKNOWN_COMMIT,
+  readCommit,
   versionText,
 } from "..";
 
@@ -23,5 +25,18 @@ describe("version", () => {
     expect(versionText("1.0.0", "abc1234")).toBe(
       "PaintCanvas v1.0.0 (abc1234)",
     );
+  });
+});
+
+describe("readCommit", () => {
+  it("should read the commit, or say it's unknown when it wasn't put in place", () => {
+    expect(readCommit(() => "abc1234")).toBe("abc1234");
+    expect(readCommit(() => "")).toBe(UNKNOWN_COMMIT);
+    expect(readCommit(() => undefined)).toBe(UNKNOWN_COMMIT);
+    expect(
+      readCommit(() => {
+        throw new ReferenceError("__PAINTCANVAS_COMMIT__ is not defined");
+      }),
+    ).toBe(UNKNOWN_COMMIT);
   });
 });

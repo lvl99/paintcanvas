@@ -9,8 +9,30 @@ declare const __PAINTCANVAS_COMMIT__: string;
 /** PaintCanvas's version, from its package.json, e.g. `0.6.0` */
 export const PAINTCANVAS_VERSION: string = version;
 
-/** The short hash of the commit PaintCanvas was built from, e.g. `ac12a0d` (`unknown` outside a git checkout) */
-export const PAINTCANVAS_COMMIT: string = __PAINTCANVAS_COMMIT__;
+/** What the commit is called when it's unknown */
+export const UNKNOWN_COMMIT = "unknown";
+
+/**
+ * Read the commit's hash, or `UNKNOWN_COMMIT` when it wasn't put in place (e.g. the source served or bundled without
+ * PaintCanvas's Vite config, where `__PAINTCANVAS_COMMIT__` is undefined).
+ *
+ * @example
+ * readCommit(() => "ac12a0d"); // "ac12a0d"
+ * readCommit(() => { throw new ReferenceError(); }); // "unknown"
+ */
+export const readCommit = (read: () => unknown): string => {
+  try {
+    const commit = read();
+    return typeof commit === "string" && commit ? commit : UNKNOWN_COMMIT;
+  } catch {
+    return UNKNOWN_COMMIT;
+  }
+};
+
+/** The short hash of the commit PaintCanvas was built from, e.g. `ac12a0d` (`unknown` when it can't be told) */
+export const PAINTCANVAS_COMMIT: string = readCommit(
+  () => __PAINTCANVAS_COMMIT__,
+);
 
 /** Where PaintCanvas's source code is */
 export const PAINTCANVAS_REPOSITORY_URL =
