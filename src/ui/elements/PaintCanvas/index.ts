@@ -87,7 +87,7 @@ const TAKE_OVER_CHOICE = "take-over";
  * does by default), the toolbar has no layers menu button.
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
- * rail@600"`), which the layout gives the side's `<pc-pane>`s (see `PcPane`): `docked` beside the canvas; `rail`, a
+ * floating@600"`), which the layout gives the side's `<pc-pane>`s (see `PcPane`): `docked` beside the canvas; `rail`, a
  * column of buttons (one per panel) that open each panel over the canvas; `floating`, the pane over the canvas as a
  * box that collapses to a button; or `overlay`, a rail over the canvas without a background (the canvas fills the
  * width behind it). Give side content in a `<pc-pane>` to have it follow the side's mode.

@@ -256,7 +256,7 @@ describe("paint-canvas", () => {
     layout.width = 500;
     await layout.updateComplete;
     expect(layout.hasAttribute("narrow")).toBe(true);
-    expect(layout.getAttribute("right-mode")).toBe("rail");
+    expect(layout.getAttribute("right-mode")).toBe("floating");
     layout.dispatchEvent(pointerEvent("pointerdown", 0, 0));
     expect(layout.input).toBe("mouse");
     layout.dispatchEvent(
@@ -272,9 +272,9 @@ describe("paint-canvas", () => {
     expect(layout.input).toBe("touch");
     await layout.updateComplete;
     expect(states.map((s) => [s.narrow, s.rightMode, s.input])).toEqual([
-      [true, "rail", "mouse"],
-      [true, "rail", "pen"],
-      [true, "rail", "touch"],
+      [true, "floating", "mouse"],
+      [true, "floating", "pen"],
+      [true, "floating", "touch"],
     ]);
     layout.requestUpdate();
     await layout.updateComplete;
@@ -328,15 +328,15 @@ describe("paint-canvas", () => {
     );
     const given = layout.querySelector<PcPane>("#given")!;
     const toolbar = query<PcToolbar>(layout, "pc-toolbar");
-    expect([given.mode, given.edge]).toEqual(["rail", "right"]);
-    expect([toolbar.mode, toolbar.edge]).toEqual(["rail", "left"]);
-    expect(query(layout, ".side.right").dataset.mode).toBe("rail");
+    expect([given.mode, given.edge]).toEqual(["floating", "right"]);
+    expect([toolbar.mode, toolbar.edge]).toEqual(["floating", "left"]);
+    expect(query(layout, ".side.right").dataset.mode).toBe("floating");
     layout.width = 1000;
     await layout.updateComplete;
     expect(given.mode).toBe("docked");
-    layout.rightModes = "floating";
+    layout.rightModes = "rail";
     await layout.updateComplete;
-    expect(given.mode).toBe("floating");
+    expect(given.mode).toBe("rail");
   });
 
   it("should keep the canvas clear of open floating panes", async () => {
