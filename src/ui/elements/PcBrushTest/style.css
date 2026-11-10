@@ -18,9 +18,6 @@ canvas {
 }
 .show-points {
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
 }
 /* "Clear": a red pill */
 button.pill.clear {

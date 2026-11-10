@@ -1,6 +1,7 @@
 import { css, html, nothing } from "lit";
 import { PcElement, defineElement, emit } from "../../base";
 import ChangeController from "../../ChangeController";
+import "../PcToggleCheckbox";
 import { languageName } from "../../../lib/i18n";
 import {
   isTouchDevice,
@@ -82,13 +83,7 @@ export class PcInputSettings extends PcElement {
         font-weight: bold;
       }
       .toggle {
-        display: flex;
         grid-column: 1 / -1;
-        gap: var(--pc-space-2);
-        align-items: center;
-      }
-      input[type="checkbox"] {
-        accent-color: var(--pc-accent);
       }
       input:focus-visible,
       select:focus-visible {
@@ -138,24 +133,21 @@ export class PcInputSettings extends PcElement {
       void this.translations.setLocale(locale);
   }
 
-  /** A checkbox for an on/off setting */
+  /** A switch for an on/off setting */
   private toggle(
     data: Readonly<InputSettingsData>,
     key: ToggleSetting,
     label: string,
   ) {
-    return html`<label class="toggle">
-      <input
-        type="checkbox"
-        name=${key}
-        .checked=${data[key]}
-        @change=${(e: Event) =>
-          this.settings?.update({
-            [key]: (e.target as HTMLInputElement).checked,
-          })}
-      />
+    return html`<pc-toggle-checkbox
+      class="toggle"
+      data-setting=${key}
+      .checked=${data[key]}
+      @change=${(e: CustomEvent<{ checked: boolean }>) =>
+        this.settings?.update({ [key]: e.detail.checked })}
+    >
       ${label}
-    </label>`;
+    </pc-toggle-checkbox>`;
   }
 
   /**

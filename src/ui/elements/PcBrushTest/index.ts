@@ -2,6 +2,7 @@ import { html, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
 import { PILLS_CSS } from "../../styles";
 import { PcElement, defineElement } from "../../base";
+import "../PcToggleCheckbox";
 import type { BrushConfig } from "../../../lib/brushes/types";
 import type BrushTipCache from "../../../lib/brushes/BrushTipCache";
 import StrokeEngine from "../../../lib/brushes/StrokeEngine";
@@ -244,15 +245,14 @@ export class PcBrushTest extends PcElement {
         <button type="button" class="pill clear" @click=${() => this.clear()}>
           ${this.t("paintCanvas.common.clear")}
         </button>
-        <label class="show-points">
-          <input
-            type="checkbox"
-            .checked=${this.showPoints}
-            @change=${(e: Event) =>
-              this.setShowPoints((e.target as HTMLInputElement).checked)}
-          />
+        <pc-toggle-checkbox
+          class="show-points"
+          size="s"
+          .checked=${this.showPoints}
+          @change=${(e: CustomEvent<{ checked: boolean }>) => this.setShowPoints(e.detail.checked)}
+        >
           ${this.t("paintCanvas.brushConfig.showStrokePoints")}
-        </label>
+        </pc-toggle-checkbox>
       </div>
     `;
   }

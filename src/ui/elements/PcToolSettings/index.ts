@@ -21,6 +21,7 @@ import type { TransformBox } from "../../../lib/transform/geometry";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/classes/Viewport";
 import { iconLabel } from "../../icons";
 import "../PcBrushSize";
+import "../PcToggleCheckbox";
 import "../PcNumberSlider";
 import "../PcPopover";
 import type { PcPopover } from "../PcPopover";
@@ -609,16 +610,14 @@ export class PcToolSettings extends PcElement {
           ${iconLabel(this.iconUrl(app.constrainProportions ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
         </label>
         ${side("height", this.t("paintCanvas.common.height"))}
-        <label>
-          <input
-            type="checkbox"
-            class="percent"
-            .checked=${this.percent}
-            @change=${(e: Event) =>
-              (this.percent = (e.target as HTMLInputElement).checked)}
-          />
+        <pc-toggle-checkbox
+          class="percent"
+          size="s"
+          .checked=${this.percent}
+          @change=${(e: CustomEvent<{ checked: boolean }>) => (this.percent = e.detail.checked)}
+        >
           ${this.t("paintCanvas.toolSettings.percent")}
-        </label>
+        </pc-toggle-checkbox>
         <button
           type="button"
           class="icon-button flip-horizontal"
