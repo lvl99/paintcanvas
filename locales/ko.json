@@ -163,6 +163,8 @@
   "paintCanvas.layers.alphaLock": "투명 픽셀 잠금",
   "paintCanvas.layers.blendMode": "혼합 모드",
   "paintCanvas.layers.actions": "레이어 작업",
+  "paintCanvas.layers.rename": "이름 바꾸기…",
+  "paintCanvas.layers.renameTitle": "레이어 이름 바꾸기",
   "paintCanvas.layers.reorder": "{name} 순서 변경: 드래그하거나 눌러서 작업 보기",
   "paintCanvas.layers.duplicate": "복제",
   "paintCanvas.layers.createMask": "마스크 만들기",

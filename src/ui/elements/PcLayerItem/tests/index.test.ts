@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import type { PcDialog } from "../../PcDialog";
 import type { PcContextMenu } from "../../PcContextMenu";
+import type { PcSliderRange } from "../../PcSliderRange";
 import {
   DRAG_THRESHOLD,
   LAYER_ACTIONS,
@@ -71,44 +72,113 @@ const runFromMenu = async (element: PcLayerItem, action: string) => {
 describe("pc-layer-item", () => {
   it("should render nothing without a stack and layer", async () => {
     const element = await mount<PcLayerItem>("pc-layer-item");
-    expect(queryAll(element, "input")).toHaveLength(0);
+    expect(queryAll(element, ".name")).toHaveLength(0);
     element.runAction("duplicate");
     expect(element.menuOpen).toBe(false);
   });
 
-  it("should show the layer's settings and bold the active layer's name", async () => {
+  it("should show the layer's name as text, marking the row while its layer is selected", async () => {
     const { element, stack } = await mountItem();
-    expect(query<HTMLInputElement>(element, ".name").value).toBe("Layer 2");
-    expect(query(element, ".name").classList.contains("active")).toBe(true);
+    const name = query(element, ".name");
+    expect([name.tagName, name.textContent, name.title]).toEqual([
+      "SPAN",
+      "Layer 2",
+      "Layer 2",
+    ]);
+    expect(element.active).toBe(true);
+    expect(element.hasAttribute("active")).toBe(true);
     stack.select(stack.layers[1]!.id);
     await element.updateComplete;
-    expect(query(element, ".name").classList.contains("active")).toBe(false);
+    expect(element.hasAttribute("active")).toBe(false);
   });
 
-  it("should select the layer when clicked", async () => {
+  it.each([
+    ".thumbnail",
+    ".name",
+    ".opacity",
+    "select",
+    ".alpha-lock",
+    ".visibility",
+  ])("should select the layer when %s is pressed", async (selector) => {
     const { element, stack, layer } = await mountItem();
     stack.select(stack.layers[1]!.id);
-    query(element, ".thumbnail").click();
+    query(element, selector).click();
     expect(stack.active).toBe(layer);
   });
 
-  it("should rename the layer, reverting empty names", async () => {
+  it("should select the layer when its handle is pressed, opening its actions", async () => {
+    const { element, stack, layer } = await mountItem();
+    stack.select(stack.layers[1]!.id);
+    handleButton(element).click();
+    await element.updateComplete;
+    expect([stack.active, element.menuOpen]).toEqual([layer, true]);
+  });
+
+  it("should not select a layer that's no longer in the stack, or from its dialogs", async () => {
+    const { element, stack, layer } = await mountItem();
+    const other = stack.layers[1]!;
+    element.runAction("delete");
+    await element.updateComplete;
+    stack.select(other.id);
+    query(element, "pc-dialog").click();
+    expect(stack.active).toBe(other);
+    stack.remove(layer.id);
+    query(element, ".thumbnail").click();
+    expect(stack.active).toBe(other);
+  });
+
+  it("should rename the layer from its actions, ignoring empty names and cancelling", async () => {
     const { element, layer } = await mountItem();
-    const input = query<HTMLInputElement>(element, ".name");
-    input.value = "Ink";
-    input.dispatchEvent(new Event("change"));
+    const prompt = vi
+      .fn()
+      .mockResolvedValueOnce(" Ink ")
+      .mockResolvedValueOnce("  ")
+      .mockResolvedValueOnce(null);
+    element.prompt = prompt;
+    await runFromMenu(element, "rename");
+    await vi.waitFor(() => expect(layer.name).toBe("Ink"));
+    expect(prompt).toHaveBeenCalledWith({
+      heading: "Rename layer",
+      label: "Layer name",
+      value: "Layer 2",
+      confirm: "Save",
+      cancel: "Cancel",
+    });
+    await element.updateComplete;
+    expect(query(element, ".name").textContent).toBe("Ink");
+    element.runAction("rename");
+    element.runAction("rename");
+    await vi.waitFor(() => expect(prompt).toHaveBeenCalledTimes(3));
+    await Promise.resolve();
     expect(layer.name).toBe("Ink");
-    input.value = "  ";
-    input.dispatchEvent(new Event("change"));
-    expect(layer.name).toBe("Ink");
-    expect(input.value).toBe("Ink");
+  });
+
+  it("should ask for the new name in a dialog by default", async () => {
+    const { element, layer } = await mountItem();
+    element.runAction("rename");
+    await element.updateComplete;
+    const dialog = await vi.waitFor(() =>
+      query<PcDialog>(element, "pc-dialog"),
+    );
+    expect(dialog.heading).toBe("Rename layer");
+    dialog.dispatchEvent(
+      new CustomEvent("pc-choose", { detail: { value: "cancel" } }),
+    );
+    await Promise.resolve();
+    expect(layer.name).toBe("Layer 2");
   });
 
   it("should change opacity, blend mode, alpha lock and visibility", async () => {
     const { element, layer } = await mountItem();
-    const opacity = query<HTMLInputElement>(element, "input[type=range]");
-    opacity.value = "40";
-    opacity.dispatchEvent(new Event("change"));
+    const opacity = query<PcSliderRange>(element, ".opacity");
+    expect([opacity.single, opacity.value, opacity.unit]).toEqual([
+      true,
+      100,
+      "%",
+    ]);
+    opacity.dispatchEvent(
+      new CustomEvent("pc-change", { detail: { low: 0, high: 40, value: 40 } }),
+    );
     const blend = query<HTMLSelectElement>(element, "select");
     blend.value = BlendMode.Multiply;
     blend.dispatchEvent(new Event("change"));
@@ -517,10 +587,14 @@ describe("pc-layer-item", () => {
     expect(menuTop(700, 900, 800)).toBe(MENU_MARGIN);
   });
 
-  it("should offer Create mask first in the context menu", async () => {
+  it("should offer Rename first, then Create mask, in the context menu", async () => {
     const { element } = await mountItem();
     await rightClick(element);
-    expect(menuItems(element)[0]!.textContent?.trim()).toBe("Create mask");
+    expect(
+      menuItems(element)
+        .slice(0, 2)
+        .map((item) => item.textContent?.trim()),
+    ).toEqual(["Rename…", "Create mask"]);
   });
 
   it("should show nothing without a layer", async () => {

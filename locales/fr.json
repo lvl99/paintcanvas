@@ -163,6 +163,8 @@
   "paintCanvas.layers.alphaLock": "Verrouillage alpha",
   "paintCanvas.layers.blendMode": "Mode de fusion",
   "paintCanvas.layers.actions": "Actions du calque",
+  "paintCanvas.layers.rename": "Renommer…",
+  "paintCanvas.layers.renameTitle": "Renommer le calque",
   "paintCanvas.layers.reorder": "Réorganiser {name} : faire glisser, ou appuyer pour les actions",
   "paintCanvas.layers.duplicate": "Dupliquer",
   "paintCanvas.layers.createMask": "Créer un masque",

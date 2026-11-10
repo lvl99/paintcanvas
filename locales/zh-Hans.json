@@ -163,6 +163,8 @@
   "paintCanvas.layers.alphaLock": "锁定透明像素",
   "paintCanvas.layers.blendMode": "混合模式",
   "paintCanvas.layers.actions": "图层操作",
+  "paintCanvas.layers.rename": "重命名…",
+  "paintCanvas.layers.renameTitle": "重命名图层",
   "paintCanvas.layers.reorder": "调整{name}的顺序：拖动，或按下以显示操作",
   "paintCanvas.layers.duplicate": "复制",
   "paintCanvas.layers.createMask": "创建蒙版",

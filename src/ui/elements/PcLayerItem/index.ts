@@ -1,4 +1,5 @@
 import { html, nothing, unsafeCSS } from "lit";
+import { live } from "lit/directives/live.js";
 import styles from "./style.css?inline";
 import { WINDOWS_CSS as theme } from "../../styles";
 import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
@@ -8,6 +9,9 @@ import { BlendMode, type default as Layer } from "../../../lib/classes/Layer";
 import type LayerStack from "../../../lib/classes/LayerStack";
 import { drawCheckerboard, fitSize } from "../../../lib/rendering/checkerboard";
 import "../PcDialog";
+import "../PcSliderRange";
+import type { RangeDetail } from "../PcSliderRange";
+import { askText, type PromptFn } from "../../ask";
 import "../PcContextMenu";
 import { MENU_MARGIN, menuTop } from "../PcContextMenu";
 import type { MenuItem } from "../PcMenu";
@@ -29,6 +33,7 @@ export const BLEND_MODE_OPTIONS: readonly {
 
 /** Actions in the reorder handle's context menu */
 export type LayerAction =
+  | "rename"
   | "mask"
   | "duplicate"
   | "merge"
@@ -42,6 +47,7 @@ export type LayerAction =
 /** Context menu options in display order, with the translation keys of their labels */
 export const LAYER_ACTIONS: readonly { action: LayerAction; label: string }[] =
   [
+    { action: "rename", label: "paintCanvas.layers.rename" },
     { action: "mask", label: "paintCanvas.layers.createMask" },
     { action: "duplicate", label: "paintCanvas.layers.duplicate" },
     { action: "merge", label: "paintCanvas.layers.mergeDown" },
@@ -146,7 +152,9 @@ export interface LayerDragDetail {
 export { MENU_MARGIN, menuTop };
 
 /**
- * One row in the layers menu: reorder handle, thumbnail and name (then opacity and blend mode under them), alpha lock (padlock) and visibility (eye) icons.
+ * One row in the layers menu: reorder handle, thumbnail and name (then opacity and blend mode under them), alpha lock
+ * (padlock) and visibility (eye) icons. Pressing anywhere on the row (its controls too) selects the layer, which is then
+ * shown with a purple background (`active`). "Rename…" in the actions menu asks for a new name.
  * Dragging the handle (with mouse, pen or touch) reorders the layer: the row fires {@link LAYER_DRAG_EVENT} and the
  * layers menu shows where it will land. Clicking or tapping the handle, pressing Enter or Space on it, or right-clicking
  * it opens the layer's actions menu (which can also reorder it). Cmd/Ctrl + click on the thumbnail or name (or "Create
@@ -166,6 +174,7 @@ export class PcLayerItem extends PcElement {
     confirming: { state: true },
     dragging: { type: Boolean, reflect: true },
     dropAction: { attribute: "drop-action", reflect: true },
+    active: { type: Boolean, reflect: true },
   };
 
   static override styles = [
@@ -188,6 +197,12 @@ export class PcLayerItem extends PcElement {
 
   /** The action the user is being asked to confirm, if any */
   declare confirming?: ConfirmedAction;
+
+  /** Whether this row's layer is the selected one (shown with a purple background) */
+  declare active: boolean;
+
+  /** Asks the user for the layer's new name (replaceable for tests) */
+  prompt: PromptFn = (options) => askText(this.renderRoot, options);
 
   /** Whether this row's layer is being dragged (set by the layers menu; the row floats with the pointer) */
   declare dragging: boolean;
@@ -215,7 +230,21 @@ export class PcLayerItem extends PcElement {
     super();
     this.menuOpen = false;
     this.dragging = false;
+    this.active = false;
+    this.addEventListener("click", this.onClick);
   }
+
+  /** Pressing anywhere on the row selects its layer, except in the dialogs it shows (e.g. after deleting it) */
+  private readonly onClick = (event: MouseEvent): void => {
+    const { stack, layer } = this;
+    if (!stack || !layer || !stack.layers.includes(layer)) return;
+    const fromDialog = event
+      .composedPath()
+      .some(
+        (target) => target instanceof Element && target.matches("pc-dialog"),
+      );
+    if (!fromDialog && stack.active !== layer) stack.select(layer.id);
+  };
 
   /**
    * Run a context menu action. Merging down, clearing and deleting ask for confirmation first (see `confirmed`).
@@ -225,6 +254,9 @@ export class PcLayerItem extends PcElement {
     this.menuOpen = false;
     if (!stack || !layer || !this.canRun(action)) return;
     switch (action) {
+      case "rename":
+        void this.rename(stack, layer);
+        break;
       case "mask":
         this.requestMask(layer, { shiftKey: false, altKey: false });
         break;
@@ -424,10 +456,9 @@ export class PcLayerItem extends PcElement {
   }
 
   /**
-   * Clicking the row selects the layer. Cmd/Ctrl + click on the thumbnail or name also makes a mask from the layer's alpha.
+   * Cmd/Ctrl + click on the thumbnail or name makes a mask from the layer's alpha (the click also selects the layer).
    */
-  private onRowClick(event: MouseEvent, stack: LayerStack, layer: Layer): void {
-    stack.select(layer.id);
+  private onDetailsClick(event: MouseEvent, layer: Layer): void {
     if (!event.metaKey && !event.ctrlKey) return;
     const target = event.composedPath()[0];
     if (!(target instanceof Element) || !target.matches(".thumbnail, .name"))
@@ -437,15 +468,25 @@ export class PcLayerItem extends PcElement {
   }
 
   /**
-   * Rename a layer when the name input changes. Empty names are reverted.
+   * Ask for the layer's new name and use it. Cancelling or an empty name leaves the name as it was.
    */
-  private onRename(event: Event, stack: LayerStack, layer: Layer): void {
-    const input = event.target as HTMLInputElement;
-    try {
-      stack.rename(layer.id, input.value);
-    } catch {
-      input.value = layer.name;
-    }
+  private async rename(stack: LayerStack, layer: Layer): Promise<void> {
+    const name = (
+      await this.prompt({
+        heading: this.t("paintCanvas.layers.renameTitle"),
+        label: this.t("paintCanvas.layers.name"),
+        value: layer.name,
+        confirm: this.t("paintCanvas.common.save"),
+        cancel: this.t("paintCanvas.common.cancel"),
+      })
+    )?.trim();
+    if (name && stack.layers.includes(layer)) stack.rename(layer.id, name);
+  }
+
+  protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
+    super.willUpdate(changed);
+    this.active =
+      this.layer !== undefined && this.stack?.active.id === this.layer.id;
   }
 
   override updated(): void {
@@ -513,7 +554,6 @@ export class PcLayerItem extends PcElement {
   override render() {
     const { stack, layer } = this;
     if (!stack || !layer) return html``;
-    const active = stack.active.id === layer.id;
     return html`
       <pc-context-menu
         class="handle"
@@ -531,26 +571,21 @@ export class PcLayerItem extends PcElement {
       >
       <div
         class="details"
-        @click=${(e: MouseEvent) => this.onRowClick(e, stack, layer)}
+        @click=${(e: MouseEvent) => this.onDetailsClick(e, layer)}
       >
         <canvas class="thumbnail" aria-hidden="true"></canvas>
-        <input
-          class="name ${active ? "active" : ""}"
-          aria-label=${this.t("paintCanvas.layers.name")}
-          .value=${layer.name}
-          @change=${(e: Event) => this.onRename(e, stack, layer)}
-        />
-        <input
-          type="range"
+        <span class="name" title=${layer.name}>${layer.name}</span>
+        <pc-slider-range
+          single
+          class="opacity"
+          label=${this.t("paintCanvas.common.opacity")}
           min="0"
           max="100"
-          aria-label=${this.t("paintCanvas.common.opacity")}
-          .value=${String(Math.round(layer.opacity * 100))}
-          @change=${(e: Event) =>
-            stack.update(layer.id, {
-              opacity: Number((e.target as HTMLInputElement).value) / 100,
-            })}
-        />
+          unit="%"
+          .value=${live(Math.round(layer.opacity * 100))}
+          @pc-change=${(e: CustomEvent<RangeDetail>) =>
+            stack.update(layer.id, { opacity: e.detail.value / 100 })}
+        ></pc-slider-range>
         <select
           aria-label=${this.t("paintCanvas.layers.blendMode")}
           @change=${(e: Event) =>

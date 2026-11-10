@@ -163,6 +163,8 @@
   "paintCanvas.layers.alphaLock": "Alpha lock",
   "paintCanvas.layers.blendMode": "Blending mode",
   "paintCanvas.layers.actions": "Layer actions",
+  "paintCanvas.layers.rename": "Rename…",
+  "paintCanvas.layers.renameTitle": "Rename layer",
   "paintCanvas.layers.reorder": "Reorder {name}: drag, or press for actions",
   "paintCanvas.layers.duplicate": "Duplicate",
   "paintCanvas.layers.createMask": "Create mask",

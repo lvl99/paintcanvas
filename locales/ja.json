@@ -163,6 +163,8 @@
   "paintCanvas.layers.alphaLock": "透明部分をロック",
   "paintCanvas.layers.blendMode": "描画モード",
   "paintCanvas.layers.actions": "レイヤーの操作",
+  "paintCanvas.layers.rename": "名前を変更…",
+  "paintCanvas.layers.renameTitle": "レイヤー名を変更",
   "paintCanvas.layers.reorder": "{name}の並べ替え：ドラッグ、または押して操作を表示",
   "paintCanvas.layers.duplicate": "複製",
   "paintCanvas.layers.createMask": "マスクを作成",
