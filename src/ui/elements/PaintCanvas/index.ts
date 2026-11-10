@@ -76,7 +76,8 @@ const TAKE_OVER_CHOICE = "take-over";
  * - `left`: `<pc-toolbar>` (a pane) by default; toolbars in the sides are minimised (their tools one button that opens a
  *   menu of them) while the layout is narrow
  * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) and, at its end,
- *   `<pc-clipboard-tools>` (cut, copy and paste; a ⋮ menu while the layout is narrow) by default
+ *   `<pc-clipboard-tools>` (cut, copy and paste; a ⋮ menu while the layout is narrow or the window is narrower than
+ *   900px) by default
  * - `right`: a `<pc-pane>` with `<pc-panel-layers>` by default
  * - `center`: `<pc-canvas>` by default
  * - `overlay`: drawn over the canvas; `<pc-canvas-map>` by default
