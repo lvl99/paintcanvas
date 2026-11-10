@@ -1,6 +1,7 @@
 // Preview of PaintCanvas's base elements: switch language and theme to check them.
 import "../src/ui";
 import { languageName, translations } from "../src/lib/i18n";
+import type { PcButtonMenu } from "../src/ui/elements/PcButtonMenu";
 import type { PcContextMenu } from "../src/ui/elements/PcContextMenu";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
 import type { PcDialogWindow } from "../src/ui/elements/PcDialogWindow";
@@ -94,3 +95,9 @@ menu.addEventListener("pc-select", (event) => {
   alphaLock = !alphaLock;
   menu.items = menuItems();
 });
+
+find<PcButtonMenu>("#button-menu").items = [
+  { value: "cut", label: "Cut" },
+  { value: "copy", label: "Copy" },
+  { value: "paste", label: "Paste", disabled: true },
+];

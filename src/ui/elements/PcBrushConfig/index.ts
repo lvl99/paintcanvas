@@ -15,6 +15,7 @@ import { live } from "lit/directives/live.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { PcElement, defineElement } from "../../base";
 import "../PcBrushTest";
+import "../PcToggleCheckbox";
 import "../PcDialogWindow";
 import "../PcSliderRange";
 import "../PcProfileEditor";
@@ -641,19 +642,15 @@ export class PcBrushConfig extends PcElement {
             >
             ${this.single("spacing", this.t("paintCanvas.brushConfig.spacing"), draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
           </div>
-          <label>
-            <input
-              type="checkbox"
-              class="snap"
-              .checked=${draft.snapToPixelGrid ?? false}
-              ?disabled=${this.busy}
-              @change=${(e: Event) =>
-                this.change({
-                  snapToPixelGrid: (e.target as HTMLInputElement).checked,
-                })}
-            />
+          <pc-toggle-checkbox
+            class="snap"
+            .checked=${draft.snapToPixelGrid ?? false}
+            ?disabled=${this.busy}
+            @change=${(e: CustomEvent<{ checked: boolean }>) =>
+              this.change({ snapToPixelGrid: e.detail.checked })}
+          >
             ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
-          </label>
+          </pc-toggle-checkbox>
         </div>
         ${
           this.editingId

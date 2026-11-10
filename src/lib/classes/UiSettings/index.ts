@@ -3,6 +3,14 @@ export const THEMES = ["light", "dark", "system"] as const;
 
 export type Theme = (typeof THEMES)[number];
 
+/**
+ * Where canvases draw: `cpu` keeps their pixels in regular memory (reading and saving them never waits for the GPU),
+ * `gpu` asks the browser to keep them on the GPU (drawing may be quicker; the browser can still use the CPU)
+ */
+export const RENDERINGS = ["cpu", "gpu"] as const;
+
+export type Rendering = (typeof RENDERINGS)[number];
+
 /** Longest locale tag kept in UI settings (characters) */
 export const MAX_LOCALE_LENGTH = 35;
 
@@ -18,6 +26,16 @@ export const LOCALE_PATTERN = "^[A-Za-z0-9-]+$";
  */
 export const isTheme = (value: unknown): value is Theme =>
   THEMES.includes(value as Theme);
+
+/**
+ * Whether a value is one of the renderings.
+ *
+ * @example
+ * isRendering("gpu"); // true
+ * isRendering("webgl"); // false
+ */
+export const isRendering = (value: unknown): value is Rendering =>
+  RENDERINGS.includes(value as Rendering);
 
 /**
  * Whether a value can be a locale tag (letters, digits and hyphens, at most `MAX_LOCALE_LENGTH` characters).
@@ -37,7 +55,18 @@ export interface UiSettingsData {
   theme: Theme;
   /** The language's locale tag, e.g. `fr`, or undefined to follow the device's languages */
   locale?: string;
+  /**
+   * Where canvases draw (`cpu` by default). Browsers fix this when a canvas is made, so a change applies the next time
+   * the canvas starts (e.g. after reloading the page; see `PaintCanvasOptions.rendering`).
+   */
+  rendering: Rendering;
 }
+
+/** UI settings used for anything not given */
+export const DEFAULT_UI_SETTINGS: Readonly<UiSettingsData> = {
+  theme: "system",
+  rendering: "cpu",
+};
 
 /** UI settings the UI can show and change: PaintCanvas's `UiSettings`, or anything with the same data and `update` */
 export interface UiSettingsLike extends EventTarget {
@@ -50,7 +79,8 @@ export interface UiSettingsLike extends EventTarget {
  * or invalid. Other properties are left out.
  *
  * @example
- * sanitiseUiSettings({ theme: "dark", locale: 42 }, { theme: "system" }); // { theme: "dark" }
+ * sanitiseUiSettings({ theme: "dark", locale: 42 }, { theme: "system", rendering: "cpu" });
+ * // { theme: "dark", rendering: "cpu" }
  */
 export const sanitiseUiSettings = (
   input: unknown,
@@ -61,11 +91,16 @@ export const sanitiseUiSettings = (
   ) as Record<string, unknown>;
   const theme = isTheme(value.theme) ? value.theme : defaults.theme;
   const locale = isLocaleTag(value.locale) ? value.locale : defaults.locale;
-  return locale === undefined ? { theme } : { theme, locale };
+  const rendering = isRendering(value.rendering)
+    ? value.rendering
+    : defaults.rendering;
+  return locale === undefined
+    ? { theme, rendering }
+    : { theme, locale, rendering };
 };
 
 /**
- * The user's interface choices: the theme and the language. Kept in memory; the implementer saves and restores them
+ * The user's interface choices: the theme, the language and where canvases draw. Kept in memory; the implementer saves and restores them
  * with the other app settings (see `SettingsAutosave`), and the UI shows and applies them (e.g. `<pc-theme-picker>` and
  * `<pc-input-settings>`).
  *
@@ -81,7 +116,7 @@ export default class UiSettings extends EventTarget {
 
   constructor(initial?: unknown) {
     super();
-    this.values = sanitiseUiSettings(initial, { theme: "system" });
+    this.values = sanitiseUiSettings(initial, DEFAULT_UI_SETTINGS);
   }
 
   /** Current settings (read-only copy) */
@@ -100,7 +135,11 @@ export default class UiSettings extends EventTarget {
       { ...this.values, ...changes },
       this.values,
     );
-    if (next.theme === this.values.theme && next.locale === this.values.locale)
+    const keys = Object.keys(next) as (keyof UiSettingsData)[];
+    if (
+      keys.length === Object.keys(this.values).length &&
+      keys.every((key) => next[key] === this.values[key])
+    )
       return;
     this.values = next;
     this.dispatchEvent(new Event("change"));

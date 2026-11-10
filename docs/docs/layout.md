@@ -86,7 +86,7 @@ Each side (`left` and `right`) is shown in one of four modes, chosen by the layo
 - `floating`: the pane floats over the canvas as a box that starts collapsed to a button.
 - `overlay`: a rail over the canvas, which fills the width behind it. The pane has no background; each button has its own, and presses between them reach the canvas. Its panels stay solid. The toolbar's own panels (e.g. the brush presets) open beside a left overlay. When fitting the drawing, the canvas keeps it clear of the overlay.
 
-Set the rules with `left-modes` and `right-modes`: a mode, then `mode@width` for layouts narrower than that width. The default is `"docked, rail@600"`.
+Set the rules with `left-modes` and `right-modes`: a mode, then `mode@width` for layouts narrower than that width. The default is `"docked, floating@600"`.
 
 ```html
 <paint-canvas right-modes="docked, rail@800, floating@400"></paint-canvas>
@@ -147,7 +147,7 @@ Key presses are matched on keyboards with any layout:
 
 ## Keeping the user's settings
 
-With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette, the foreground and background colours, the user's own profile graphs (`canvas.profiles`, a `ProfileGraphs`), and the theme and language (`canvas.ui`, a `UiSettings`). Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen.
+With a `settings-store` name, the layout keeps the user's app settings in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the colour palette, the foreground and background colours, the user's own profile graphs (`canvas.profiles`, a `ProfileGraphs`), and the theme, language and rendering (`canvas.ui`, a `UiSettings`). Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen. The rendering (CPU or GPU) is also kept in `localStorage`, so the canvas the layout makes draws where the user last chose; a change applies after reloading the page (see [Drawing on the CPU or the GPU](engine.md#drawing-on-the-cpu-or-the-gpu)).
 
 ```html
 <paint-canvas settings-store="default"></paint-canvas>

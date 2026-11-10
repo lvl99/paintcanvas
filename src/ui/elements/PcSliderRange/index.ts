@@ -103,9 +103,10 @@ export class PcSliderRange extends PcElement {
         border-radius: var(--pc-radius-pill);
         transform: translateY(-50%);
       }
+      /* The whole range: the same area the fill covers from min to max */
       .rail {
-        left: calc(var(--pc-range-thumb) / -2);
-        right: calc(var(--pc-range-thumb) / -2);
+        left: 0;
+        right: 0;
         background: var(--pc-border);
       }
       .fill {

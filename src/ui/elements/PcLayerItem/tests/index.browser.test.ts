@@ -27,7 +27,7 @@ describe("layer rows in a real browser", () => {
     const rowBox = row.getBoundingClientRect();
     expect(rowBox.right).toBeLessThanOrEqual(menuBox.right);
     for (const part of row.shadowRoot!.querySelectorAll(
-      ".name, select, .visibility",
+      ".name, .opacity, select, .visibility",
     ))
       expect(part.getBoundingClientRect().right).toBeLessThanOrEqual(
         rowBox.right,
@@ -35,8 +35,9 @@ describe("layer rows in a real browser", () => {
     // Still wide enough to read the chosen blend mode's start, and the opacity slider usable
     const select = row.shadowRoot!.querySelector("select")!;
     expect(select.getBoundingClientRect().width).toBeGreaterThanOrEqual(70);
-    const slider = row.shadowRoot!.querySelector("input[type=range]")!;
-    expect(slider.getBoundingClientRect().width).toBeGreaterThanOrEqual(60);
+    const slider = row.shadowRoot!.querySelector(".opacity")!;
+    const track = slider.shadowRoot!.querySelector(".track")!;
+    expect(track.getBoundingClientRect().width).toBeGreaterThanOrEqual(60);
     menu.remove();
   });
 });

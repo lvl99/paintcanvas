@@ -1,10 +1,8 @@
-import { css, html, nothing, unsafeCSS } from "lit";
+import { css, html, nothing } from "lit";
 import { PcElement, defineElement } from "../../base";
 import ChangeController from "../../ChangeController";
-import { PILLS_CSS } from "../../styles";
 import PaintCanvas, { Tool } from "../../../lib/classes/PaintCanvas";
-import type { MenuItem } from "../PcMenu";
-import "../PcContextMenu";
+import "../PcButtonMenu";
 
 /** The tools that cut, copy and paste are shown for: the brush, eraser, lassos and Move tool */
 export const CLIPBOARD_TOOLS: readonly Tool[] = [
@@ -16,6 +14,9 @@ export const CLIPBOARD_TOOLS: readonly Tool[] = [
   Tool.FreeformLasso,
   Tool.Move,
 ];
+
+/** Window width (CSS pixels) below which the clipboard tools are one ⋮ menu */
+export const CLIPBOARD_MENU_BELOW = 900;
 
 /** A clipboard action: its name (class and menu value), label, whether it can be done, and what it does */
 interface ClipboardAction {
@@ -29,7 +30,8 @@ interface ClipboardAction {
  * Cut, copy, copy merged and paste buttons for the canvas's masked image data, shown for the brush, eraser, lassos and
  * Move tool (see `CLIPBOARD_TOOLS`). "Copy merged" copies the shown layers mixed as shown (see `PaintCanvas.copyMerged`).
  * Cut and both copies work while there's a mask and no transform is pending; paste while there's copied image data.
- * While `narrow`, they're one ⋮ menu (`pc-context-menu`) instead.
+ * They're one ⋮ menu instead while the window is narrower than `CLIPBOARD_MENU_BELOW` (900px), or while `narrow` (see
+ * `pc-button-menu`).
  *
  * `<paint-canvas>` puts it at the end of its top pane, after the tool settings.
  *
@@ -45,13 +47,11 @@ export class PcClipboardTools extends PcElement {
 
   static override styles = [
     PcElement.styles,
-    unsafeCSS(PILLS_CSS),
     css`
       :host {
         display: flex;
         flex: none;
         align-items: center;
-        gap: 8px;
         padding: 4px 8px;
         background: var(--pc-bar);
         border-bottom: 1px solid var(--pc-surface-active);
@@ -64,7 +64,7 @@ export class PcClipboardTools extends PcElement {
 
   declare app?: PaintCanvas;
 
-  /** Whether the buttons are one ⋮ menu (e.g. while the layout is narrow) */
+  /** Whether the buttons are one ⋮ menu whatever the window's width (e.g. while the layout is narrow) */
   declare narrow: boolean;
 
   private changes = new ChangeController(this, () =>
@@ -116,29 +116,21 @@ export class PcClipboardTools extends PcElement {
     const app = this.app;
     if (!app || this.hidden) return nothing;
     const actions = this.actions(app);
-    if (this.narrow)
-      return html`<pc-context-menu
-        class="more"
-        label=${this.t("paintCanvas.toolSettings.moreActions")}
-        .items=${actions.map(({ name, label, disabled }): MenuItem => ({
-          value: name,
-          label,
-          disabled,
-        }))}
-        @pc-select=${(event: CustomEvent<{ value: string }>) =>
-          actions.find((action) => action.name === event.detail.value)?.run()}
-      ></pc-context-menu>`;
-    return actions.map(
-      (action) =>
-        html`<button
-          type="button"
-          class="pill-s ${action.name}"
-          ?disabled=${action.disabled}
-          @click=${action.run}
-        >
-          ${action.label}
-        </button>`,
-    );
+    return html`<pc-button-menu
+      size="pill-s"
+      label=${this.t("paintCanvas.toolSettings.moreActions")}
+      menu-below=${CLIPBOARD_MENU_BELOW}
+      ?menu=${this.narrow}
+      .items=${actions.map(({ name, label, disabled }) => ({
+        value: name,
+        label,
+        disabled,
+      }))}
+      @pc-select=${(event: CustomEvent<{ value: string }>) => {
+        event.stopPropagation();
+        actions.find((action) => action.name === event.detail.value)?.run();
+      }}
+    ></pc-button-menu>`;
   }
 }
 

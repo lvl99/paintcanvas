@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { globSync, readFileSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
+import { buildInfo } from "./scripts/build-info.ts";
 
 // Every module the package exports (see `exports` in package.json): the engine (`@lvl99dotcom/paintcanvas`), the optional UI
 // (`@lvl99dotcom/paintcanvas/ui`), each engine and UI folder (`@lvl99dotcom/paintcanvas/lib/*`, `@lvl99dotcom/paintcanvas/ui/*`) and the test helpers
@@ -44,7 +45,7 @@ export const keepSideEffectImports = (): Plugin => ({
 // Builds PaintCanvas as ES modules in `dist/`, one file per source file in the same folders as `src/`, so each exported
 // path has its own file and implementers' bundlers only include what they import
 export default defineConfig({
-  plugins: [copyValidatorTypes(), keepSideEffectImports()],
+  plugins: [copyValidatorTypes(), keepSideEffectImports(), buildInfo()],
   build: {
     lib: { entry: entries, formats: ["es"] },
     rolldownOptions: {

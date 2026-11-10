@@ -25,6 +25,7 @@ import Transformer, {
 import { boxBounds } from "../../transform/geometry";
 import Layer, {
   createMemoryCanvas,
+  createOffscreenCanvas,
   type BlendMode,
   type CanvasFactory,
   type LayerConfig,
@@ -41,7 +42,7 @@ import {
 import { BRUSH_PRESET_FILE_FORMAT } from "../../presets";
 import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
 import InputSettings from "../InputSettings";
-import UiSettings from "../UiSettings";
+import UiSettings, { DEFAULT_UI_SETTINGS, type Rendering } from "../UiSettings";
 import Palette from "../Palette";
 import ProfileGraphs from "../ProfileGraphs";
 import ShortcutSettings from "../ShortcutSettings";
@@ -243,9 +244,15 @@ export interface PaintCanvasOptions {
   /** Most layers the user can have (default `DEFAULT_MAX_LAYERS`) */
   maxLayers?: number;
   /**
-   * Creates the canvases the engine draws in: layers, stroke buffers, masks and copies. `createMemoryCanvas` by default,
-   * keeping pixels in regular memory so saving and copying don't stall phones; pass `createOffscreenCanvas` to keep them
-   * on the GPU instead (replaceable for tests).
+   * Where the canvases draw (`cpu` by default): `cpu` keeps their pixels in regular memory (`createMemoryCanvas`) so
+   * saving and copying don't stall phones; `gpu` asks the browser to keep them on the GPU (`createOffscreenCanvas`).
+   * Browsers fix this when a canvas is made, so it can't change while the canvas runs: to follow the user's choice
+   * (`ui.data.rendering`), pass the one they made last time (`<paint-canvas>` does this with its `settings-store`).
+   */
+  rendering?: Rendering;
+  /**
+   * Creates the canvases the engine draws in: layers, stroke buffers, masks and copies. Chosen by `rendering` unless
+   * given (replaceable for tests).
    */
   createCanvas?: CanvasFactory;
   /** Where custom brush presets are kept (defaults to keeping them in memory only) */
@@ -310,8 +317,8 @@ export default class PaintCanvas extends EventTarget {
   /** How the user's input devices control the canvas (scrolling, pinching, touch gestures, focus pen mode) */
   readonly input = new InputSettings();
 
-  /** The user's interface choices (theme and language), kept with the other app settings */
-  readonly ui = new UiSettings();
+  /** The user's interface choices (theme, language and where canvases draw), kept with the other app settings */
+  readonly ui: UiSettings;
 
   /** The user's saved colours, shown as swatches */
   readonly palette = new Palette();
@@ -441,6 +448,9 @@ export default class PaintCanvas extends EventTarget {
   // Send the changes soon after the user's layers change
   private readonly onLayersChangeToSend = () => this.sender?.schedule();
 
+  /** Where the canvases draw, chosen when the canvas started (the user's choice for next time is `ui.data.rendering`) */
+  readonly rendering: Rendering;
+
   /** Creates the canvases the app draws on (fake ones in tests) */
   readonly createCanvas: CanvasFactory;
 
@@ -479,7 +489,11 @@ export default class PaintCanvas extends EventTarget {
       this.listCustomPresets(),
     );
     void this.customPresets.load().catch(() => undefined);
-    this.createCanvas = options.createCanvas ?? createMemoryCanvas;
+    this.rendering = options.rendering ?? DEFAULT_UI_SETTINGS.rendering;
+    this.ui = new UiSettings({ rendering: this.rendering });
+    this.createCanvas =
+      options.createCanvas ??
+      (this.rendering === "gpu" ? createOffscreenCanvas : createMemoryCanvas);
     this.systemClipboard =
       options.systemClipboard === null
         ? undefined

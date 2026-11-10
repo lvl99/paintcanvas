@@ -8,6 +8,9 @@ import IndexedDbLayerStore, {
   DEFAULT_SETTINGS_NAME,
   IndexedDbSettingsStore,
   SAVED_DRAWING_VERSION,
+  loadRenderingChoice,
+  renderingChoiceKey,
+  saveRenderingChoice,
   type SavedDrawing,
 } from "..";
 import { BlendMode } from "../../classes/Layer";
@@ -287,5 +290,45 @@ describe("IndexedDbSettingsStore", () => {
       request.onblocked = () => reject(new Error("Blocked"));
     });
     await expect(store.load()).rejects.toBeDefined();
+  });
+});
+
+describe("loadRenderingChoice and saveRenderingChoice", () => {
+  /** Browser storage kept in a map */
+  const mapStorage = () => {
+    const items = new Map<string, string>();
+    return {
+      items,
+      getItem: (key: string) => items.get(key) ?? null,
+      setItem: (key: string, value: string) => void items.set(key, value),
+    };
+  };
+
+  it("should keep the rendering under the settings' name", () => {
+    const storage = mapStorage();
+    expect(loadRenderingChoice("demo", storage)).toBeUndefined();
+    saveRenderingChoice("demo", "gpu", storage);
+    expect(storage.items.get(renderingChoiceKey("demo"))).toBe("gpu");
+    expect(renderingChoiceKey("demo")).toBe("paintcanvas-rendering:demo");
+    expect(loadRenderingChoice("demo", storage)).toBe("gpu");
+    expect(loadRenderingChoice(undefined, storage)).toBeUndefined();
+    storage.items.set(renderingChoiceKey(DEFAULT_SETTINGS_NAME), "webgl");
+    expect(loadRenderingChoice(undefined, storage)).toBeUndefined();
+  });
+
+  it("should do without storage that's missing or can't be used", () => {
+    const broken = {
+      getItem: () => {
+        throw new Error("Blocked");
+      },
+      setItem: () => {
+        throw new Error("Blocked");
+      },
+    };
+    expect(loadRenderingChoice("demo", broken)).toBeUndefined();
+    expect(() => saveRenderingChoice("demo", "gpu", broken)).not.toThrow();
+    // This file runs in Node, which has no `localStorage`
+    expect(loadRenderingChoice("demo")).toBeUndefined();
+    expect(() => saveRenderingChoice("demo", "gpu")).not.toThrow();
   });
 });

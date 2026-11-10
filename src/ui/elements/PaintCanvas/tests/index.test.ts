@@ -13,8 +13,10 @@ import type { PcPanelLayers } from "../../PcPanelLayers";
 import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { createFakeLocks } from "../../../../testing/locks";
+import { createRecordingContext } from "../../../../testing/recordingContext";
 import IndexedDbLayerStore, {
   IndexedDbSettingsStore,
+  loadRenderingChoice,
 } from "../../../../lib/storage";
 import {
   AUTOSAVE_ERROR_EVENT,
@@ -256,7 +258,7 @@ describe("paint-canvas", () => {
     layout.width = 500;
     await layout.updateComplete;
     expect(layout.hasAttribute("narrow")).toBe(true);
-    expect(layout.getAttribute("right-mode")).toBe("rail");
+    expect(layout.getAttribute("right-mode")).toBe("floating");
     layout.dispatchEvent(pointerEvent("pointerdown", 0, 0));
     expect(layout.input).toBe("mouse");
     layout.dispatchEvent(
@@ -272,9 +274,9 @@ describe("paint-canvas", () => {
     expect(layout.input).toBe("touch");
     await layout.updateComplete;
     expect(states.map((s) => [s.narrow, s.rightMode, s.input])).toEqual([
-      [true, "rail", "mouse"],
-      [true, "rail", "pen"],
-      [true, "rail", "touch"],
+      [true, "floating", "mouse"],
+      [true, "floating", "pen"],
+      [true, "floating", "touch"],
     ]);
     layout.requestUpdate();
     await layout.updateComplete;
@@ -328,15 +330,15 @@ describe("paint-canvas", () => {
     );
     const given = layout.querySelector<PcPane>("#given")!;
     const toolbar = query<PcToolbar>(layout, "pc-toolbar");
-    expect([given.mode, given.edge]).toEqual(["rail", "right"]);
-    expect([toolbar.mode, toolbar.edge]).toEqual(["rail", "left"]);
-    expect(query(layout, ".side.right").dataset.mode).toBe("rail");
+    expect([given.mode, given.edge]).toEqual(["floating", "right"]);
+    expect([toolbar.mode, toolbar.edge]).toEqual(["floating", "left"]);
+    expect(query(layout, ".side.right").dataset.mode).toBe("floating");
     layout.width = 1000;
     await layout.updateComplete;
     expect(given.mode).toBe("docked");
-    layout.rightModes = "floating";
+    layout.rightModes = "rail";
     await layout.updateComplete;
-    expect(given.mode).toBe("floating");
+    expect(given.mode).toBe("rail");
   });
 
   it("should keep the canvas clear of open floating panes", async () => {
@@ -510,6 +512,39 @@ describe("paint-canvas", () => {
     await second.layout.settingsAutosave?.ready;
     expect(second.app.palette.colours).toEqual(["#123456"]);
     expect(second.app.shortcuts.combo("tool-brush")).toEqual({ key: "p" });
+  });
+
+  it("should keep the rendering chosen with the app settings, and make its own canvas draw there", async () => {
+    const name = `rendering-${crypto.randomUUID()}`;
+    const { layout, app } = await setup();
+    layout.settingsStore = name;
+    await layout.updateComplete;
+    app.ui.update({ rendering: "gpu" });
+    expect(loadRenderingChoice(name)).toBe("gpu");
+    // Removing the name stops keeping it
+    layout.settingsStore = undefined;
+    await layout.updateComplete;
+    app.ui.update({ rendering: "cpu" });
+    expect(loadRenderingChoice(name)).toBe("gpu");
+    layout.remove();
+    vi.stubGlobal(
+      "OffscreenCanvas",
+      class {
+        getContext() {
+          return createRecordingContext().ctx;
+        }
+      },
+    );
+    const own = document.createElement("paint-canvas") as PaintCanvasElement;
+    own.setAttribute("settings-store", name);
+    document.body.append(own);
+    expect(own.app?.rendering).toBe("gpu");
+    own.remove();
+    const plain = document.createElement("paint-canvas") as PaintCanvasElement;
+    document.body.append(plain);
+    expect(plain.app?.rendering).toBe("cpu");
+    plain.remove();
+    vi.unstubAllGlobals();
   });
 
   it("should show a toast when the app settings can't be kept", async () => {

@@ -75,6 +75,9 @@
         <pc-icon-toggle icon="focusPen" label="Focus pen mode"></pc-icon-toggle>
       </pc-button-group>
       <pc-toggle-checkbox checked>Pinch to zoom</pc-toggle-checkbox>
+      <pc-toggle-checkbox size="s"
+        >Show stroke points (small)</pc-toggle-checkbox
+      >
       <pc-slider label="Opacity" value="50" unit="%"></pc-slider>
       <pc-slider-range
         label="Width"
@@ -102,6 +105,13 @@
         >Focus pen mode stops fingers and palms from drawing.</pc-info-tip
       >
       <pc-context-menu id="menu" label="Layer actions"></pc-context-menu>
+      <!-- A ⋮ menu instead of buttons in windows narrower than 900px -->
+      <pc-button-menu
+        id="button-menu"
+        label="More actions"
+        size="pill-s"
+        menu-below="900"
+      ></pc-button-menu>
     </section>
     <pc-toast message="Preset saved" duration="0"></pc-toast>
     <script type="module" src="./elements.ts"></script>

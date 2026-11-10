@@ -27,8 +27,8 @@ export interface SideModeRule {
   below?: number;
 }
 
-/** Side modes used unless the implementer chooses others: docked, and a rail below 600px wide */
-export const DEFAULT_SIDE_MODES = "docked, rail@600";
+/** Side modes used unless the implementer chooses others: docked, and floating below 600px wide */
+export const DEFAULT_SIDE_MODES = "docked, floating@600";
 
 /** Layout width (CSS pixels) below which the layout counts as narrow, unless the implementer chooses another */
 export const DEFAULT_NARROW_WIDTH = 600;

@@ -11,7 +11,8 @@ import {
 } from "..";
 import StrokeEngine from "../../../../lib/brushes/StrokeEngine";
 import { createRecordingCanvasFactory } from "../../../../testing/recordingCanvas";
-import { query } from "../../../../testing/elements";
+import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
+import { query, shadow } from "../../../../testing/elements";
 import { createRecordingContext } from "../../../../testing/recordingContext";
 import { createApp } from "../../../../testing/app";
 
@@ -172,7 +173,8 @@ describe("pc-brush-test stroke points", () => {
       value: () => ctx,
       configurable: true,
     });
-    const toggle = query<HTMLInputElement>(element, ".show-points input");
+    const toggle = query<PcToggleCheckbox>(element, ".show-points");
+    expect(toggle.size).toBe("s");
     expect(toggle.checked).toBe(false);
     expect(query(element, ".show-points").textContent!.trim()).toBe(
       "Show stroke points",
@@ -185,8 +187,7 @@ describe("pc-brush-test stroke points", () => {
     draw();
     expect(calls.some(([name]) => name === "arc")).toBe(false);
 
-    toggle.checked = true;
-    toggle.dispatchEvent(new Event("change"));
+    shadow<HTMLInputElement>(toggle, "input").click();
     expect(element.showPoints).toBe(true);
     calls.length = 0;
     draw();

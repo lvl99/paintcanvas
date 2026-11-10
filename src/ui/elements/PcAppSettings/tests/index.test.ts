@@ -1,8 +1,9 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
-import type { PcAppSettings } from "..";
+import { PcAppSettings } from "..";
 import type { PcShortcutSettings } from "../../PcShortcutSettings";
 import type { PcDialogWindow } from "../../PcDialogWindow";
+import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
 import { events, mount, query } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 import {
@@ -34,6 +35,43 @@ describe("pc-app-settings", () => {
     expect(element.shadowRoot!.querySelector("pc-dialog-window")).toBeNull();
     await element.importFile(new File(["{}"], "x.json"));
     await element.exportFile();
+  });
+
+  it("should switch drawing with the GPU, saying when the page needs reloading", async () => {
+    const { app, element } = await setup();
+    const toggle = query<PcToggleCheckbox>(element, "pc-toggle-checkbox.gpu");
+    const hint = () => query(element, ".gpu .hint");
+    expect(toggle.checked).toBe(false);
+    expect(hint().textContent).toContain("Try this if drawing is slow");
+    toggle.dispatchEvent(
+      new CustomEvent("change", { detail: { checked: true } }),
+    );
+    await element.updateComplete;
+    expect(app.ui.data.rendering).toBe("gpu");
+    expect(toggle.checked).toBe(true);
+    expect(hint().textContent).toContain("Reload the page");
+    expect(hint().classList.contains("pending")).toBe(true);
+    toggle.dispatchEvent(
+      new CustomEvent("change", { detail: { checked: false } }),
+    );
+    await element.updateComplete;
+    expect(app.ui.data.rendering).toBe("cpu");
+    expect(hint().textContent).toContain("Try this if drawing is slow");
+    // Imported or restored choices show too
+    app.ui.update({ rendering: "gpu" });
+    await element.updateComplete;
+    expect(toggle.checked).toBe(true);
+  });
+
+  it("should show its buttons at the usual pill size, each on its own full-width row", async () => {
+    const { element } = await setup();
+    const buttons = [".shortcuts", ".import", ".export"].map((selector) =>
+      query(element, selector),
+    );
+    for (const button of buttons) expect(button.classList).toContain("pill");
+    const styles = PcAppSettings.styles.map(String).join("");
+    expect(styles).toMatch(/\.actions \{[^}]*flex-direction: column/);
+    expect(styles).toMatch(/\.actions button \{[^}]*width: 100%/);
   });
 
   it("should open the keyboard shortcuts in a shaded window", async () => {

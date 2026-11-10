@@ -2,29 +2,45 @@ import { css, html } from "lit";
 import { live } from "lit/directives/live.js";
 import { PcElement, defineElement, emit } from "../../base";
 
+/** Sizes of the switch: `m` (20px high, the default) and `s` (16px high, e.g. in toolbars) */
+export const TOGGLE_SIZES = ["m", "s"] as const;
+
+export type ToggleSize = (typeof TOGGLE_SIZES)[number];
+
 /**
- * An on/off switch with its text (the element's content) beside it, e.g. for settings. Fires `change` when the user
- * turns it on or off.
+ * An on/off switch with its text (the element's content) beside it, e.g. for settings. Use it instead of plain
+ * checkboxes. It comes in two sizes (`size`: `m`, 20px high, by default, or `s`, 16px high), both pressable over at
+ * least 24px of height. Fires `change` when the user turns it on or off.
  *
  * @example
  * html`<pc-toggle-checkbox .checked=${pinchZoom} @change=${toggle}>Pinch to zoom</pc-toggle-checkbox>`
+ * html`<pc-toggle-checkbox size="s">Show stroke points</pc-toggle-checkbox>`
  */
 export class PcToggleCheckbox extends PcElement {
   static override properties = {
     ...PcElement.properties,
     checked: { type: Boolean, reflect: true },
     disabled: { type: Boolean, reflect: true },
+    size: { type: String, reflect: true },
   };
 
   static override styles = [
     PcElement.styles,
     css`
       :host {
+        --pc-toggle-height: 20px;
+        --pc-toggle-width: 36px;
         display: flex;
+      }
+      :host([size="s"]) {
+        --pc-toggle-height: 16px;
+        --pc-toggle-width: 28px;
       }
       label {
         display: flex;
         flex: 1;
+        /* The pressable area is at least 24px high, whatever the switch's size */
+        min-height: 24px;
         gap: var(--pc-space-2);
         align-items: center;
         color: var(--pc-text);
@@ -39,8 +55,8 @@ export class PcToggleCheckbox extends PcElement {
       input {
         position: relative;
         flex: none;
-        width: 36px;
-        height: 20px;
+        width: var(--pc-toggle-width);
+        height: var(--pc-toggle-height);
         margin: 0;
         border-radius: var(--pc-radius-pill);
         background: var(--pc-disabled);
@@ -51,8 +67,8 @@ export class PcToggleCheckbox extends PcElement {
         position: absolute;
         top: 2px;
         left: 2px;
-        width: 16px;
-        height: 16px;
+        width: calc(var(--pc-toggle-height) - 4px);
+        height: calc(var(--pc-toggle-height) - 4px);
         border-radius: 50%;
         background: #ffffff;
         content: "";
@@ -62,7 +78,9 @@ export class PcToggleCheckbox extends PcElement {
         background: var(--pc-accent);
       }
       input:checked::before {
-        transform: translateX(16px);
+        transform: translateX(
+          calc(var(--pc-toggle-width) - var(--pc-toggle-height))
+        );
       }
       input:focus-visible {
         outline: var(--pc-focus-width) solid var(--pc-focus);
@@ -80,10 +98,14 @@ export class PcToggleCheckbox extends PcElement {
 
   declare disabled: boolean;
 
+  /** The switch's size: `m` (default) or `s` */
+  declare size: ToggleSize;
+
   constructor() {
     super();
     this.checked = false;
     this.disabled = false;
+    this.size = "m";
   }
 
   /** Follow the user's change, and tell listeners */

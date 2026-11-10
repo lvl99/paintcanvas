@@ -14,7 +14,8 @@ import {
   samplerPosition,
   type PcCanvas,
 } from "..";
-import { Tool } from "../../../../lib/classes/PaintCanvas";
+import PaintCanvas, { Tool } from "../../../../lib/classes/PaintCanvas";
+import { createRecordingCanvasFactory } from "../../../../testing/recordingCanvas";
 import {
   EYEDROPPER_CURSOR,
   FREEFORM_LASSO_CURSOR,
@@ -361,6 +362,31 @@ describe("pc-canvas", () => {
       "2d",
       { willReadFrequently: true },
     ]);
+    getContext.mockRestore();
+    element.remove();
+  });
+
+  it("should keep the screen canvas on the GPU for an app drawing there, making a new one when the app's rendering differs", async () => {
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext");
+    const element = await mount<PcCanvas>("pc-canvas", { app: createApp() });
+    const first = element.canvas;
+    element.app = new PaintCanvas({
+      rendering: "gpu",
+      createCanvas: createRecordingCanvasFactory().factory,
+    });
+    await element.updateComplete;
+    expect(element.canvas).not.toBe(first);
+    expect(getContext.mock.contexts.at(-1)).toBe(element.canvas);
+    expect(getContext.mock.calls.at(-1)).toEqual([
+      "2d",
+      { willReadFrequently: false },
+    ]);
+    // The same screen canvas keeps its context
+    const madeContexts = () => getContext.mock.calls.filter((c) => c[1]).length;
+    const made = madeContexts();
+    element.requestUpdate();
+    await element.updateComplete;
+    expect(madeContexts()).toBe(made);
     getContext.mockRestore();
     element.remove();
   });

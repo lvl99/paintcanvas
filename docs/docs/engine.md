@@ -22,6 +22,26 @@ canvas.addEventListener("change", () => render(canvas));
 document.querySelector("#undo").addEventListener("click", () => canvas.undo());
 ```
 
+## Drawing on the CPU or the GPU
+
+By default the canvases keep their pixels in regular memory and draw on the CPU (`rendering: "cpu"`), so saving and copying never wait for the GPU (which stalled phones for up to 15 seconds). Pass `rendering: "gpu"` to ask the browser to keep them on the GPU instead; drawing may be quicker on some devices, and the browser can still choose the CPU.
+
+Browsers fix where a canvas draws when it's made, so `canvas.rendering` can't change while the canvas runs. The user's choice for next time is `canvas.ui.data.rendering` (shown by `<pc-app-settings>` as "Draw with the GPU"); pass it when you next make the canvas. `loadRenderingChoice` and `saveRenderingChoice` (`@lvl99dotcom/paintcanvas/lib/storage`) keep it in `localStorage`, which can be read before the canvas is made:
+
+```ts
+import {
+  loadRenderingChoice,
+  saveRenderingChoice,
+} from "@lvl99dotcom/paintcanvas/lib/storage";
+
+const canvas = new PaintCanvas({ rendering: loadRenderingChoice("my-app") });
+canvas.ui.addEventListener("change", () =>
+  saveRenderingChoice("my-app", canvas.ui.data.rendering),
+);
+```
+
+`<paint-canvas settings-store="…">` does this for the canvas it makes.
+
 ## Foreground and background colours
 
 The engine has two colours, read with `canvas.colours` (`canvas.colour` is the foreground colour):
@@ -57,8 +77,8 @@ The engine dispatches `change` when its own state changes (tool, colours, panels
 
 Useful building blocks:
 
-- Drawing elements: `<pc-canvas>`, `<pc-canvas-map>`, `<pc-toolbar>`, `<pc-colour-pair>` (the foreground and background colours), `<pc-panel-colours>` (the colour palette menu), `<pc-shortcut-settings>` (changing keyboard shortcuts), `<pc-app-settings>` (keyboard shortcuts window and settings import/export), `<pc-clipboard-tools>` (cut, copy, copy merged (the shown layers mixed as shown) and paste, or a ⋮ menu while narrow), `<pc-tool-settings>` (the current tool's settings, with `start` and `end` slots; a brush or eraser's pressure, tilt, focus pen mode, width, height and constrain proportions are in a popover from its cog button), `<pc-panel-brushes>`, `<pc-brush-size>` (the brush size, dragged right or up to grow and left or down to shrink, or tapped to type a size), `<pc-profile-graph>` (a profile graph to edit: press the line to add a point, drag or arrow-key points, make them sharp or smooth, remove them), `<pc-profile-editor>` (the profile graph window: presets and saved graphs, New graph, Duplicate…, Rename…, Delete…, Save, Reset), `<pc-brush-config>` (the brush configuration window; pressure, tilt and randomise are one-at-a-time choices per setting, each with a profile graph (see `@lvl99dotcom/paintcanvas/lib/profiles`); pressing its shape picks a built-in shape, `BUILT_IN_SHAPES` from `@lvl99dotcom/paintcanvas/lib/brushes/shapes`, or upload or paste your own), `<pc-panel-layers>`, `<pc-layer-item>`, `<pc-input-settings>`, `<pc-stats>` (the canvas size, how much the drawing takes in the browser, zoom and the colour under the pointer), `<pc-theme-picker>`.
-- Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>`, `<pc-slider>`, `<pc-slider-range>` (a range: one track with low and high handles that can't cross, and a number slider for each end; with `single`, one value with its number slider before or after the track, `number-position`), `<pc-number-slider>` (a number dragged right or up to raise it and left or down to lower it, or tapped to type a value), `<pc-menu>`, `<pc-context-menu>`, `<pc-dialog-window>` (a window over the page, centred and never bigger than the screen, with header, body and footer slots; only its body scrolls), `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>` (a floating box, optionally with an arrow pointing at the button that opens it), `<pc-panel>`, `<pc-pane>`.
+- Drawing elements: `<pc-canvas>`, `<pc-canvas-map>`, `<pc-toolbar>`, `<pc-colour-pair>` (the foreground and background colours), `<pc-panel-colours>` (the colour palette menu), `<pc-shortcut-settings>` (changing keyboard shortcuts), `<pc-app-settings>` (the "Draw with the GPU" switch, keyboard shortcuts window and settings import/export), `<pc-clipboard-tools>` (cut, copy, copy merged (the shown layers mixed as shown) and paste, or a ⋮ menu in windows narrower than 900px or while narrow), `<pc-tool-settings>` (the current tool's settings, with `start` and `end` slots; a brush or eraser's pressure, tilt, focus pen mode, width, height and constrain proportions are in a popover from its cog button), `<pc-panel-brushes>`, `<pc-brush-size>` (the brush size, dragged right or up to grow and left or down to shrink, or tapped to type a size), `<pc-profile-graph>` (a profile graph to edit: press the line to add a point, drag or arrow-key points, make them sharp or smooth, remove them), `<pc-profile-editor>` (the profile graph window: presets and saved graphs, New graph, Duplicate…, Rename…, Delete…, Save, Reset), `<pc-brush-config>` (the brush configuration window; pressure, tilt and randomise are one-at-a-time choices per setting, each with a profile graph (see `@lvl99dotcom/paintcanvas/lib/profiles`); pressing its shape picks a built-in shape, `BUILT_IN_SHAPES` from `@lvl99dotcom/paintcanvas/lib/brushes/shapes`, or upload or paste your own), `<pc-panel-layers>`, `<pc-layer-item>` (a layer's row: pressing anywhere on it selects the layer, shown purple; "Rename…" in its actions menu renames it), `<pc-input-settings>`, `<pc-stats>` (the canvas size, how much the drawing takes in the browser, zoom and the colour under the pointer), `<pc-theme-picker>`, `<pc-version>` (PaintCanvas's version and the commit it was built from, linked to its GitHub repository; also `versionText()` from `@lvl99dotcom/paintcanvas/lib/version`).
+- Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>` (an on/off switch, used instead of plain checkboxes; `size="s"` for a 16px switch instead of 20px, both pressable over 24px of height), `<pc-slider>`, `<pc-slider-range>` (a range: one track with low and high handles that can't cross, and a number slider for each end; with `single`, one value with its number slider before or after the track, `number-position`), `<pc-number-slider>` (a number dragged right or up to raise it and left or down to lower it, or tapped to type a value), `<pc-menu>`, `<pc-context-menu>`, `<pc-button-menu>` (a row of pill buttons for actions, which becomes one ⋮ menu while `menu` is set or, with `menu-below="900"`, in windows narrower than that), `<pc-dialog-window>` (a window over the page, centred and never bigger than the screen, with header, body and footer slots; only its body scrolls), `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>` (a floating box, optionally with an arrow pointing at the button that opens it), `<pc-panel>`, `<pc-pane>`.
 - `PcElement`, the base class for your own elements: gives them `t()` for translated text, `iconUrl()` and the design tokens.
 
 Custom brush presets are kept in memory unless you pass a `presetStore` (e.g. backed by IndexedDB) in the options.

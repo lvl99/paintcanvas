@@ -5,7 +5,14 @@ import InputSettings from "../../../../lib/classes/InputSettings";
 import UiSettings from "../../../../lib/classes/UiSettings";
 import { DEFAULT_GESTURES } from "../../../../lib/utils/gestures";
 import Translations from "../../../../lib/i18n";
-import { events, mount, query, queryAll } from "../../../../testing/elements";
+import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
+import {
+  events,
+  mount,
+  query,
+  queryAll,
+  shadow,
+} from "../../../../testing/elements";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -22,7 +29,7 @@ const setup = (properties: Partial<PcInputSettings> = {}) => {
 
 /** The visible labels of the on/off settings */
 const toggleLabels = (element: PcInputSettings) =>
-  queryAll(element, "label.toggle").map((label) => label.textContent?.trim());
+  queryAll(element, ".toggle").map((toggle) => toggle.textContent?.trim());
 
 describe("pc-input-settings", () => {
   it("should show nothing without settings", async () => {
@@ -43,13 +50,13 @@ describe("pc-input-settings", () => {
 
   it("should change settings straight away, and follow changes made elsewhere", async () => {
     const { element, settings } = await setup();
-    const pinch = query<HTMLInputElement>(element, "input[name=pinchZoom]");
-    pinch.click();
+    const pinch = query<PcToggleCheckbox>(element, "[data-setting=pinchZoom]");
+    shadow<HTMLInputElement>(pinch, "input").click();
     expect(settings.data.pinchZoom).toBe(false);
     settings.update({ focusPen: true });
     await element.updateComplete;
     expect(
-      query<HTMLInputElement>(element, "input[name=focusPen]").checked,
+      query<PcToggleCheckbox>(element, "[data-setting=focusPen]").checked,
     ).toBe(true);
   });
 
@@ -57,7 +64,7 @@ describe("pc-input-settings", () => {
     const { element, settings } = await setup({ touch: true });
     expect(toggleLabels(element)[0]).toBe("Two-finger drag to pan");
     expect(
-      element.shadowRoot?.querySelector("input[name=modifierScrollZoom]"),
+      element.shadowRoot?.querySelector("[data-setting=modifierScrollZoom]"),
     ).toBeNull();
     const undo = query<HTMLSelectElement>(element, "select[name=gesture-undo]");
     expect(undo.value).toBe(DEFAULT_GESTURES.undo);

@@ -2,6 +2,7 @@
 // user's app settings (see `SettingsAutosave`).
 import type { LayerConfig } from "../classes/Layer";
 import type { AppSettings } from "../settings/schema";
+import { isRendering, type Rendering } from "../classes/UiSettings";
 
 /** Version of a saved drawing's shape, so drawings saved by other versions can be recognised */
 export const SAVED_DRAWING_VERSION = 1;
@@ -277,3 +278,52 @@ export class IndexedDbSettingsStore implements SettingsStoreLike {
     await done;
   }
 }
+
+/**
+ * The browser storage key that keeps the rendering chosen with the app settings of a name (see
+ * `loadRenderingChoice`).
+ *
+ * @example
+ * renderingChoiceKey("demo"); // "paintcanvas-rendering:demo"
+ */
+export const renderingChoiceKey = (name: string): string =>
+  `${DATABASE_NAME}-rendering:${name}`;
+
+/**
+ * The rendering (`cpu` or `gpu`) last chosen with the app settings of a name, kept in `localStorage` so it can be read
+ * before the canvas is made (the app settings themselves load later, from IndexedDB). Undefined when none was kept, it
+ * isn't valid, or the storage can't be read (e.g. blocked by the browser).
+ *
+ * @example
+ * new PaintCanvas({ rendering: loadRenderingChoice("demo") });
+ */
+export const loadRenderingChoice = (
+  name: string = DEFAULT_SETTINGS_NAME,
+  storage: Pick<Storage, "getItem"> | undefined = globalThis.localStorage,
+): Rendering | undefined => {
+  try {
+    const value = storage?.getItem(renderingChoiceKey(name));
+    return isRendering(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * Keep the rendering chosen with the app settings of a name, to be read with `loadRenderingChoice` when the canvas is
+ * next made. Does nothing if the storage can't be written.
+ *
+ * @example
+ * canvas.ui.addEventListener("change", () => saveRenderingChoice("demo", canvas.ui.data.rendering));
+ */
+export const saveRenderingChoice = (
+  name: string,
+  rendering: Rendering,
+  storage: Pick<Storage, "setItem"> | undefined = globalThis.localStorage,
+): void => {
+  try {
+    storage?.setItem(renderingChoiceKey(name), rendering);
+  } catch {
+    // The choice is still kept with the app settings
+  }
+};

@@ -12,6 +12,8 @@ import type { Insets } from "../../../lib/classes/Viewport";
 import type { ShortcutAction } from "../../../lib/utils/shortcuts";
 import IndexedDbLayerStore, {
   IndexedDbSettingsStore,
+  loadRenderingChoice,
+  saveRenderingChoice,
 } from "../../../lib/storage";
 import SettingsAutosave, {
   SETTINGS_AUTOSAVE_ERROR_EVENT,
@@ -74,7 +76,8 @@ const TAKE_OVER_CHOICE = "take-over";
  * - `left`: `<pc-toolbar>` (a pane) by default; toolbars in the sides are minimised (their tools one button that opens a
  *   menu of them) while the layout is narrow
  * - `top`: a horizontal `<pc-pane>` with `<pc-tool-settings>` (for tools that have settings) and, at its end,
- *   `<pc-clipboard-tools>` (cut, copy and paste; a ⋮ menu while the layout is narrow) by default
+ *   `<pc-clipboard-tools>` (cut, copy and paste; a ⋮ menu while the layout is narrow or the window is narrower than
+ *   900px) by default
  * - `right`: a `<pc-pane>` with `<pc-panel-layers>` by default
  * - `center`: `<pc-canvas>` by default
  * - `overlay`: drawn over the canvas; `<pc-canvas-map>` by default
@@ -87,7 +90,7 @@ const TAKE_OVER_CHOICE = "take-over";
  * does by default), the toolbar has no layers menu button.
  *
  * Each side has a mode, chosen by the layout's width from `left-modes` and `right-modes` (default `"docked,
- * rail@600"`), which the layout gives the side's `<pc-pane>`s (see `PcPane`): `docked` beside the canvas; `rail`, a
+ * floating@600"`), which the layout gives the side's `<pc-pane>`s (see `PcPane`): `docked` beside the canvas; `rail`, a
  * column of buttons (one per panel) that open each panel over the canvas; `floating`, the pane over the canvas as a
  * box that collapses to a button; or `overlay`, a rail over the canvas without a background (the canvas fills the
  * width behind it). Give side content in a `<pc-pane>` to have it follow the side's mode.
@@ -101,7 +104,9 @@ const TAKE_OVER_CHOICE = "take-over";
  * that offers to draw here instead. Fires `pc-toast` when the drawing can't be loaded or saved.
  *
  * With a `settings-store` name, the user's app settings (input settings, keyboard shortcuts, colour palette, colours,
- * theme and language) are kept in the browser under that name (see `SettingsAutosave`). Fires `pc-toast` when they can't be.
+ * theme, language and rendering) are kept in the browser under that name (see `SettingsAutosave`). Fires `pc-toast` when
+ * they can't be. The rendering chosen there is also kept in `localStorage` (see `saveRenderingChoice`), so the canvas the
+ * layout makes draws where the user last chose (see `PaintCanvasOptions.rendering`).
  *
  * @example
  * html`<paint-canvas style="height: 600px"></paint-canvas>`
@@ -188,6 +193,9 @@ export class PaintCanvasElement extends PcElement {
 
   /** Keeps the app settings under the `settings-store` name, if any */
   private ownSettingsAutosave?: SettingsAutosave;
+
+  /** Stops keeping the rendering chosen in the canvas's UI settings under the `settings-store` name, if kept */
+  private stopKeepingRendering?: () => void;
 
   /** Whether drawing was blocked when shortcuts were last watched */
   private blockedShortcuts = false;
@@ -286,7 +294,12 @@ export class PaintCanvasElement extends PcElement {
   }
 
   override connectedCallback(): void {
-    this.app ??= new PaintCanvas();
+    // Draw where the user chose last time; the choice can't change once the canvas is made
+    this.app ??= new PaintCanvas({
+      rendering: this.settingsStore
+        ? loadRenderingChoice(this.settingsStore)
+        : undefined,
+    });
     super.connectedCallback();
     this.resizeObserver?.observe(this);
     this.addEventListener("pointerdown", this.onPointerDown, true);
@@ -416,7 +429,10 @@ export class PaintCanvasElement extends PcElement {
    */
   private useSettingsStore(): void {
     this.ownSettingsAutosave?.stop();
+    this.stopKeepingRendering?.();
     const name = this.settingsStore || undefined;
+    this.stopKeepingRendering =
+      name === undefined ? undefined : this.keepRendering(name);
     this.ownSettingsAutosave =
       name === undefined
         ? undefined
@@ -428,6 +444,17 @@ export class PaintCanvasElement extends PcElement {
       SETTINGS_AUTOSAVE_ERROR_EVENT,
       this.onSettingsAutosaveError,
     );
+  }
+
+  /**
+   * Keep the rendering chosen in the canvas's UI settings (e.g. when they're restored, imported or changed) under a
+   * name, for the next time the layout makes a canvas. Returns what stops it.
+   */
+  private keepRendering(name: string): () => void {
+    const ui = (this.app as PaintCanvas).ui;
+    const keep = () => saveRenderingChoice(name, ui.data.rendering);
+    ui.addEventListener("change", keep);
+    return () => ui.removeEventListener("change", keep);
   }
 
   /** Show errors from the canvas's current autosave */

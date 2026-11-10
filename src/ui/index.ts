@@ -12,6 +12,11 @@ export { PcElement, defineElement, emit } from "./base";
 export { PcIcon } from "./elements/PcIcon";
 export { PcButton, type ButtonVariant } from "./elements/PcButton";
 export { PcButtonGroup } from "./elements/PcButtonGroup";
+export {
+  PcButtonMenu,
+  isNarrowerThan,
+  type ButtonMenuItem,
+} from "./elements/PcButtonMenu";
 export { PcIconToggle } from "./elements/PcIconToggle";
 export { PcToggleCheckbox } from "./elements/PcToggleCheckbox";
 export { PcSlider } from "./elements/PcSlider";
@@ -89,7 +94,11 @@ export {
 } from "./elements/PcInputSettings";
 export { PcMatch } from "./elements/PcMatch";
 export { PcColourPair, COLOUR_CLICK_EVENT } from "./elements/PcColourPair";
-export { PcClipboardTools, CLIPBOARD_TOOLS } from "./elements/PcClipboardTools";
+export {
+  PcClipboardTools,
+  CLIPBOARD_MENU_BELOW,
+  CLIPBOARD_TOOLS,
+} from "./elements/PcClipboardTools";
 export {
   PcShortcutSettings,
   type ShortcutSettingsLike,
@@ -101,6 +110,7 @@ export {
   type ColourModel,
 } from "./elements/PcPanelColours";
 export { PcStats, formatBytes } from "./elements/PcStats";
+export { PcVersion } from "./elements/PcVersion";
 export {
   PcThemePicker,
   THEMES,

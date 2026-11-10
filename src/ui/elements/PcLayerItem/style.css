@@ -9,36 +9,46 @@
   border: 1px solid var(--pc-surface-active);
   background: var(--pc-surface);
 }
-.name.active {
+/* The selected layer: purple, so it stands out */
+:host([active]) {
+  border-color: var(--pc-accent);
+  background: var(--pc-accent);
+  color: var(--pc-accent-text);
+}
+:host([active]) .name {
   font-weight: bold;
+}
+/* The opacity slider's track and handle in the row's text colour, so they show on purple */
+:host([active]) .opacity {
+  --pc-accent: var(--pc-accent-text);
+  --pc-border: rgb(255 255 255 / 45%);
+}
+/* The name, on one line (cut short with "…"); renamed from the actions menu */
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .thumbnail {
   width: 30px;
   height: 30px;
 }
-/* Thumbnail on the left and name on the right; under them, opacity on the left and blend mode on the right. The blend
-   mode gets a set share of the width rather than its own: browsers size dropdowns differently (Safari and Firefox as
-   wide as the longest option, Chrome as the chosen one), which would otherwise push the row wider than its panel */
+/* Thumbnail on the left and name on the right; under them, opacity, then blend mode, each the full width. The blend
+   mode never sets its own width: browsers size dropdowns differently (Safari and Firefox as wide as the longest option,
+   Chrome as the chosen one), which would otherwise push the row wider than its panel */
 .details {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
   gap: 4px 6px;
   min-width: 0;
 }
-.details .name {
-  grid-column: 2 / -1;
-}
-.details .name,
+.details .opacity,
 .details select {
+  grid-column: 1 / -1;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-}
-.details input[type="range"] {
-  grid-column: 1 / 3;
-  min-width: 0;
-  margin: 0;
 }
 /* The reorder handle drags with mouse, pen or touch (touch drags it rather than scrolling the panel) */
 .handle {

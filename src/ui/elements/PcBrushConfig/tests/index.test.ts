@@ -7,6 +7,7 @@ import { PROFILE_PRESETS, linearPoints } from "../../../../lib/profiles";
 import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
 import { OK_CHOICE } from "../../../ask";
 import type { PcBrushConfig } from "..";
+import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
 import { SmoothingType, type BrushConfig } from "../../../../lib/brushes/types";
 import {
   SHAPE_ERRORS,
@@ -16,6 +17,7 @@ import {
   mount,
   query,
   queryAll,
+  shadow,
   toastText,
 } from "../../../../testing/elements";
 import { createApp, TEST_HANDLE } from "../../../../testing/app";
@@ -629,18 +631,17 @@ describe("pc-brush-config", () => {
     "should turn snapping to the pixel grid on and off for the %s",
     async (kind) => {
       const { element, events } = await setup({ kind });
-      const snap = query<HTMLInputElement>(element, "input.snap");
+      const snap = query<PcToggleCheckbox>(element, ".snap");
+      const snapSwitch = shadow<HTMLInputElement>(snap, "input");
       expect(snap.checked).toBe(false);
-      snap.checked = true;
-      snap.dispatchEvent(new Event("change"));
+      snapSwitch.click();
       await element.updateComplete;
       expect(draft(element).snapToPixelGrid).toBe(true);
       await click(element, "button.save");
       expect(events).toEqual([
         ["pc-save", expect.objectContaining({ snapToPixelGrid: true })],
       ]);
-      snap.checked = false;
-      snap.dispatchEvent(new Event("change"));
+      snapSwitch.click();
       expect(draft(element).snapToPixelGrid).toBe(false);
     },
   );

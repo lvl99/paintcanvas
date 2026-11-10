@@ -16,7 +16,8 @@ import { icons } from "../../../icons";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../../lib/classes/Viewport";
 import { Panel, Tool } from "../../../../lib/classes/PaintCanvas";
 import type { TransformBox } from "../../../../lib/transform/geometry";
-import { mount, query, queryAll } from "../../../../testing/elements";
+import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
+import { mount, query, queryAll, shadow } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 
 afterEach(() => document.body.replaceChildren());
@@ -487,9 +488,9 @@ describe("pc-tool-settings", () => {
     expect(setBox).toHaveBeenCalledTimes(2);
     await typeInto(width, "200");
 
-    const percent = query<HTMLInputElement>(element, "input.percent");
-    percent.checked = true;
-    percent.dispatchEvent(new Event("change"));
+    const percent = query<PcToggleCheckbox>(element, ".percent");
+    expect(percent.size).toBe("s");
+    shadow<HTMLInputElement>(percent, "input").click();
     await element.updateComplete;
     expect([width.value, width.unit]).toEqual([200, "%"]);
     await typeInto(slider(element, "height"), "50");
@@ -531,9 +532,11 @@ describe("pc-tool-settings", () => {
       "Move, scale and rotate settings",
     );
     expect(
-      [...toolbar.querySelectorAll(".start > :is(.field, label, button)")].map(
-        (item) => item.textContent?.replace(/\s+/g, " ").trim(),
-      ),
+      [
+        ...toolbar.querySelectorAll(
+          ".start > :is(.field, label, pc-toggle-checkbox, button)",
+        ),
+      ].map((item) => item.textContent?.replace(/\s+/g, " ").trim()),
     ).toEqual([
       "Width",
       "Constrain proportions",

@@ -81,7 +81,7 @@ describe("pc-panel-layers", () => {
     expect(fromAlpha).toHaveBeenLastCalledWith(app.layers.active, "add");
 
     // Other controls in the row do not make a mask
-    query(item, "input[type=range]").dispatchEvent(
+    query(item, ".opacity").dispatchEvent(
       new MouseEvent("click", { bubbles: true, metaKey: true }),
     );
     expect(fromAlpha).toHaveBeenCalledTimes(1);
