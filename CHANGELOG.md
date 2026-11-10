@@ -2,6 +2,32 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.7.0 (2026-11-10)
+
+A setting to draw with the GPU, switches for every checkbox, clearer layer rows, a version line, and a button row that becomes a menu in narrow windows.
+
+### Fixed
+
+- `<pc-slider-range>`'s rail covers the same area as a fill across the whole range; it reached half a handle past each end.
+
+### Added
+
+- "Draw with the GPU" in `<pc-app-settings>`: the user's choice (`ui.rendering`, `cpu` by default or `gpu`) is kept and exported with the app settings and applies after reloading the page, which the panel says. The engine takes `rendering` (`canvas.rendering`), and `<paint-canvas settings-store>` makes its canvas with the user's last choice, kept in `localStorage` (`loadRenderingChoice`, `saveRenderingChoice`).
+- `<pc-toggle-checkbox size="s">`: a 16px-high switch. Both sizes are pressable over at least 24px of height.
+- "Rename…" in a layer's actions menu, which asks for the new name in a dialog.
+- `<pc-version>`: "PaintCanvas v<version> (<commit>)", linked to the GitHub repository; also `versionText()`, `PAINTCANVAS_VERSION` and `PAINTCANVAS_COMMIT` (`lib/version`). The commit is put in when PaintCanvas is built.
+- `<pc-button-menu>`: a row of pill buttons for actions that becomes one ⋮ menu while `menu` is set or the window is narrower than `menu-below` (`isNarrowerThan`).
+
+### Changed
+
+- **Breaking:** the layout's default side modes are `"docked, floating@600"`: below 600px wide, panes float over the canvas instead of becoming a rail.
+- **Breaking:** a layer's name is plain text instead of a field (rename it from its actions menu), and its opacity is a single-value `pc-slider-range` on its own line.
+- Pressing anywhere on a layer row selects its layer, and the selected row is purple.
+- Every plain checkbox is a `pc-toggle-checkbox` (input settings, "Snap to pixel grid", "Percent", "Show stroke points").
+- `<pc-clipboard-tools>` is built on `<pc-button-menu>` and is a ⋮ menu in windows narrower than 900px (`CLIPBOARD_MENU_BELOW`), as well as while `narrow`.
+- `<pc-app-settings>`'s buttons are default-size pills, each on its own full-width row.
+- `pnpm dev` uses `vite.demo.config.ts`.
+
 ## 0.6.0 (2026-11-09)
 
 Smooth drawing on phones, a dialog window for every window and prompt, range sliders, profile graphs for pressure, tilt and randomness, Copy merged, and one set of pill button sizes.
