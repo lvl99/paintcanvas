@@ -8,7 +8,9 @@ import {
   SETTINGS_FILE_FORMAT,
   SETTINGS_FILE_VERSION,
   SettingsFileError,
+  OLDER_PALETTE_NAME,
   applySettings,
+  keepOlderPalette,
   collectSettings,
   exportSettingsFile,
   isValidSettings,
@@ -161,7 +163,6 @@ describe("collectSettings and applySettings", () => {
     expect(collectSettings(app)).toEqual({
       input: app.input.data,
       shortcuts: defaultShortcutBindings(),
-      palette: DEFAULT_PALETTE,
       palettes: [],
       colours: { foreground: "#000000", background: "#ffffff" },
       profiles: [],
@@ -198,10 +199,10 @@ describe("collectSettings and applySettings", () => {
   it("should give copies that don't change with the canvas", () => {
     const app = createApp();
     const settings = collectSettings(app);
-    app.palette.add("#123456");
+    app.palettes.create("Sunset");
     app.shortcuts.set("deselect", null);
     app.profiles.save({ name: "Soft", points: linearPoints() });
-    expect(settings.palette).toEqual(DEFAULT_PALETTE);
+    expect(settings.palettes).toEqual([]);
     expect(settings.profiles).toEqual([]);
     expect(settings.shortcuts?.deselect).toEqual({ key: "d", cmd: true });
   });
@@ -210,7 +211,6 @@ describe("collectSettings and applySettings", () => {
     const source = createApp();
     source.input.update({ focusPen: true });
     source.shortcuts.set("tool-brush", { key: "p" });
-    source.palette.set(["#123456"]);
     source.setColour("#ff0000");
     source.setColour("#00ff00", "background");
     source.ui.update({ theme: "dark", locale: "fr", rendering: "gpu" });
@@ -227,7 +227,25 @@ describe("collectSettings and applySettings", () => {
     applySettings(app, {});
     expect(collectSettings(app)).toEqual(before);
     applySettings(app, { palette: [] });
-    expect(collectSettings(app)).toEqual({ ...before, palette: [] });
+    expect(collectSettings(app)).toEqual(before);
+  });
+
+  it("should move colours older versions saved in PaintCanvas's palette to one of the user's, once", () => {
+    const app = createApp();
+    applySettings(app, { palette: ["#123456", "#ABCDEF", "red"] });
+    expect(app.palettes.items).toEqual([
+      {
+        id: expect.any(String),
+        name: OLDER_PALETTE_NAME,
+        author: { name: "Unknown" },
+        colours: ["#123456", "#abcdef"],
+      },
+    ]);
+    applySettings(app, { palette: ["#123456", "#abcdef"] });
+    keepOlderPalette(app, [...DEFAULT_PALETTE]);
+    keepOlderPalette(app, ["red"]);
+    expect(app.palettes.items).toHaveLength(1);
+    expect(app.palette.colours).toEqual(DEFAULT_PALETTE);
   });
 });
 

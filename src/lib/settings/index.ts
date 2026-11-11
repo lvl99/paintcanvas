@@ -5,6 +5,7 @@ import {
 } from "../validation/validators.generated.js";
 import type PaintCanvas from "../classes/PaintCanvas";
 import type { InputSettingsData } from "../classes/InputSettings";
+import { sanitisePalette } from "../classes/Palette";
 import {
   SETTINGS_FILE_FORMAT,
   SETTINGS_FILE_FORMATS,
@@ -52,7 +53,7 @@ export interface CollectSettingsOptions {
  * and language.
  *
  * @example
- * collectSettings(canvas).palette; // ["#2c6bff", ...]
+ * collectSettings(canvas).palettes; // the user's own palettes
  * collectSettings(canvas, { without: ["profiles"] }).profiles; // undefined
  */
 export const collectSettings = (
@@ -61,7 +62,6 @@ export const collectSettings = (
 ): AppSettings => ({
   input: structuredClone(app.input.data) as InputSettingsData,
   shortcuts: structuredClone(app.shortcuts.bindings),
-  palette: [...app.palette.colours],
   ...(without.includes("palettes")
     ? {}
     : { palettes: structuredClone([...app.palettes.items]) }),
@@ -72,10 +72,39 @@ export const collectSettings = (
   ui: { ...app.ui.data },
 });
 
+/** Name of the palette that colours saved in PaintCanvas's palette by older versions are moved to */
+export const OLDER_PALETTE_NAME = "My colours";
+
+/**
+ * Keep colours that older versions saved in PaintCanvas's palette (which can no longer be changed) in a palette of the
+ * user's own, named `OLDER_PALETTE_NAME`: unless they're PaintCanvas's colours, or one of the user's palettes already has
+ * them.
+ *
+ * @example
+ * keepOlderPalette(canvas, ["#123456"]); // the user now has a "My colours" palette with #123456
+ */
+export const keepOlderPalette = (
+  app: PaintCanvas,
+  colours: readonly string[],
+): void => {
+  const valid = sanitisePalette(colours) ?? [];
+  const same = (other: readonly string[]) =>
+    other.length === valid.length &&
+    other.every((colour, i) => colour === valid[i]);
+  if (
+    valid.length === 0 ||
+    same(app.palette.colours) ||
+    app.palettes.items.some((palette) => same(palette.colours))
+  )
+    return;
+  app.palettes.create(OLDER_PALETTE_NAME, valid, app.author);
+};
+
 /**
  * Use app settings on a canvas, e.g. ones kept in the browser or imported. Parts left out stay as they are; invalid
  * values within a part are left out (see each part's sanitising). Colour palettes and profile graphs are added to the
- * user's own, replacing those with the same IDs.
+ * user's own, replacing those with the same IDs. Colours older versions saved in PaintCanvas's palette are moved to one of
+ * the user's own (see `keepOlderPalette`).
  *
  * @example
  * applySettings(canvas, { colours: { foreground: "#ff0000", background: "#ffffff" } });
@@ -86,7 +115,7 @@ export const applySettings = (
 ): void => {
   if (settings.input) app.input.update(settings.input);
   if (settings.shortcuts) app.shortcuts.load(settings.shortcuts);
-  if (settings.palette) app.palette.set(settings.palette);
+  if (settings.palette) keepOlderPalette(app, settings.palette);
   if (settings.palettes) app.palettes.merge(settings.palettes);
   if (settings.colours) {
     app.setColour(settings.colours.foreground, "foreground");

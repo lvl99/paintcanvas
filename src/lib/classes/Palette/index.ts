@@ -20,8 +20,9 @@ export const sanitisePalette = (input: unknown): string[] | undefined => {
 };
 
 /**
- * The user's saved colours, shown as swatches. Each colour is kept once, as lowercase `#rrggbb`, up to
- * `MAX_PALETTE_COLOURS`. Kept in memory; the implementer saves and restores them (see `set` and the `change` event).
+ * The colours of the palette PaintCanvas comes with (`canvas.palette`), shown as swatches the user can pick from but not
+ * change. Each colour is kept once, as lowercase `#rrggbb`, up to `MAX_PALETTE_COLOURS`. An implementer can give it other
+ * colours (see `set` and the `change` event); it isn't saved.
  *
  * Dispatches a `change` event when the colours change.
  *

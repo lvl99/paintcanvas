@@ -54,7 +54,7 @@ One of them is selected for configuration (`canvas.selectedColour`, the foregrou
 
 ## Colour palettes
 
-`canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE` to start with), each once as lowercase `#rrggbb`. Change them with `add`, `merge`, `remove` and `set`; it dispatches `change` when they change. It can't be renamed or deleted, and its ID is `DEFAULT_PALETTE_ID`. It's kept with the app settings.
+`canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE`), each once as lowercase `#rrggbb`. Its ID is `DEFAULT_PALETTE_ID`. Users can't change it: picking one of its colours sets the selected foreground or background colour, and changing that colour afterwards doesn't change the palette. It isn't saved with the app settings; colours older versions saved in it are moved to a palette of the user's own named "My colours" (`keepOlderPalette` from `@lvl99dotcom/paintcanvas/lib/settings`). An implementer can give it other colours with `set`.
 
 `canvas.palettes` (a `ColourPalettes`) holds the user's own palettes, each with an ID, a name, an optional author and its colours:
 
@@ -77,7 +77,7 @@ const text = colourPaletteFile.write(canvas.palettes.items);
 canvas.palettes.merge(colourPaletteFile.parse(text)); // throws an AssetFileError for files it can't read
 ```
 
-`<pc-panel-colours>` shows the user's palettes above PaintCanvas's, each with its own [+] to save the selected colour. Each of the user's palettes has a ⋮ menu (Rename…, Export, Delete…), and "New palette" makes one.
+`<pc-panel-colours>` shows the user's palettes above PaintCanvas's, each with its own [+] to save the selected colour (PaintCanvas's has none, and its colours can't be deleted). Each of the user's palettes has a ⋮ menu (Rename…, Export, Delete…), and "New palette" makes one.
 
 ## Events
 

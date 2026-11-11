@@ -40,7 +40,10 @@ export interface AppSettings {
   input?: Partial<InputSettingsData>;
   /** Each configurable keyboard shortcut action's key combination, by ID (null when it has none) */
   shortcuts?: Record<string, KeyCombo | null>;
-  /** The colours of the palette PaintCanvas comes with, as `#rrggbb` */
+  /**
+   * Colours saved in PaintCanvas's palette by older versions, as `#rrggbb` (no longer saved: applying them moves them
+   * to one of the user's palettes, see `keepOlderPalette`)
+   */
   palette?: string[];
   /** The user's own colour palettes */
   palettes?: ColourPalette[];

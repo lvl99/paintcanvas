@@ -498,22 +498,24 @@ describe("paint-canvas", () => {
     first.layout.settingsStore = name;
     await first.layout.updateComplete;
     await first.layout.settingsAutosave?.ready;
-    first.app.palette.set(["#123456"]);
+    first.app.setColour("#123456");
     first.app.shortcuts.set("tool-brush", { key: "p" });
     // Removing the name stops saving, saving the waiting change
     first.layout.settingsStore = undefined;
     await first.layout.updateComplete;
     const store = new IndexedDbSettingsStore(name);
     await vi.waitFor(async () =>
-      expect(await store.load()).toMatchObject({ palette: ["#123456"] }),
+      expect(await store.load()).toMatchObject({
+        colours: { foreground: "#123456" },
+      }),
     );
-    first.app.palette.set([]);
+    first.app.setColour("#000000");
     // Another layout with the same name restores them
     const second = await setup();
     second.layout.settingsStore = name;
     await second.layout.updateComplete;
     await second.layout.settingsAutosave?.ready;
-    expect(second.app.palette.colours).toEqual(["#123456"]);
+    expect(second.app.colour).toBe("#123456");
     expect(second.app.shortcuts.combo("tool-brush")).toEqual({ key: "p" });
   });
 

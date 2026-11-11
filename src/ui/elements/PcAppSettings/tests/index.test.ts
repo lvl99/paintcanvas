@@ -112,12 +112,12 @@ describe("pc-app-settings", () => {
   it("should import a settings file, using its settings", async () => {
     const { app, element, toasts } = await setup();
     const source = createApp();
-    source.palette.set(["#123456"]);
+    source.palettes.create("Sunset", ["#123456"]);
     source.shortcuts.set("tool-brush", { key: "p" });
     await element.importFile(
       new File([exportSettingsFile(collectSettings(source))], "s.json"),
     );
-    expect(app.palette.colours).toEqual(["#123456"]);
+    expect(app.palettes.items).toEqual(source.palettes.items);
     expect(app.shortcuts.combo("tool-brush")).toEqual({ key: "p" });
     expect(toasts).toEqual([{ message: "Settings imported", kind: "success" }]);
   });
@@ -127,18 +127,28 @@ describe("pc-app-settings", () => {
     Object.assign(app.names, { settingsFileFormat: "myapp-settings" });
     await element.importFile(
       new File(
-        [exportSettingsFile({ palette: [] }, "myapp-settings")],
+        [
+          exportSettingsFile(
+            { colours: { foreground: "#111111", background: "#ffffff" } },
+            "myapp-settings",
+          ),
+        ],
         "s.json",
       ),
     );
-    expect(app.palette.colours).toEqual([]);
+    expect(app.colour).toBe("#111111");
     await element.importFile(
       new File(
-        [exportSettingsFile({ palette: ["#000000"] }, SETTINGS_FILE_FORMAT)],
+        [
+          exportSettingsFile(
+            { colours: { foreground: "#222222", background: "#ffffff" } },
+            SETTINGS_FILE_FORMAT,
+          ),
+        ],
         "s.json",
       ),
     );
-    expect(app.palette.colours).toEqual(["#000000"]);
+    expect(app.colour).toBe("#222222");
   });
 
   it("should show an error for files that can't be read or aren't settings files", async () => {
@@ -147,11 +157,11 @@ describe("pc-app-settings", () => {
     const unreadable = new File(["x"], "x.json");
     vi.spyOn(unreadable, "text").mockRejectedValue(new Error("No"));
     await element.importFile(unreadable);
-    vi.spyOn(app.palette, "set").mockImplementation(() => {
+    vi.spyOn(app.palettes, "merge").mockImplementation(() => {
       throw new Error("Unexpected");
     });
     await element.importFile(
-      new File([exportSettingsFile({ palette: [] })], "s.json"),
+      new File([exportSettingsFile({ palettes: [] })], "s.json"),
     );
     expect(toasts).toEqual([
       { message: "Settings JSON file not compatible", kind: "error" },

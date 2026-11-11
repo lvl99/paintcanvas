@@ -7,7 +7,9 @@ import type { PcMenu } from "../../PcMenu";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import { events, mount, query, queryAll } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
-import { colourPaletteFile } from "../../../../lib/palette";
+import { DEFAULT_PALETTE, colourPaletteFile } from "../../../../lib/palette";
+import type PaintCanvas from "../../../../lib/classes/PaintCanvas";
+import { DEFAULT_PALETTE_ID } from "../../../../lib/classes/ColourPalettes";
 
 /** A colour palette file holding palettes of the given colours */
 const paletteFile = (...palettes: string[][]): File =>
@@ -35,10 +37,16 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-/** A palette for a new canvas with a few saved colours, open as the canvas's panel */
+/** ID of the user's palette in `setup` */
+const MINE = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
+
+/** The colours of the user's palette in `setup` */
+const mine = (app: PaintCanvas) => app.palettes.get(MINE)?.colours;
+
+/** The palette for a new canvas with a user's palette of a few colours ("Mine"), open as the canvas's panel */
 const setup = async (colours = ["#ff0000", "#00ff00", "#0000ff"]) => {
   const app = createApp();
-  app.palette.set(colours);
+  app.palettes.set([{ id: MINE, name: "Mine", colours }]);
   app.togglePanel(Panel.Palette);
   const element = await mount<PcPanelColours>("pc-panel-colours", { app });
   const toasts = events<{ message: string; kind: string }>(element, "pc-toast");
@@ -64,8 +72,11 @@ const enter = async (
 };
 
 /** The saved colours' buttons */
-const swatches = (element: PcPanelColours) =>
-  queryAll<HTMLButtonElement>(element, ".swatch");
+const swatches = (element: PcPanelColours, palette = MINE) =>
+  queryAll<HTMLButtonElement>(
+    element,
+    `.swatches[data-palette="${palette}"] .swatch`,
+  );
 
 /** Press a key on an element inside the palette */
 const press = (target: Element, key: string, init: KeyboardEventInit = {}) => {
@@ -308,10 +319,10 @@ describe("pc-panel-colours", () => {
   it("should save the selected colour once with [+]", async () => {
     const { app, element } = await setup();
     const add = get<HTMLButtonElement>(element, ".add");
-    expect(add.getAttribute("aria-label")).toBe("Save #000000 to PaintCanvas");
+    expect(add.getAttribute("aria-label")).toBe("Save #000000 to Mine");
     add.click();
     await element.updateComplete;
-    expect(app.palette.colours.at(-1)).toBe("#000000");
+    expect(mine(app)?.at(-1)).toBe("#000000");
     expect(add.disabled).toBe(true);
   });
 
@@ -332,7 +343,7 @@ describe("pc-panel-colours", () => {
     ]);
     dialog.choose("delete");
     await element.updateComplete;
-    expect(app.palette.colours).toEqual(["#00ff00", "#0000ff"]);
+    expect(mine(app)).toEqual(["#00ff00", "#0000ff"]);
     expect(element.shadowRoot!.querySelector("pc-dialog")).toBeNull();
     expect(app.colour).toBe("#000000");
   });
@@ -343,7 +354,7 @@ describe("pc-panel-colours", () => {
     await element.updateComplete;
     get<PcDialog>(element, "pc-dialog").choose("cancel");
     await element.updateComplete;
-    expect(app.palette.colours).toHaveLength(3);
+    expect(mine(app)).toHaveLength(3);
     expect(element.shadowRoot!.activeElement).toBe(swatches(element)[2]);
   });
 
@@ -368,7 +379,7 @@ describe("pc-panel-colours", () => {
     expect(element.shadowRoot!.querySelector("pc-menu")).toBeNull();
     get<PcDialog>(element, "pc-dialog").choose("delete");
     await element.updateComplete;
-    expect(app.palette.colours).toEqual(["#ff0000", "#0000ff"]);
+    expect(mine(app)).toEqual(["#ff0000", "#0000ff"]);
   });
 
   it("should return focus to the colour when its menu closes without choosing", async () => {
@@ -501,7 +512,7 @@ describe("pc-panel-colours", () => {
     await element.updateComplete;
     get<PcDialog>(element, "pc-dialog").choose("delete");
     await element.updateComplete;
-    expect(app.palette.colours).toEqual([]);
+    expect(mine(app)).toEqual([]);
   });
 
   it("should show the delete cursor while Alt is held", async () => {
@@ -555,10 +566,11 @@ describe("pc-panel-colours", () => {
     expect(
       app.palettes.items.map(({ name, colours }) => [name, colours]),
     ).toEqual([
+      ["Mine", ["#ff0000", "#00ff00", "#0000ff"]],
       ["Palette 1", ["#ff0000", "#123456"]],
       ["Palette 2", ["#abcdef", "#123456"]],
     ]);
-    expect(app.palette.colours).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
+    expect(app.palette.colours).toEqual(DEFAULT_PALETTE);
     expect(toasts).toEqual([
       { message: "Imported 2 color palettes", kind: "success" },
     ]);
@@ -566,6 +578,8 @@ describe("pc-panel-colours", () => {
 
   it("should import a palette file from before versioned schemas, of any format", async () => {
     const { app, element, toasts } = await setup([]);
+    app.palettes.set([]);
+    await element.updateComplete;
     await element.importFile(
       new File(
         [
@@ -656,6 +670,8 @@ describe("pc-panel-colours", () => {
 
   it("should export the user's palettes, or say there are none, showing an error when it fails", async () => {
     const { app, element, toasts } = await setup();
+    app.palettes.set([]);
+    await element.updateComplete;
     const saved: { blob: Blob; name: string }[] = [];
     element.saveFile = vi.fn(async (blob: Blob, name: string) => {
       saved.push({ blob, name });
@@ -679,6 +695,8 @@ describe("pc-panel-colours", () => {
 
   it("should show the user's palettes above PaintCanvas's, each saving the selected colour with its [+]", async () => {
     const { app, element } = await setup();
+    app.palettes.set([]);
+    await element.updateComplete;
     const sunset = app.palettes.create("Sunset", ["#ff7700"])!;
     await element.updateComplete;
     const headings = queryAll(element, ".palette-heading h3").map(
@@ -694,7 +712,7 @@ describe("pc-panel-colours", () => {
       "#ff7700",
       "#000000",
     ]);
-    expect(app.palette.colours).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
+    expect(app.palette.colours).toEqual(DEFAULT_PALETTE);
     (group.querySelector(".swatch") as HTMLButtonElement).click();
     expect(app.colour).toBe("#ff7700");
   });
@@ -730,6 +748,8 @@ describe("pc-panel-colours", () => {
 
   it("should make a palette, asking for its name, with the user as its author", async () => {
     const { app, element } = await setup();
+    app.palettes.set([]);
+    await element.updateComplete;
     element.prompt = vi.fn(async () => "Sunset");
     get(element, "button.new-palette").click();
     await vi.waitFor(() => expect(app.palettes.items).toHaveLength(1));
@@ -751,6 +771,8 @@ describe("pc-panel-colours", () => {
 
   it("should rename, export and delete the user's palettes from their menu", async () => {
     const { app, element } = await setup();
+    app.palettes.set([]);
+    await element.updateComplete;
     const sunset = app.palettes.create("Sunset", ["#ff7700"])!;
     await element.updateComplete;
     element.prompt = vi.fn(async () => "Dusk");
@@ -789,5 +811,37 @@ describe("pc-panel-colours", () => {
     await element.actOnPalette(sunset.id, "rename");
     element.app = undefined;
     expect(await element.createPalette()).toBeUndefined();
+  });
+
+  it("should not change PaintCanvas's palette: no [+], menu or deleting, and changing a colour picked from it changes only the selected colour", async () => {
+    const { app, element } = await setup();
+    const group = get(
+      element,
+      `.swatches[data-palette="${DEFAULT_PALETTE_ID}"]`,
+    );
+    expect(group.querySelector(".add")).toBeNull();
+    const [first] = swatches(element, DEFAULT_PALETTE_ID);
+    expect(first!.hasAttribute("aria-haspopup")).toBe(false);
+    first!.click();
+    expect(app.colour).toBe(DEFAULT_PALETTE[0]);
+    first!.dispatchEvent(
+      new MouseEvent("click", { altKey: true, bubbles: true }),
+    );
+    first!.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+    );
+    first!.dispatchEvent(
+      new PointerEvent("pointerdown", { pointerType: "touch", bubbles: true }),
+    );
+    press(first!, "Delete");
+    press(first!, "ContextMenu");
+    await new Promise((resolve) => setTimeout(resolve, LONG_PRESS_MS + 50));
+    await element.updateComplete;
+    expect(queryAll(element, "pc-dialog")).toHaveLength(0);
+    expect(queryAll(element, "pc-menu")).toHaveLength(0);
+    // Changing the picked colour changes the foreground colour only
+    await enter(element, get<HTMLInputElement>(element, ".hex"), "#123456");
+    expect(app.colour).toBe("#123456");
+    expect(app.palette.colours).toEqual(DEFAULT_PALETTE);
   });
 });

@@ -19,7 +19,7 @@ export interface SettingsAutosaveOptions {
 }
 
 /**
- * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and
+ * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palettes, colours, profile graphs, theme and
  * language) in a store: the saved settings are restored when it starts (invalid ones are ignored), then changes are
  * saved soon after they happen. While the canvas keeps colour palettes or profile graphs in stores of their own (see
  * `PaintCanvas.useAssetStores`), they are left out of the saved settings (ones restored from older settings are added,
@@ -68,15 +68,7 @@ export default class SettingsAutosave extends EventTarget {
   /** The canvas parts whose changes are saved */
   private get sources(): EventTarget[] {
     const { app } = this;
-    return [
-      app,
-      app.input,
-      app.shortcuts,
-      app.palette,
-      app.palettes,
-      app.profiles,
-      app.ui,
-    ];
+    return [app, app.input, app.shortcuts, app.palettes, app.profiles, app.ui];
   }
 
   /**
@@ -111,9 +103,13 @@ export default class SettingsAutosave extends EventTarget {
 
   /** Restore the saved settings, then listen for changes */
   private async start(): Promise<void> {
+    let older = false;
     try {
       const result = isValidSettings(await this.store.load());
-      if (result.valid && !this.stopped) applySettings(this.app, result.value);
+      if (result.valid && !this.stopped) {
+        applySettings(this.app, result.value);
+        older = result.value.palette !== undefined;
+      }
     } catch (error) {
       this.fail(error);
     }
@@ -121,6 +117,11 @@ export default class SettingsAutosave extends EventTarget {
     this.saved = JSON.stringify(this.collect());
     for (const source of this.sources)
       source.addEventListener("change", this.onChange);
+    // Settings from older versions are saved again without what moved elsewhere, so it's only moved once
+    if (older) {
+      this.saved = undefined;
+      await this.save();
+    }
   }
 
   /** The canvas's settings to save, without the assets kept in stores of their own */

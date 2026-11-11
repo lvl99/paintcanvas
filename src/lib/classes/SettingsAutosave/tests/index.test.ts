@@ -36,20 +36,25 @@ describe("SettingsAutosave", () => {
   it("should restore saved settings, then save changes after a pause", async () => {
     vi.useFakeTimers();
     const app = createApp();
+    const sunset = {
+      id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
+      name: "Sunset",
+      colours: ["#123456"],
+    };
     const store = createStore({
-      palette: ["#123456"],
+      palettes: [sunset],
       colours: { foreground: "#ff0000", background: "#00ff00" },
     });
     const autosave = new SettingsAutosave(app, store);
     await autosave.ready;
-    expect(app.palette.colours).toEqual(["#123456"]);
+    expect(app.palettes.items).toEqual([sunset]);
     expect(app.colours).toEqual({
       foreground: "#ff0000",
       background: "#00ff00",
     });
     expect(store.save).not.toHaveBeenCalled();
 
-    app.palette.add("#abcdef");
+    app.palettes.addColour(sunset.id, "#abcdef");
     app.shortcuts.set("cut", null);
     app.input.update({ focusPen: true });
     app.setColour("#0000ff");
@@ -97,11 +102,11 @@ describe("SettingsAutosave", () => {
     const store = createStore();
     const autosave = new SettingsAutosave(app, store);
     await autosave.ready;
-    app.palette.set([]);
+    app.setColour("#111111");
     autosave.stop();
     await vi.advanceTimersByTimeAsync(0);
     expect(store.save).toHaveBeenCalledOnce();
-    app.palette.set(["#000000"]);
+    app.setColour("#222222");
     autosave.stop();
     await vi.runAllTimersAsync();
     expect(store.save).toHaveBeenCalledOnce();
@@ -118,11 +123,11 @@ describe("SettingsAutosave", () => {
 
   it("should not restore or listen when stopped before loading finishes", async () => {
     const app = createApp();
-    const store = createStore({ palette: [] });
+    const store = createStore({ palette: ["#123456"] });
     const autosave = new SettingsAutosave(app, store);
     autosave.stop();
     await autosave.ready;
-    expect(app.palette.colours).not.toEqual([]);
+    expect(app.palettes.items).toEqual([]);
   });
 
   it("should tell listeners when loading or saving fails, and save again on the next change", async () => {
@@ -137,14 +142,14 @@ describe("SettingsAutosave", () => {
       errors.push((event as CustomEvent).detail),
     );
     await autosave.ready;
-    app.palette.set([]);
+    app.setColour("#111111");
     await vi.runAllTimersAsync();
     expect(errors.map((error) => (error as Error).message)).toEqual([
       "load",
       "save",
     ]);
     // The failed save is tried again with the next change
-    app.palette.set(["#000000"]);
+    app.setColour("#222222");
     await vi.runAllTimersAsync();
     expect(store.save).toHaveBeenCalledTimes(2);
     expect(store.value).toEqual(collectSettings(app));
@@ -155,8 +160,8 @@ describe("SettingsAutosave", () => {
     const store = createStore();
     const autosave = new SettingsAutosave(app, store);
     await autosave.ready;
-    app.palette.add("#123456");
-    app.palette.remove(app.palette.colours.length - 1);
+    app.setColour("#123456");
+    app.setColour("#000000");
     await autosave.save();
     expect(store.save).not.toHaveBeenCalled();
   });
@@ -182,9 +187,23 @@ describe("SettingsAutosave", () => {
     await autosave.ready;
     expect(app.profiles.graphs).toEqual([graph]);
     await vi.waitFor(() => expect(profiles.put).toHaveBeenCalledWith(graph));
-    app.palette.add("#123456");
+    app.setColour("#123456");
     await vi.waitFor(() => expect(store.save).toHaveBeenCalled());
     expect(store.value).not.toHaveProperty("profiles");
+    autosave.stop();
+  });
+
+  it("should move colours older versions saved in PaintCanvas's palette to one of the user's, saving the settings again without them", async () => {
+    const app = createApp();
+    const store = createStore({ palette: ["#123456", "#abcdef"] });
+    const autosave = new SettingsAutosave(app, store);
+    await autosave.ready;
+    expect(app.palettes.items).toMatchObject([
+      { name: "My colours", colours: ["#123456", "#abcdef"] },
+    ]);
+    expect(store.save).toHaveBeenCalledOnce();
+    expect(store.value).not.toHaveProperty("palette");
+    expect(store.value).toEqual(collectSettings(app));
     autosave.stop();
   });
 });

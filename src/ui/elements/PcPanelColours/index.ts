@@ -125,6 +125,10 @@ interface SwatchRef {
   index: number;
 }
 
+/** Whether a saved colour is in one of the user's palettes (PaintCanvas's can't be changed) */
+const isEditable = ({ palette }: SwatchRef): boolean =>
+  palette !== DEFAULT_PALETTE_ID;
+
 /** Actions in a palette's menu */
 const PALETTE_ACTIONS = ["rename", "export", "delete"] as const;
 
@@ -156,9 +160,10 @@ const clampWhole = (value: number, max: number): number =>
  * palette and to import and export the user's palettes as a JSON file.
  *
  * - Pressing the foreground or background colour selects it.
- * - Pressing a saved colour sets the selected colour; a palette's [+] saves the selected colour in it.
+ * - Pressing a saved colour sets the selected colour (changing it afterwards doesn't change the palette); a palette's [+]
+ *   saves the selected colour in it. PaintCanvas's palette can't be changed.
  * - Each of the user's palettes has a ⋮ menu to rename, export or delete it (deleting asks first).
- * - A saved colour is deleted, after asking, by clicking it with Alt/Option held (the cursor shows an "X"), from its
+ * - A colour in one of the user's palettes is deleted, after asking, by clicking it with Alt/Option held (the cursor shows an "X"), from its
  *   menu (right-click, a long press on touch screens, or the context menu key), or with Delete or Backspace. Arrow keys,
  *   Home and End move between saved colours.
  * - Escape closes it (closes the canvas's open panel).
@@ -384,22 +389,23 @@ export class PcPanelColours extends PcPanel {
     this.requestUpdate();
   }
 
-  /** Set the selected colour from a saved colour, or ask to delete it with Alt/Option held */
+  /** Set the selected colour from a saved colour, or ask to delete one of the user's with Alt/Option held */
   private onSwatchClick(event: MouseEvent, swatch: SwatchRef): void {
     this.focused = swatch;
     if (this.longPressed) {
       this.longPressed = false;
       return;
     }
-    if (event.altKey) {
+    if (event.altKey && isEditable(swatch)) {
       this.confirming = swatch;
       return;
     }
     this.setColour(this.colourAt(swatch) as string);
   }
 
-  /** Open a saved colour's menu where it was right-clicked */
+  /** Open the menu of a colour in one of the user's palettes where it was right-clicked */
   private onSwatchContextMenu(event: MouseEvent, swatch: SwatchRef): void {
+    if (!isEditable(swatch)) return;
     event.preventDefault();
     this.focused = swatch;
     this.menu = { ...swatch, x: event.clientX, y: event.clientY };
@@ -408,7 +414,7 @@ export class PcPanelColours extends PcPanel {
   /** Start waiting for a touch held on a saved colour to open its menu */
   private onSwatchPointerDown(event: PointerEvent, swatch: SwatchRef): void {
     this.longPressed = false;
-    if (event.pointerType !== "touch") return;
+    if (event.pointerType !== "touch" || !isEditable(swatch)) return;
     this.cancelPress();
     const { clientX: x, clientY: y } = event;
     this.press = {
@@ -446,15 +452,16 @@ export class PcPanelColours extends PcPanel {
    */
   private onSwatchKeyDown(event: KeyboardEvent, swatch: SwatchRef): void {
     const { palette, index } = swatch;
-    if (event.key === "Delete" || event.key === "Backspace") {
+    const editable = isEditable(swatch);
+    if (editable && (event.key === "Delete" || event.key === "Backspace")) {
       event.preventDefault();
       event.stopPropagation();
       this.confirming = swatch;
       return;
     }
     if (
-      event.key === "ContextMenu" ||
-      (event.shiftKey && event.key === "F10")
+      editable &&
+      (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))
     ) {
       event.preventDefault();
       event.stopPropagation();
@@ -500,11 +507,9 @@ export class PcPanelColours extends PcPanel {
       ?.focus();
   }
 
-  /** Save the selected colour in a palette */
+  /** Save the selected colour in one of the user's palettes */
   private onAdd(palette: string): void {
-    const app = this.app as PaintCanvas;
-    if (palette === DEFAULT_PALETTE_ID) app.palette.add(this.colour);
-    else app.palettes.addColour(palette, this.colour);
+    this.app?.palettes.addColour(palette, this.colour);
   }
 
   /** Delete the saved colour that was asked about, if confirmed */
@@ -513,11 +518,8 @@ export class PcPanelColours extends PcPanel {
     const swatch = this.confirming as SwatchRef;
     this.confirming = undefined;
     const app = this.app as PaintCanvas;
-    if (event.detail.value === DELETE_CHOICE) {
-      if (swatch.palette === DEFAULT_PALETTE_ID)
-        app.palette.remove(swatch.index);
-      else app.palettes.removeColour(swatch.palette, swatch.index);
-    }
+    if (event.detail.value === DELETE_CHOICE)
+      app.palettes.removeColour(swatch.palette, swatch.index);
     // Back to the colour, or the one that took its place
     const count = this.coloursOf(swatch.palette).length;
     if (count > 0)
@@ -755,7 +757,7 @@ export class PcPanelColours extends PcPanel {
             style="--colour: ${colour}"
             title=${colour}
             aria-label=${colour}
-            aria-haspopup="menu"
+            aria-haspopup=${palette.own ? "menu" : nothing}
             aria-pressed=${colour === this.colour}
             tabindex=${index === focused ? 0 : -1}
             @click=${(e: MouseEvent) => this.onSwatchClick(e, swatch)}
@@ -769,16 +771,20 @@ export class PcPanelColours extends PcPanel {
             @keydown=${(e: KeyboardEvent) => this.onSwatchKeyDown(e, swatch)}
           ></button>`;
         })}
-        <button
-          type="button"
-          class="add"
-          title=${add}
-          aria-label=${add}
-          ?disabled=${!canAdd}
-          @click=${() => this.onAdd(id)}
-        >
-          +
-        </button>
+        ${
+          palette.own
+            ? html`<button
+                type="button"
+                class="add"
+                title=${add}
+                aria-label=${add}
+                ?disabled=${!canAdd}
+                @click=${() => this.onAdd(id)}
+              >
+                +
+              </button>`
+            : nothing
+        }
       </div>
     </section>`;
   }
