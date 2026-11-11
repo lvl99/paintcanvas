@@ -1,7 +1,8 @@
 // A full-page PaintCanvas with the layout's layers pane on the right, an app menu with input settings, keyboard shortcuts and
 // settings import/export, a theme picker and a "New drawing" button. The drawing, the app settings (including the
 // theme and language) and the user's brush presets, colour palettes and profile graphs are kept in the browser (`store="demo"`,
-// `settings-store="demo"`), so they survive reloading the page.
+// `settings-store="demo"`), so they survive reloading the page. With `?remote` in the address, the drawing is also
+// saved every 30 seconds (while it changes) to a pretend remote store that takes 3 seconds, to try out remote saving.
 // The demo's own text is translated like an app's would be: its locales are added after PaintCanvas's, with `demo.` keys.
 import "../src/ui";
 import { translations } from "../src/lib/i18n";
@@ -12,6 +13,7 @@ import type { PcThemePicker } from "../src/ui/elements/PcThemePicker";
 import type { PcCanvasMap } from "../src/ui/elements/PcCanvasMap";
 import type { PcDialog } from "../src/ui/elements/PcDialog";
 import type { PcToast } from "../src/ui/elements/PcToast";
+import { MemoryDocumentStore } from "../src/testing/documentStore";
 
 /** An element on the page (the page always has it) */
 const find = <T extends Element = HTMLElement>(selector: string): T =>
@@ -41,6 +43,11 @@ const app = layout.app as NonNullable<PaintCanvasElement["app"]>;
 find<PcCanvasMap>("#map").app = app;
 find<PcInputSettings>("#settings").settings = app.input;
 find<PcAppSettings>("#app-settings").app = app;
+if (new URLSearchParams(location.search).has("remote"))
+  app.useRemoteDocumentStore(
+    new MemoryDocumentStore({ label: "Demo cloud", delayMs: 3000 }),
+    { intervalMs: 30_000 },
+  );
 // The theme and language are kept with the app settings, so they're restored on reload too
 find<PcThemePicker>("pc-theme-picker").settings = app.ui;
 find<PcInputSettings>("#settings").ui = app.ui;

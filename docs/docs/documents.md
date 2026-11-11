@@ -43,3 +43,20 @@ canvas.useLayerStore(new IndexedDbLayerStore("my-drawing"));
 - To start again with an empty drawing, use `canvas.newDocument()`. The saved drawing follows.
 
 `canvas.autosave` (a `LayerAutosave`) has the state (`starting`, `elsewhere`, `ready` or `stopped`) and dispatches `change` and `error`. To keep layers somewhere else (e.g. your server), pass your own store with the same methods as `LayerStoreLike`: `load`, `save` and `clear`. The test helpers include `MemoryLayerStore` (`@lvl99dotcom/paintcanvas/testing/layerStore`) and fake Web Locks (`@lvl99dotcom/paintcanvas/testing/locks`).
+
+## Keeping the drawing somewhere else
+
+Besides the browser, the whole drawing can be kept in a remote store, e.g. the user's account online. Saving there takes longer, so it happens less often: every 5 minutes (`REMOTE_SAVE_INTERVAL_MS`) while there are changes, or when asked.
+
+```ts
+canvas.useRemoteDocumentStore(myAccountStore, { intervalMs: 10 * 60 * 1000 });
+// or: new PaintCanvas({ remoteDocumentStore: myAccountStore })
+
+await canvas.remoteAutosave?.save(); // save now, e.g. from a "Save" button
+```
+
+- A remote store has the `DocumentStoreLike` methods: `save(document, onProgress)` (the whole document, with its PNG blobs and thumbnail; call `onProgress` with how much is done, 0 to 1, if known) and `load(id)`. Its optional `label` names it for the user, e.g. "Bluesky".
+- `canvas.remoteAutosave` (a `RemoteDocumentAutosave`) has `saving`, `progress`, `lastSaved`, `hasChanges` and `error`, and dispatches `change` and `error`. A failed save is tried again next time.
+- While it saves, `<pc-stats>` shows "Saving to …" with a progress bar on the right, and says so if saving failed.
+- To open a document from the store, use `canvas.openDocument(await myAccountStore.load(id))`.
+- `MemoryDocumentStore` (`@lvl99dotcom/paintcanvas/testing/documentStore`) keeps documents in memory, optionally taking its time, for tests and trying it out. The demo uses it with `?remote` in its address.

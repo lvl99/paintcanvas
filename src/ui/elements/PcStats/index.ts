@@ -36,10 +36,12 @@ export const formatBytes = (bytes: number, locale?: string): string => {
 
 /**
  * A line of small text about the canvas: its size; while the drawing is kept in the browser, how much its layer
- * images take there; the zoom level; and the colour under the pointer (with a swatch; a dash when the pointer isn't
- * over the canvas). The colour follows the pointer at most every `COLOUR_INTERVAL_MS`, and isn't read while a stroke is
- * drawn (the next pointer move after it reads it). It's not announced to screen readers as it changes, as it changes
- * with every pointer move.
+ * images take there; the zoom level; the colour under the pointer (with a swatch; a dash when the pointer isn't over the
+ * canvas); and, on the right, while the drawing is being saved to a remote store (see
+ * `PaintCanvas.useRemoteDocumentStore`), a progress bar, or that saving there failed. The colour follows the pointer
+ * at most every `COLOUR_INTERVAL_MS`, and isn't read while a stroke is drawn (the next pointer move after it reads it).
+ * It's not announced to screen readers as it changes, as it changes with every pointer move; saving to the remote store
+ * is.
  *
  * @example
  * html`<pc-stats .app=${app}></pc-stats>`
@@ -78,6 +80,18 @@ export class PcStats extends PcElement {
         white-space: nowrap;
         font-variant-numeric: tabular-nums;
       }
+      /* Saving to the remote store: at the end of the line, on the right */
+      .remote {
+        margin-left: auto;
+      }
+      .remote progress {
+        width: 48px;
+        height: 6px;
+        accent-color: var(--pc-accent, currentColor);
+      }
+      .remote.failed {
+        color: var(--pc-dismiss-text);
+      }
       .swatch {
         width: 10px;
         height: 10px;
@@ -93,6 +107,7 @@ export class PcStats extends PcElement {
     this.app,
     this.app?.viewport,
     this.app?.autosave,
+    this.app?.remoteAutosave,
   ]);
 
   /** The colour under the pointer when it was last read, if it's over the canvas */
@@ -186,7 +201,29 @@ export class PcStats extends PcElement {
             : nothing
         }
       </li>
+      ${this.renderRemote(app)}
     </ul>`;
+  }
+
+  /** Saving to the remote store, while under way or after it failed */
+  private renderRemote(app: PaintCanvas) {
+    const remote = app.remoteAutosave;
+    if (!remote || (!remote.saving && remote.error === undefined))
+      return nothing;
+    const store = remote.store.label ?? this.t("paintCanvas.stats.remoteStore");
+    if (!remote.saving)
+      return html`<li class="remote failed" role="status">
+        ${this.t("paintCanvas.stats.remoteFailed", { store })}
+      </li>`;
+    const label = this.t("paintCanvas.stats.remoteSaving", { store });
+    return html`<li class="remote" role="status">
+      ${label}
+      <progress
+        aria-label=${label}
+        max="1"
+        value=${remote.progress ?? nothing}
+      ></progress>
+    </li>`;
   }
 }
 
