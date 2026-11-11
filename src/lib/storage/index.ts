@@ -5,6 +5,7 @@ import type { AppSettings } from "../settings/schema";
 import type { BrushConfig } from "../brushes/types";
 import type { ColourPalette } from "../palette/schema";
 import type { ProfileGraph } from "../profiles";
+import type { DocumentInfo } from "../document/schema";
 import { isRendering, type Rendering } from "../classes/UiSettings";
 
 /** Version of a saved drawing's shape, so drawings saved by other versions can be recognised */
@@ -37,10 +38,12 @@ const OBJECT_STORES = [DRAWINGS, IMAGES, SETTINGS, ...ASSET_KINDS] as const;
 /** A saved layer's settings (its pixels are kept separately, as a PNG) */
 export type SavedLayer = Required<LayerConfig>;
 
-/** A saved drawing: its size, its layers (top first) without their pixels, and the selected layer */
+/** A saved drawing: its details, size, its layers (top first) without their pixels, and the selected layer */
 export interface SavedDrawing {
   /** The shape's version (see `SAVED_DRAWING_VERSION`) */
   version: number;
+  /** The drawing's details (drawings saved by older versions have none) */
+  document?: DocumentInfo;
   width: number;
   height: number;
   layers: SavedLayer[];

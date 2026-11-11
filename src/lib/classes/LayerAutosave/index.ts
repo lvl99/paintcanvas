@@ -9,6 +9,7 @@ import {
   type SavedDrawingWithImages,
   type SavedLayer,
 } from "../../storage";
+import type { DocumentInfo } from "../../document/schema";
 
 /** How long to wait after the layers change before saving, so quick changes are saved together (milliseconds) */
 export const SAVE_DELAY_MS = 500;
@@ -39,6 +40,10 @@ export interface AutosaveCanvas extends EventTarget {
   readonly layers: LayerStack;
   /** Slow work that waits for pauses in drawing */
   readonly background: BackgroundWork;
+  /** The drawing's details (changes are followed by a `change` event) */
+  readonly documentInfo: Readonly<DocumentInfo>;
+  /** Use the details of the drawing being restored */
+  restoreDocumentInfo(info: DocumentInfo): void;
   /** Replace the canvas size and layers with saved ones, drawing each layer's image, and select one */
   restoreLayers(
     width: number,
@@ -90,8 +95,8 @@ const isComplete = (
   drawing.layers.some((layer) => layer.id === drawing.activeLayer);
 
 /**
- * Keeps a canvas's layers in a store, so the drawing survives reloading the page: restores the saved drawing when it
- * starts, then saves soon after the layers change (once drawing pauses), and straight away when the page is hidden.
+ * Keeps a canvas's layers and the drawing's details in a store, so the drawing survives reloading the page: restores the
+ * saved drawing when it starts, then saves soon after the layers or details change (once drawing pauses), and straight away when the page is hidden.
  * Only layers whose pixels changed are encoded and saved again: the layers' change counts tell which (see
  * `LayerStack.pixelVersion`), without reading their pixels, which is slow on phones.
  *
@@ -152,11 +157,16 @@ export default class LayerAutosave extends EventTarget {
   // Save soon after the layers change
   private readonly onLayersChange = () => this.schedule();
 
-  // Follow the canvas's new layers when its size changes
+  /** The drawing's details as last saved or restored, as JSON */
+  private savedInfo?: string;
+
+  // Follow the canvas's new layers when its size changes, and save when the drawing's details change
   private readonly onCanvasChange = () => {
-    if (this.canvas.layers === this.watched) return;
-    this.watch();
-    this.onLayersChange();
+    if (this.canvas.layers !== this.watched) {
+      this.watch();
+      this.onLayersChange();
+    } else if (JSON.stringify(this.canvas.documentInfo) !== this.savedInfo)
+      this.onLayersChange();
   };
 
   // Save before the page is hidden (it may be closing); try to draw again when it's shown
@@ -313,7 +323,10 @@ export default class LayerAutosave extends EventTarget {
     if (this.currentState !== AutosaveState.Starting) return;
     this.saved = new Map();
     this.watch();
-    if (restored) this.remember();
+    if (restored) {
+      this.remember();
+      this.savedInfo = JSON.stringify(this.canvas.documentInfo);
+    }
     this.setState(AutosaveState.Ready);
     if (!restored) this.onLayersChange();
   }
@@ -336,6 +349,7 @@ export default class LayerAutosave extends EventTarget {
     if (this.currentState !== AutosaveState.Starting) return false;
     // Not saved again for being restored
     this.unwatch();
+    if (drawing.document) this.canvas.restoreDocumentInfo(drawing.document);
     this.canvas.restoreLayers(
       drawing.width,
       drawing.height,
@@ -384,8 +398,10 @@ export default class LayerAutosave extends EventTarget {
           this.encode(layer.canvas).then((image) => [layer.id, image] as const),
         );
       }
+      const info = structuredClone(this.canvas.documentInfo) as DocumentInfo;
       const drawing: SavedDrawing = {
         version: SAVED_DRAWING_VERSION,
+        document: info,
         width: stack.width,
         height: stack.height,
         layers: stack.layers.map((layer) => layer.toConfig()),
@@ -399,6 +415,7 @@ export default class LayerAutosave extends EventTarget {
       for (const id of this.saved.keys())
         if (!kept.has(id)) this.saved.delete(id);
       for (const [id, record] of encoded) this.saved.set(id, record);
+      this.savedInfo = JSON.stringify(info);
       this.error = undefined;
       this.rememberSizes(kept, images);
     } catch (error) {
