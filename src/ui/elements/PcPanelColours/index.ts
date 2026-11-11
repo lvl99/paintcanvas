@@ -27,15 +27,8 @@ import {
   type Hsl,
   type Rgb,
 } from "../../../lib/utils/colour";
-import {
-  MAX_PALETTE_COLOURS,
-  PALETTE_FILE_ERRORS,
-  PALETTE_FILE_FORMAT,
-  PaletteFileError,
-  exportPaletteFile,
-  paletteFileName,
-  parsePaletteFile,
-} from "../../../lib/palette";
+import { MAX_PALETTE_COLOURS, colourPaletteFile } from "../../../lib/palette";
+import { AssetFileError } from "../../../lib/assets";
 import {
   JSON_FILE_TYPE,
   saveFile,
@@ -110,11 +103,18 @@ export const LONG_PRESS_MS = 500;
 /** How far a touch can move and still count as held still (CSS pixels) */
 const LONG_PRESS_SLOP = 10;
 
-/** Translation keys of the palette file error messages */
-const PALETTE_FILE_ERROR_KEYS: Record<string, string> = {
-  [PALETTE_FILE_ERRORS.incompatible]: "paintCanvas.palette.fileIncompatible",
-  [PALETTE_FILE_ERRORS.read]: "paintCanvas.palette.fileReadFailed",
+/** Translation keys of the messages shown when importing a palette file fails, by reason */
+const IMPORT_ERROR_KEYS: Record<string, string> = {
+  invalid: "paintCanvas.palette.fileIncompatible",
+  unsupported: "paintCanvas.palette.fileUnsupported",
 };
+
+/**
+ * The translation key of the message shown when importing a palette file fails.
+ */
+const importErrorKey = (error: unknown): string =>
+  (error instanceof AssetFileError && IMPORT_ERROR_KEYS[error.reason]) ||
+  "paintCanvas.palette.fileReadFailed";
 
 /** The dialog's choice that deletes the colour */
 const DELETE_CHOICE = "delete";
@@ -458,39 +458,31 @@ export class PcPanelColours extends PcPanel {
   }
 
   /**
-   * Import the colours in a colour palette file, adding them after the saved ones (leaving out ones already saved).
+   * Import the colours of the palettes in a colour palette file, adding them after the saved ones (leaving out ones
+   * already saved).
    */
   async importFile(file: File): Promise<void> {
     const app = this.app;
     if (!app) return;
-    let text: string;
     try {
-      text = await file.text();
-    } catch {
-      this.toastError(PALETTE_FILE_ERRORS.read);
-      return;
-    }
-    try {
-      const colours = parsePaletteFile(text, [
-        app.names.paletteFileFormat,
-        PALETTE_FILE_FORMAT,
-      ]);
-      const count = app.palette.merge(colours);
+      const palettes = colourPaletteFile.parse(await file.text());
+      const count = app.palette.merge(
+        palettes.flatMap((palette) => palette.colours),
+      );
       emit(this, "pc-toast", {
         message: this.t("paintCanvas.palette.imported", { count }),
         kind: "success",
       });
     } catch (error) {
-      this.toastError(
-        error instanceof PaletteFileError
-          ? error.message
-          : PALETTE_FILE_ERRORS.read,
-      );
+      emit(this, "pc-toast", {
+        message: this.t(importErrorKey(error)),
+        kind: "error",
+      });
     }
   }
 
   /**
-   * Export the saved colours as a colour palette file.
+   * Export the saved colours as a colour palette file holding one palette.
    */
   async exportFile(): Promise<void> {
     const app = this.app;
@@ -498,10 +490,18 @@ export class PcPanelColours extends PcPanel {
     try {
       await this.saveFile(
         new Blob(
-          [exportPaletteFile(app.palette.colours, app.names.paletteFileFormat)],
+          [
+            colourPaletteFile.write([
+              {
+                id: crypto.randomUUID(),
+                name: this.t("paintCanvas.palette.label"),
+                colours: [...app.palette.colours],
+              },
+            ]),
+          ],
           { type: "application/json" },
         ),
-        paletteFileName(undefined, app.names.filePrefix),
+        colourPaletteFile.fileName(undefined, app.names.filePrefix),
       );
     } catch {
       emit(this, "pc-toast", {
@@ -509,14 +509,6 @@ export class PcPanelColours extends PcPanel {
         kind: "error",
       });
     }
-  }
-
-  /** Show a palette file error (one of `PALETTE_FILE_ERRORS`) in the chosen language */
-  private toastError(message: string): void {
-    emit(this, "pc-toast", {
-      message: this.t(PALETTE_FILE_ERROR_KEYS[message] as string),
-      kind: "error",
-    });
   }
 
   /** The colour model tabs and the selected model's sliders */

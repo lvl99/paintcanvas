@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { Ajv } from "ajv";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import { withoutType } from "../../validation/standalone";
+import { profileGraphSchema } from "../../profiles/schema";
 import {
   SETTINGS_FILE_ERRORS,
   SETTINGS_FILE_FORMAT,
@@ -38,9 +40,11 @@ const file = (settings: unknown, changes: Record<string, unknown> = {}) => ({
 
 describe("settings schemas", () => {
   it("should compile in ajv strict mode and validate settings and files", () => {
-    const ajv = new Ajv({
+    const ajv = new Ajv2020({
       strict: true,
-      schemas: [keyComboSchema, settingsSchema],
+      schemas: [profileGraphSchema, keyComboSchema, settingsSchema].map(
+        withoutType,
+      ),
     });
     const validateSettings = ajv.getSchema(settingsSchema.$id)!;
     const validateFile = ajv.compile(settingsFileSchema);
@@ -48,11 +52,18 @@ describe("settings schemas", () => {
     expect(validateSettings(settings)).toBe(true);
     expect(validateFile(file(settings))).toBe(true);
     expect(validateSettings({ palette: ["red"] })).toBe(false);
+    const id = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
+    expect(
+      validateSettings({
+        profiles: [{ id, name: "Soft", points: linearPoints() }],
+      }),
+    ).toBe(true);
+    // The user's own graphs have UUIDs
     expect(
       validateSettings({
         profiles: [{ id: "a", name: "Soft", points: linearPoints() }],
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       validateSettings({ profiles: [{ id: "a", name: "", points: [] }] }),
     ).toBe(false);

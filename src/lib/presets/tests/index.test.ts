@@ -1,23 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { Ajv } from "ajv";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import validPreset from "./brushPreset-valid.data.json";
 import {
-  BRUSH_PRESET_FILE_FORMAT,
-  BRUSH_PRESET_FILE_VERSION,
+  BRUSH_PRESET_COLLECTION_TYPE,
+  BRUSH_PRESET_TYPE,
   MAX_PRESETS_PER_FILE,
   MAX_SHAPE_DATA_URL_LENGTH,
-  brushPresetFileSchema,
+  brushPresetCollectionSchema,
   brushPresetSchema,
   formatErrors,
   isValidBrushPreset,
-  isValidBrushPresetFile,
 } from "../index";
+import { profileGraphSchema } from "../../profiles/schema";
+import { withoutType } from "../../validation/standalone";
 
-/** A preset file with the given presets */
-const file = (presets: unknown[]) => ({
-  format: BRUSH_PRESET_FILE_FORMAT,
-  version: BRUSH_PRESET_FILE_VERSION,
-  presets,
+/** A preset collection file with the given presets */
+const file = (items: unknown[]) => ({
+  $schema: brushPresetCollectionSchema.$id,
+  "@type": BRUSH_PRESET_COLLECTION_TYPE,
+  items,
 });
 
 /** The valid preset with changes (undefined removes a property) */
@@ -29,14 +30,54 @@ const withChanges = (changes: Record<string, unknown>) =>
   );
 
 describe("brush preset schemas", () => {
+  const ajv = new Ajv2020({
+    strict: true,
+    schemas: [profileGraphSchema, brushPresetSchema].map(withoutType),
+  });
+  const validatePreset = ajv.getSchema(brushPresetSchema.$id)!;
+  const validateFile = ajv.compile(withoutType(brushPresetCollectionSchema));
+
+  it("should be published with a versioned URL and a type", () => {
+    expect(brushPresetSchema.$id).toBe(
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-1.0.0.json",
+    );
+    expect(brushPresetSchema["@type"]).toBe("PaintCanvas/BrushConfig");
+    expect(brushPresetCollectionSchema.$id).toBe(
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-1.0.0.json",
+    );
+    expect(brushPresetCollectionSchema["@type"]).toBe(
+      "PaintCanvas/BrushConfigCollection",
+    );
+  });
+
   it("should compile in ajv strict mode and validate presets and files", () => {
-    const ajv = new Ajv({ strict: true, schemas: [brushPresetSchema] });
-    const validatePreset = ajv.getSchema(brushPresetSchema.$id)!;
-    const validateFile = ajv.compile(brushPresetFileSchema);
     expect(validatePreset(validPreset)).toBe(true);
+    expect(
+      validatePreset({
+        ...validPreset,
+        $schema: brushPresetSchema.$id,
+        "@type": BRUSH_PRESET_TYPE,
+      }),
+    ).toBe(true);
     expect(validateFile(file([validPreset]))).toBe(true);
+    expect(validateFile(file([]))).toBe(true);
     expect(validatePreset({ id: "not a UUID" })).toBe(false);
+    expect(validatePreset({ ...validPreset, "@type": "Other" })).toBe(false);
     expect(validateFile(file([{ id: "not a UUID" }]))).toBe(false);
+  });
+
+  it.each([
+    ["without a schema", { "@type": BRUSH_PRESET_COLLECTION_TYPE, items: [] }],
+    ["of another type", { ...file([]), "@type": "Other" }],
+    ["without presets", { ...file([]), items: undefined }],
+    [
+      "with too many presets",
+      file(Array(MAX_PRESETS_PER_FILE + 1).fill(validPreset)),
+    ],
+    ["with extra properties", { ...file([]), extra: true }],
+    ["that isn't an object", []],
+  ])("should reject a file %s", (_label, input) => {
+    expect(validateFile(JSON.parse(JSON.stringify(input)))).toBe(false);
   });
 });
 
@@ -103,6 +144,11 @@ describe("isValidBrushPreset", () => {
       { author: { handle: "a.test" } },
       "/author must have required property 'name'",
     ],
+    [
+      "with an author's website (now homepage)",
+      { author: { name: "Ada", website: "https://a.test" } },
+      "/author must NOT have additional properties",
+    ],
   ])("should reject a preset %s", (_label, changes, error) => {
     const result = isValidBrushPreset(withChanges(changes));
     expect(result.valid).toBe(false);
@@ -110,7 +156,7 @@ describe("isValidBrushPreset", () => {
   });
 });
 
-describe("isValidBrushPresetFile", () => {
+describe("isValidBrushPreset profile graphs", () => {
   it("should check a setting's profile graph", () => {
     const profile = (points: unknown, profileId: unknown = "overweight") =>
       isValidBrushPreset(
@@ -134,39 +180,12 @@ describe("isValidBrushPresetFile", () => {
     expect(profile(undefined, "")).toBe(false);
   });
 
-  it("should accept a file of presets", () => {
-    const input = file([validPreset]);
-    expect(isValidBrushPresetFile(input)).toEqual({
-      valid: true,
-      value: input,
-    });
-    expect(isValidBrushPresetFile(file([])).valid).toBe(true);
-    // Any format name is valid here; reading a file checks it is one the app accepts (see `parsePresetFile`)
-    expect(
-      isValidBrushPresetFile({
-        ...file([]),
-        format: "otherapp-brush-presets",
-      }).valid,
-    ).toBe(true);
-  });
-
-  it.each([
-    ["without a format name", { ...file([]), format: "" }],
-    [
-      "with a format name that's too long",
-      { ...file([]), format: "x".repeat(101) },
-    ],
-    ["of another version", { ...file([]), version: 2 }],
-    ["without presets", { format: BRUSH_PRESET_FILE_FORMAT, version: 1 }],
-    ["with an invalid preset", file([{ id: "x" }])],
-    [
-      "with too many presets",
-      file(Array(MAX_PRESETS_PER_FILE + 1).fill(validPreset)),
-    ],
-    ["with extra properties", { ...file([]), extra: true }],
-    ["that isn't an object", []],
-  ])("should reject a file %s", (_label, input) => {
-    expect(isValidBrushPresetFile(input).valid).toBe(false);
+  it("should take a built-in profile graph's ID or a UUID", () => {
+    const profileId = (id: string) =>
+      isValidBrushPreset(withChanges({ widthConfig: { profileId: id } })).valid;
+    expect(profileId("underweight")).toBe(true);
+    expect(profileId("2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a")).toBe(true);
+    expect(profileId("custom")).toBe(false);
   });
 });
 

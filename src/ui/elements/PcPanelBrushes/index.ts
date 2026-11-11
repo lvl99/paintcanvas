@@ -17,14 +17,8 @@ import {
   UNKNOWN_AUTHOR,
   groupPresetsByAuthor,
 } from "../../../lib/brushes/authors";
-import { BRUSH_PRESET_FILE_FORMAT as PAINTCANVAS_BRUSH_PRESET_FILE_FORMAT } from "../../../lib/presets";
-import {
-  PRESET_FILE_ERRORS,
-  PresetFileError,
-  exportPresetFile,
-  parsePresetFile,
-  presetFileName,
-} from "../../../lib/brushes/presetFile";
+import { brushPresetFile } from "../../../lib/brushes/presetFile";
+import { AssetFileError } from "../../../lib/assets";
 import { DELETE_CURSOR } from "../../../lib/rendering/cursors";
 import {
   JSON_FILE_TYPE,
@@ -32,13 +26,20 @@ import {
   type SaveMethod,
 } from "../../../lib/rendering/screenshot";
 
-/** Translation keys of the preset file error messages */
-const PRESET_FILE_ERROR_KEYS: Record<string, string> = {
-  [PRESET_FILE_ERRORS.incompatible]: "paintCanvas.presets.fileIncompatible",
-  [PRESET_FILE_ERRORS.read]: "paintCanvas.presets.fileReadFailed",
-  [PRESET_FILE_ERRORS.export]: "paintCanvas.presets.exportFailed",
-  [PRESET_FILE_ERRORS.empty]: "paintCanvas.presets.nothingToExport",
-};
+/** Translation keys of the messages shown when importing or exporting a preset file fails, by reason */
+const PRESET_FILE_ERROR_KEYS = {
+  import: {
+    invalid: "paintCanvas.presets.fileIncompatible",
+    unsupported: "paintCanvas.presets.fileUnsupported",
+  },
+  export: { empty: "paintCanvas.presets.nothingToExport" },
+} as Record<"import" | "export", Record<string, string>>;
+
+/** Translation keys of the messages shown when importing or exporting fails for any other reason */
+const PRESET_FILE_FALLBACK_KEYS = {
+  import: "paintCanvas.presets.fileReadFailed",
+  export: "paintCanvas.presets.exportFailed",
+} as const;
 
 /** Cursor over a preset that a click deletes (Alt/Option held): the `--pc-delete-cursor` token's default */
 export { DELETE_CURSOR };
@@ -212,21 +213,8 @@ export class PcPanelBrushes extends PcPanel {
   async importFile(file: File): Promise<void> {
     const app = this.app;
     if (!app) return;
-    let text: string;
     try {
-      text = await file.text();
-    } catch {
-      this.emit("pc-toast", {
-        message: this.presetFileError(undefined, PRESET_FILE_ERRORS.read),
-        kind: "error",
-      });
-      return;
-    }
-    try {
-      const presets = parsePresetFile(text, [
-        app.names.presetFileFormat,
-        PAINTCANVAS_BRUSH_PRESET_FILE_FORMAT,
-      ]);
+      const presets = brushPresetFile.parse(await file.text());
       await app.customPresets.save(...presets);
       this.emit("pc-toast", {
         message: this.t("paintCanvas.presets.imported", {
@@ -236,7 +224,7 @@ export class PcPanelBrushes extends PcPanel {
       });
     } catch (error) {
       this.emit("pc-toast", {
-        message: this.presetFileError(error, PRESET_FILE_ERRORS.read),
+        message: this.presetFileError(error, "import"),
         kind: "error",
       });
     }
@@ -249,29 +237,31 @@ export class PcPanelBrushes extends PcPanel {
     const app = this.app;
     if (!app) return;
     try {
-      const json = exportPresetFile(
-        app.customPresets.presets,
-        app.names.presetFileFormat,
-      );
+      const json = brushPresetFile.write(app.customPresets.presets);
       await this.saveFile(
         new Blob([json], { type: "application/json" }),
-        presetFileName(undefined, app.names.filePrefix),
+        brushPresetFile.fileName(undefined, app.names.filePrefix),
       );
     } catch (error) {
       this.emit("pc-toast", {
-        message: this.presetFileError(error, PRESET_FILE_ERRORS.export),
+        message: this.presetFileError(error, "export"),
         kind: "error",
       });
     }
   }
 
   /**
-   * A preset file error's message in the chosen language (or the fallback's, for any other error).
+   * The message, in the chosen language, for importing or exporting a preset file failing.
    */
-  private presetFileError(error: unknown, fallback: string): string {
-    const message = error instanceof PresetFileError ? error.message : fallback;
-    const key = PRESET_FILE_ERROR_KEYS[message];
-    return key ? this.t(key) : message;
+  private presetFileError(
+    error: unknown,
+    direction: "import" | "export",
+  ): string {
+    const key =
+      (error instanceof AssetFileError &&
+        PRESET_FILE_ERROR_KEYS[direction][error.reason]) ||
+      PRESET_FILE_FALLBACK_KEYS[direction];
+    return this.t(key);
   }
 
   /**

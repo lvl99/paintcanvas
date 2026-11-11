@@ -7,10 +7,28 @@ import type { PcMenu } from "../../PcMenu";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import { events, mount, query, queryAll } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
-import {
-  PALETTE_FILE_FORMAT,
-  exportPaletteFile,
-} from "../../../../lib/palette";
+import { colourPaletteFile } from "../../../../lib/palette";
+
+/** A colour palette file holding palettes of the given colours */
+const paletteFile = (...palettes: string[][]): File =>
+  new File(
+    [
+      palettes.length > 0
+        ? colourPaletteFile.write(
+            palettes.map((colours, i) => ({
+              id: crypto.randomUUID(),
+              name: `Palette ${i + 1}`,
+              colours,
+            })),
+          )
+        : JSON.stringify({
+            $schema: colourPaletteFile.schemaUrl,
+            "@type": colourPaletteFile.config.type,
+            items: [],
+          }),
+    ],
+    "palette.json",
+  );
 
 afterEach(() => {
   vi.useRealTimers();
@@ -532,10 +550,7 @@ describe("pc-panel-colours", () => {
   it("should import a palette file, adding its new colours", async () => {
     const { app, element, toasts } = await setup();
     await element.importFile(
-      new File(
-        [exportPaletteFile(["#ff0000", "#123456", "#abcdef"])],
-        "palette.json",
-      ),
+      paletteFile(["#ff0000", "#123456"], ["#abcdef", "#123456"]),
     );
     expect(app.palette.colours).toEqual([
       "#ff0000",
@@ -547,34 +562,50 @@ describe("pc-panel-colours", () => {
     expect(toasts).toEqual([{ message: "Added 2 colors", kind: "success" }]);
   });
 
-  it("should import the implementer's own palette file format", async () => {
+  it("should import a palette file from before versioned schemas, of any format", async () => {
     const { app, element, toasts } = await setup([]);
-    Object.assign(app.names, { paletteFileFormat: "myapp-palette" });
     await element.importFile(
-      new File([exportPaletteFile(["#123456"], "myapp-palette")], "p.json"),
+      new File(
+        [
+          JSON.stringify({
+            format: "myapp-palette",
+            version: 1,
+            colours: ["#123456"],
+          }),
+        ],
+        "p.json",
+      ),
     );
-    await element.importFile(
-      new File([exportPaletteFile(["#654321"], PALETTE_FILE_FORMAT)], "p.json"),
-    );
-    expect(app.palette.colours).toEqual(["#123456", "#654321"]);
-    expect(toasts.map((toast) => toast.message)).toEqual([
-      "Added 1 color",
-      "Added 1 color",
-    ]);
+    expect(app.palette.colours).toEqual(["#123456"]);
+    expect(toasts.map((toast) => toast.message)).toEqual(["Added 1 color"]);
   });
 
   it("should show an error for files that can't be read or aren't palette files", async () => {
     const { app, element, toasts } = await setup();
     await element.importFile(new File(["{"], "bad.json"));
+    await element.importFile(new File(["{}"], "other.json"));
+    await element.importFile(
+      new File(
+        [
+          JSON.stringify({
+            $schema:
+              "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-2.0.0.json",
+          }),
+        ],
+        "newer.json",
+      ),
+    );
     const unreadable = new File(["x"], "x.json");
     vi.spyOn(unreadable, "text").mockRejectedValue(new Error("No"));
     await element.importFile(unreadable);
     vi.spyOn(app.palette, "merge").mockImplementation(() => {
       throw new Error("Unexpected");
     });
-    await element.importFile(new File([exportPaletteFile([])], "p.json"));
+    await element.importFile(paletteFile());
     expect(toasts).toEqual([
+      { message: "Failed to read color palette JSON file", kind: "error" },
       { message: "Color palette JSON file not compatible", kind: "error" },
+      { message: "Unsupported color palettes file version", kind: "error" },
       { message: "Failed to read color palette JSON file", kind: "error" },
       { message: "Failed to read color palette JSON file", kind: "error" },
     ]);
@@ -589,7 +620,7 @@ describe("pc-panel-colours", () => {
     const importFile = vi
       .spyOn(element, "importFile")
       .mockResolvedValue(undefined);
-    const file = new File([exportPaletteFile([])], "p.json");
+    const file = paletteFile();
     Object.defineProperty(input, "files", {
       value: [file],
       configurable: true,
@@ -626,10 +657,14 @@ describe("pc-panel-colours", () => {
     });
     get(element, "button.export").click();
     await vi.waitFor(() => expect(saved).toHaveLength(1));
-    expect(saved[0]!.name).toMatch(/^paintcanvas-palette-.*\.json$/);
-    expect(JSON.parse(await saved[0]!.blob.text()).colours).toEqual(
-      app.palette.colours,
-    );
+    expect(saved[0]!.name).toMatch(/^paintcanvas-colour-palettes-.*\.json$/);
+    expect(colourPaletteFile.parse(await saved[0]!.blob.text())).toEqual([
+      {
+        id: expect.any(String),
+        name: "Color palette",
+        colours: app.palette.colours,
+      },
+    ]);
     vi.mocked(element.saveFile).mockRejectedValueOnce(new Error("denied"));
     await element.exportFile();
     expect(toasts).toEqual([

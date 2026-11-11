@@ -9,11 +9,7 @@ import {
   type UiSettingsData,
 } from "../classes/UiSettings/index.ts";
 import type { KeyCombo } from "../utils/shortcuts";
-import {
-  HEX_COLOUR_PATTERN,
-  MAX_PALETTE_COLOURS,
-  paletteFileSchema,
-} from "../palette/schema.ts";
+import { HEX_COLOUR_PATTERN, paletteColoursSchema } from "../palette/schema.ts";
 import type { ProfileGraph } from "../profiles/index.ts";
 import { MAX_SAVED_PROFILES, profileGraphSchema } from "../profiles/schema.ts";
 
@@ -104,11 +100,7 @@ export const settingsSchema = {
         anyOf: [{ type: "null" }, { $ref: "key-combo" }],
       },
     },
-    palette: {
-      type: "array",
-      maxItems: MAX_PALETTE_COLOURS,
-      items: paletteFileSchema.properties.colours.items,
-    },
+    palette: paletteColoursSchema,
     colours: {
       type: "object",
       additionalProperties: false,
@@ -118,7 +110,7 @@ export const settingsSchema = {
     profiles: {
       type: "array",
       maxItems: MAX_SAVED_PROFILES,
-      items: profileGraphSchema,
+      items: { $ref: profileGraphSchema.$id },
     },
     ui: {
       type: "object",

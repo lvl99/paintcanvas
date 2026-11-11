@@ -1,7 +1,9 @@
 // Types for the generated validators (see validators.generated.js).
-import type { BrushPresetFile } from "../presets/schema";
+import type { AssetCollectionFile } from "../assets/schema";
+import type { BrushConfig } from "../brushes/types";
+import type { ProfileGraph } from "../profiles";
 import type { PaintCanvasDocument } from "../document/schema";
-import type { PaletteFile } from "../palette/schema";
+import type { ColourPalette } from "../palette/schema";
 import type { AppSettings, SettingsFile } from "../settings/schema";
 import type {
   HistoryMessage,
@@ -22,11 +24,20 @@ export interface Validator<T> {
 }
 
 export declare const validateBrushPreset: Validator<Record<string, unknown>>;
-export declare const validateBrushPresetFile: Validator<BrushPresetFile>;
+export declare const validateBrushPresetCollection: Validator<
+  AssetCollectionFile<BrushConfig>
+>;
+export declare const validateColourPalette: Validator<ColourPalette>;
+export declare const validateColourPaletteCollection: Validator<
+  AssetCollectionFile<ColourPalette>
+>;
+export declare const validateProfileGraph: Validator<ProfileGraph>;
+export declare const validateProfileGraphCollection: Validator<
+  AssetCollectionFile<ProfileGraph>
+>;
 export declare const validatePatchMessage: Validator<PatchMessage>;
 export declare const validateStrokeMessage: Validator<StrokeMessage>;
 export declare const validateHistoryMessage: Validator<HistoryMessage>;
 export declare const validateDocument: Validator<PaintCanvasDocument>;
-export declare const validatePaletteFile: Validator<PaletteFile>;
 export declare const validateSettings: Validator<AppSettings>;
 export declare const validateSettingsFile: Validator<SettingsFile>;

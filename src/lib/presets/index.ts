@@ -1,14 +1,12 @@
-import type { BrushPresetFile } from "./schema";
 import {
   validateBrushPreset,
-  validateBrushPresetFile,
   type ValidationError,
   type Validator,
 } from "../validation/validators.generated.js";
 
 export * from "./schema";
 
-/** Result of validating a brush preset or preset file */
+/** Result of validating a brush preset */
 export type PresetValidationResult<T> =
   { valid: true; value: T } | { valid: false; errors: string[] };
 
@@ -46,14 +44,3 @@ export const isValidBrushPreset = (
   input: unknown,
 ): PresetValidationResult<Record<string, unknown>> =>
   check(validateBrushPreset, input);
-
-/**
- * Check a brush preset file against `brushPresetFileSchema`.
- *
- * @example
- * isValidBrushPresetFile({ format: "paintcanvas-brush-presets", version: 1, presets: [] }).valid; // true
- */
-export const isValidBrushPresetFile = (
-  input: unknown,
-): PresetValidationResult<BrushPresetFile> =>
-  check(validateBrushPresetFile, input);

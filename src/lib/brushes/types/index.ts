@@ -1,18 +1,8 @@
 // Types describing brush and eraser presets, and the brush strokes they are applied along.
 import type { ProfilePoint } from "../../profiles";
+import type { AssetAuthor } from "../../assets/schema";
 
-export interface AssetAuthorDetails {
-  /** Author's name */
-  name: string;
-  /** Author's handle or username, which tells their presets apart from others with the same name */
-  handle?: string;
-  /** Author's email */
-  email?: string;
-  /** Author's website */
-  website?: string;
-}
-
-export type AssetAuthor = string | AssetAuthorDetails;
+export type { AssetAuthor, AssetAuthorDetails } from "../../assets/schema";
 
 /** Which colour settings a brush varies */
 export enum ColourMode {

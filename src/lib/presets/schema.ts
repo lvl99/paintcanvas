@@ -1,31 +1,32 @@
-// JSON schemas for brush presets saved by users, and for the files they are exported to and imported from.
+// JSON schemas for brush presets saved by users, and for the collection files they are exported to and imported from.
+// Imported with extensions, as the validator build script runs this file in Node
+import { profileIdSchema, profilePointsSchema } from "../profiles/schema.ts";
 import {
-  MAX_PROFILE_TEXT_LENGTH,
-  profilePointsSchema,
-} from "../profiles/schema.ts";
+  UUID_PATTERN,
+  authorSchema,
+  collectionSchema,
+  fileSchemaUrlSchema,
+} from "../assets/schema.ts";
+import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
-/** Matches a lowercase UUID */
-export const UUID_PATTERN =
-  "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+export { UUID_PATTERN };
 
-/** The `format` of a brush preset file, unless the implementer names their own (see `PaintCanvasNames`) */
-export const BRUSH_PRESET_FILE_FORMAT = "paintcanvas-brush-presets";
+/** Version of the brush preset schema */
+export const BRUSH_PRESET_SCHEMA_VERSION = "1.0.0";
 
-/** Formats of brush preset files that are imported by default */
-export const BRUSH_PRESET_FILE_FORMATS: readonly string[] = [
-  BRUSH_PRESET_FILE_FORMAT,
-];
+/** `@type` of a brush preset */
+export const BRUSH_PRESET_TYPE = "PaintCanvas/BrushConfig";
 
-/** Longest brush preset file format name (characters) */
-export const MAX_PRESET_FILE_FORMAT_LENGTH = 100;
+/** Version of the brush preset collection schema */
+export const BRUSH_PRESET_COLLECTION_SCHEMA_VERSION = "1.0.0";
 
-/** The version of the brush preset file format */
-export const BRUSH_PRESET_FILE_VERSION = 1;
+/** `@type` of a brush preset collection file */
+export const BRUSH_PRESET_COLLECTION_TYPE = "PaintCanvas/BrushConfigCollection";
 
 /** Most presets in one file */
 export const MAX_PRESETS_PER_FILE = 1000;
 
-/** Longest preset name, author name or handle (characters) */
+/** Longest preset name (characters) */
 export const MAX_PRESET_TEXT_LENGTH = 100;
 
 /** Longest brush shape data URL (characters): a 2 MB PNG as base64 */
@@ -35,15 +36,6 @@ export const MAX_SHAPE_DATA_URL_LENGTH =
 /** Matches a PNG data URL */
 export const PNG_DATA_URL_PATTERN =
   "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$";
-
-/** A brush preset file: what users export and import */
-export interface BrushPresetFile {
-  /** Names the app or kind of file, e.g. `BRUSH_PRESET_FILE_FORMAT` */
-  format: string;
-  version: typeof BRUSH_PRESET_FILE_VERSION;
-  /** Presets, each matching `brushPresetSchema` */
-  presets: Record<string, unknown>[];
-}
 
 /** A 0–1 factor */
 const factor = { type: "number", minimum: 0, maximum: 1 } as const;
@@ -63,11 +55,7 @@ const paramConfig = {
     minTilt: factor,
     maxTilt: factor,
     profile: profilePointsSchema,
-    profileId: {
-      type: "string",
-      minLength: 1,
-      maxLength: MAX_PROFILE_TEXT_LENGTH,
-    },
+    profileId: profileIdSchema,
   },
 } as const;
 
@@ -85,31 +73,21 @@ const text = {
 
 /** JSON schema for a brush preset a user made or imported (see `BrushConfig` in the app) */
 export const brushPresetSchema = {
-  $id: "paintcanvas/brush-preset",
+  $schema: SCHEMA_DIALECT,
+  $id: schemaUrl("brush-preset", BRUSH_PRESET_SCHEMA_VERSION),
+  "@type": BRUSH_PRESET_TYPE,
   type: "object",
   additionalProperties: false,
   required: ["id"],
   properties: {
+    // Named when the preset is a file of its own
+    $schema: fileSchemaUrlSchema,
+    "@type": { const: BRUSH_PRESET_TYPE },
     id: { type: "string", pattern: UUID_PATTERN },
     name: text,
     group: text,
     version: { type: "string", maxLength: 20 },
-    author: {
-      anyOf: [
-        text,
-        {
-          type: "object",
-          additionalProperties: false,
-          required: ["name"],
-          properties: {
-            name: text,
-            handle: text,
-            email: { type: "string", maxLength: 254 },
-            website: { type: "string", maxLength: 2048 },
-          },
-        },
-      ],
-    },
+    author: authorSchema,
     image: {
       type: "string",
       pattern: PNG_DATA_URL_PATTERN,
@@ -148,24 +126,11 @@ export const brushPresetSchema = {
   },
 } as const;
 
-/** JSON schema for a brush preset file */
-export const brushPresetFileSchema = {
-  $id: "paintcanvas/brush-preset-file",
-  type: "object",
-  additionalProperties: false,
-  required: ["format", "version", "presets"],
-  properties: {
-    format: {
-      type: "string",
-      minLength: 1,
-      maxLength: MAX_PRESET_FILE_FORMAT_LENGTH,
-    },
-    version: { const: BRUSH_PRESET_FILE_VERSION },
-    presets: {
-      type: "array",
-      maxItems: MAX_PRESETS_PER_FILE,
-      // Resolved against this schema's $id, so it is "paintcanvas/brush-preset"
-      items: { $ref: "brush-preset" },
-    },
-  },
-} as const;
+/** JSON schema for a brush preset collection file */
+export const brushPresetCollectionSchema = collectionSchema({
+  name: "brush-preset-collection",
+  version: BRUSH_PRESET_COLLECTION_SCHEMA_VERSION,
+  type: BRUSH_PRESET_COLLECTION_TYPE,
+  item: brushPresetSchema.$id,
+  maxItems: MAX_PRESETS_PER_FILE,
+});

@@ -31,8 +31,6 @@ describe("PaintCanvas", () => {
     expect(app.names).toEqual({
       app: "PaintCanvas",
       filePrefix: "paintcanvas",
-      presetFileFormat: "paintcanvas-brush-presets",
-      paletteFileFormat: "paintcanvas-palette",
       settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
@@ -42,8 +40,6 @@ describe("PaintCanvas", () => {
     expect(createApp({ names: { app: "My App" } }).names).toEqual({
       app: "My App",
       filePrefix: "paintcanvas",
-      presetFileFormat: "paintcanvas-brush-presets",
-      paletteFileFormat: "paintcanvas-palette",
       settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });

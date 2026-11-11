@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { Ajv } from "ajv";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import { withoutType } from "../../validation/standalone";
 import {
   GRID_UNITS,
   Interpolation,
@@ -15,6 +16,9 @@ import {
 } from "..";
 import {
   MAX_PROFILE_TEXT_LENGTH,
+  MAX_SAVED_PROFILES,
+  PROFILE_GRAPH_COLLECTION_TYPE,
+  profileGraphCollectionSchema,
   profileGraphSchema,
   profilePointsSchema,
 } from "../schema";
@@ -127,9 +131,46 @@ describe("applyProfile", () => {
 });
 
 describe("profile graph schemas", () => {
-  const ajv = new Ajv({ strict: true });
+  const ajv = new Ajv2020({ strict: true });
   const validatePoints = ajv.compile(profilePointsSchema);
-  const validateGraph = ajv.compile(profileGraphSchema);
+  const validateGraph = ajv.compile(withoutType(profileGraphSchema));
+  const validateCollection = ajv.compile(
+    withoutType(profileGraphCollectionSchema),
+  );
+  const uuid = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
+
+  it("should be published with versioned URLs and types", () => {
+    expect(profileGraphSchema.$id).toBe(
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-1.0.0.json",
+    );
+    expect(profileGraphSchema["@type"]).toBe("PaintCanvas/ProfileGraph");
+    expect(profileGraphCollectionSchema.$id).toBe(
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-1.0.0.json",
+    );
+    expect(profileGraphCollectionSchema["@type"]).toBe(
+      "PaintCanvas/ProfileGraphCollection",
+    );
+  });
+
+  it("should take a UUID or a built-in graph's ID, and an author", () => {
+    const graph = PROFILE_PRESETS[1]!;
+    expect(validateGraph({ ...graph, id: uuid, author: "Ada" })).toBe(true);
+    expect(validateGraph({ ...graph, id: "custom" })).toBe(false);
+    expect(
+      validateCollection({
+        $schema: profileGraphCollectionSchema.$id,
+        "@type": PROFILE_GRAPH_COLLECTION_TYPE,
+        items: [...PROFILE_PRESETS, { ...graph, id: uuid }],
+      }),
+    ).toBe(true);
+    expect(
+      validateCollection({
+        $schema: profileGraphCollectionSchema.$id,
+        "@type": PROFILE_GRAPH_COLLECTION_TYPE,
+        items: Array(MAX_SAVED_PROFILES + 1).fill(graph),
+      }),
+    ).toBe(false);
+  });
 
   it("should compile in ajv strict mode and accept the presets", () => {
     for (const graph of PROFILE_PRESETS) {
@@ -162,7 +203,10 @@ describe("profile graph schemas", () => {
     const graph = PROFILE_PRESETS[0]!;
     expect(validateGraph({ ...graph, name: "" })).toBe(false);
     expect(
-      validateGraph({ ...graph, id: "x".repeat(MAX_PROFILE_TEXT_LENGTH + 1) }),
+      validateGraph({
+        ...graph,
+        name: "x".repeat(MAX_PROFILE_TEXT_LENGTH + 1),
+      }),
     ).toBe(false);
     expect(validateGraph({ id: "a", name: "A" })).toBe(false);
   });

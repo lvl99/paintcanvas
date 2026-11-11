@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { Ajv } from "ajv";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import { withoutType } from "../../validation/standalone";
 import {
   CanvasMessageType,
   createPatchMessage,
@@ -111,7 +112,10 @@ describe("validateCanvasMessage", () => {
 });
 
 describe("message schemas", () => {
-  const ajv = new Ajv({ strict: true, schemas: [...messageSchemas] });
+  const ajv = new Ajv2020({
+    strict: true,
+    schemas: messageSchemas.map(withoutType),
+  });
 
   it("should compile and validate messages with ajv", () => {
     expect(ajv.validate(patchMessageSchema.$id, patch)).toBe(true);

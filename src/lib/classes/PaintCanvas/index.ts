@@ -39,14 +39,12 @@ import {
   UNKNOWN_AUTHOR,
   authorHandle,
 } from "../../brushes/authors";
-import { BRUSH_PRESET_FILE_FORMAT } from "../../presets";
 import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
 import InputSettings from "../InputSettings";
 import UiSettings, { DEFAULT_UI_SETTINGS, type Rendering } from "../UiSettings";
 import Palette from "../Palette";
 import ProfileGraphs from "../ProfileGraphs";
 import ShortcutSettings from "../ShortcutSettings";
-import { PALETTE_FILE_FORMAT } from "../../palette";
 import { SETTINGS_FILE_FORMAT } from "../../settings/schema";
 import ExternalSheets from "../ExternalSheets";
 import PatchSender from "../../messages/PatchSender";
@@ -137,10 +135,6 @@ export interface PaintCanvasNames {
   app: string;
   /** Start of the names of saved files, e.g. screenshots and exported presets */
   filePrefix: string;
-  /** The `format` written in exported brush preset files */
-  presetFileFormat: string;
-  /** The `format` written in exported colour palette files */
-  paletteFileFormat: string;
   /** The `format` written in exported settings files */
   settingsFileFormat: string;
   /** Author name of presets made by a user without a handle, e.g. from `presetAuthor` */
@@ -151,8 +145,6 @@ export interface PaintCanvasNames {
 export const DEFAULT_NAMES: Readonly<PaintCanvasNames> = {
   app: BUILT_IN_AUTHOR,
   filePrefix: "paintcanvas",
-  presetFileFormat: BRUSH_PRESET_FILE_FORMAT,
-  paletteFileFormat: PALETTE_FILE_FORMAT,
   settingsFileFormat: SETTINGS_FILE_FORMAT,
   unknownAuthor: UNKNOWN_AUTHOR,
 };
