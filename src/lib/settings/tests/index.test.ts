@@ -164,6 +164,27 @@ describe("collectSettings and applySettings", () => {
     });
   });
 
+  it("should leave out the profile graphs when asked", () => {
+    const app = createApp();
+    expect(collectSettings(app, { withoutProfiles: true })).not.toHaveProperty(
+      "profiles",
+    );
+  });
+
+  it("should add profile graphs to the user's own, replacing those with the same IDs", () => {
+    const app = createApp();
+    const kept = app.profiles.save({ name: "Kept", points: linearPoints() })!;
+    const replaced = app.profiles.save({
+      name: "Old",
+      points: linearPoints(),
+    })!;
+    applySettings(app, { profiles: [{ ...replaced, name: "New" }] });
+    expect(app.profiles.graphs.map(({ name }) => name)).toEqual([
+      kept.name,
+      "New",
+    ]);
+  });
+
   it("should give copies that don't change with the canvas", () => {
     const app = createApp();
     const settings = collectSettings(app);

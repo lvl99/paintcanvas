@@ -1,24 +1,16 @@
 import type { BrushConfig } from "../../brushes/types";
 import { isOwnAuthor } from "../../brushes/authors";
-
-/** Where custom presets are kept (see `PresetStore`) */
-export interface PresetStoreLike {
-  /** The owner's presets, in the order they were saved */
-  list(ownerId: string): Promise<BrushConfig[]>;
-  /** Save one of the owner's presets (replacing one with the same ID) */
-  put(ownerId: string, preset: BrushConfig): Promise<void>;
-  /** Delete one of the owner's presets */
-  remove(ownerId: string, id: string): Promise<void>;
-}
+import { isValidBrushPreset } from "../../presets";
+import type { AssetStoreLike } from "../../storage";
 
 /**
  * The user's own and imported brush presets, shared by the brush and eraser. They are kept in a store when one is
- * given (otherwise only until the page closes).
+ * used (otherwise only until the page closes).
  *
  * Dispatches a `change` event when presets are loaded, saved or removed.
  *
  * @example
- * const custom = new CustomPresets("user-1", myPresetStore);
+ * const custom = new CustomPresets(new IndexedDbAssetStore("brushes"));
  * await custom.load();
  * await custom.save({ id: crypto.randomUUID(), name: "My brush", author: { name: "Ada", handle } });
  */
@@ -26,22 +18,41 @@ export default class CustomPresets extends EventTarget {
   /** Presets, in the order they were added */
   presets: BrushConfig[] = [];
 
-  private readonly ownerId: string;
+  private store?: AssetStoreLike<BrushConfig>;
 
-  private readonly store?: PresetStoreLike;
-
-  constructor(ownerId: string, store?: PresetStoreLike) {
+  constructor(store?: AssetStoreLike<BrushConfig>) {
     super();
-    this.ownerId = ownerId;
     this.store = store;
   }
 
   /**
-   * Load the user's presets from the store.
+   * Keep the presets in another store (or in memory only, without one), loading the presets saved there in place of
+   * the current ones.
+   *
+   * @example
+   * await custom.useStore(new IndexedDbAssetStore("brushes", "my-app"));
+   */
+  async useStore(
+    store: AssetStoreLike<BrushConfig> | undefined,
+  ): Promise<void> {
+    this.store = store;
+    this.presets = [];
+    this.notify();
+    await this.load();
+  }
+
+  /**
+   * Load the user's presets from the store, leaving out invalid ones.
    */
   async load(): Promise<void> {
-    if (!this.store) return;
-    this.presets = await this.store.list(this.ownerId);
+    const store = this.store;
+    if (!store) return;
+    const saved = await store.list();
+    // The store changed while loading
+    if (store !== this.store) return;
+    this.presets = saved.filter(
+      (preset): preset is BrushConfig => isValidBrushPreset(preset).valid,
+    );
     this.notify();
   }
 
@@ -75,7 +86,7 @@ export default class CustomPresets extends EventTarget {
    * Add presets, replacing any with the same ID, and keep them.
    */
   async save(...presets: BrushConfig[]): Promise<void> {
-    for (const preset of presets) await this.store?.put(this.ownerId, preset);
+    for (const preset of presets) await this.store?.put(preset);
     const kept = this.presets.map(
       (existing) =>
         presets.find((preset) => preset.id === existing.id) ?? existing,
@@ -91,7 +102,7 @@ export default class CustomPresets extends EventTarget {
    * Delete a preset.
    */
   async remove(id: string): Promise<void> {
-    await this.store?.remove(this.ownerId, id);
+    await this.store?.remove(id);
     this.presets = this.presets.filter((preset) => preset.id !== id);
     this.notify();
   }

@@ -38,25 +38,38 @@ export const isValidSettings = (input: unknown): SettingsValidationResult =>
     ? { valid: true, value: input }
     : { valid: false, errors: formatErrors(validateSettings.errors) };
 
+/** What `collectSettings` leaves out */
+export interface CollectSettingsOptions {
+  /** Leave out the profile graphs, e.g. when a profile store keeps them */
+  withoutProfiles?: boolean;
+}
+
 /**
  * The app settings of a canvas: its input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme
  * and language.
  *
  * @example
  * collectSettings(canvas).palette; // ["#2c6bff", ...]
+ * collectSettings(canvas, { withoutProfiles: true }).profiles; // undefined
  */
-export const collectSettings = (app: PaintCanvas): AppSettings => ({
+export const collectSettings = (
+  app: PaintCanvas,
+  { withoutProfiles = false }: CollectSettingsOptions = {},
+): AppSettings => ({
   input: structuredClone(app.input.data) as InputSettingsData,
   shortcuts: structuredClone(app.shortcuts.bindings),
   palette: [...app.palette.colours],
   colours: { ...app.colours },
-  profiles: structuredClone([...app.profiles.graphs]),
+  ...(withoutProfiles
+    ? {}
+    : { profiles: structuredClone([...app.profiles.graphs]) }),
   ui: { ...app.ui.data },
 });
 
 /**
  * Use app settings on a canvas, e.g. ones kept in the browser or imported. Parts left out stay as they are; invalid
- * values within a part are left out (see each part's sanitising).
+ * values within a part are left out (see each part's sanitising). Profile graphs are added to the user's own, replacing
+ * those with the same IDs.
  *
  * @example
  * applySettings(canvas, { colours: { foreground: "#ff0000", background: "#ffffff" } });
@@ -72,7 +85,7 @@ export const applySettings = (
     app.setColour(settings.colours.foreground, "foreground");
     app.setColour(settings.colours.background, "background");
   }
-  if (settings.profiles) app.profiles.set(settings.profiles);
+  if (settings.profiles) app.profiles.merge(settings.profiles);
   if (settings.ui) app.ui.update(settings.ui);
 };
 

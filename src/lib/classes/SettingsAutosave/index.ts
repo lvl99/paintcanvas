@@ -19,9 +19,11 @@ export interface SettingsAutosaveOptions {
 }
 
 /**
- * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and language) in a
- * store: the saved settings are restored when it starts (invalid ones are ignored), then changes are saved soon after
- * they happen.
+ * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and
+ * language) in a store: the saved settings are restored when it starts (invalid ones are ignored), then changes are
+ * saved soon after they happen. While the canvas keeps profile graphs in a store of their own (see
+ * `PaintCanvas.useAssetStores`), they are left out of the saved settings (ones restored from older settings are added
+ * to the graphs, so that store keeps them).
  *
  * Dispatches an `error` event (with the error as `detail`) when loading or saving fails.
  *
@@ -87,7 +89,7 @@ export default class SettingsAutosave extends EventTarget {
    */
   async save(): Promise<void> {
     this.timer = undefined;
-    const settings = collectSettings(this.app);
+    const settings = this.collect();
     const json = JSON.stringify(settings);
     if (json === this.saved) return;
     this.saved = json;
@@ -108,9 +110,16 @@ export default class SettingsAutosave extends EventTarget {
       this.fail(error);
     }
     if (this.stopped) return;
-    this.saved = JSON.stringify(collectSettings(this.app));
+    this.saved = JSON.stringify(this.collect());
     for (const source of this.sources)
       source.addEventListener("change", this.onChange);
+  }
+
+  /** The canvas's settings to save */
+  private collect() {
+    return collectSettings(this.app, {
+      withoutProfiles: this.app.assetStores.profiles !== undefined,
+    });
   }
 
   /** Save soon, after changes stop for a moment */

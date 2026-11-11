@@ -160,4 +160,31 @@ describe("SettingsAutosave", () => {
     await autosave.save();
     expect(store.save).not.toHaveBeenCalled();
   });
+
+  it("should leave profile graphs out of the saved settings while a profile store keeps them, adding restored ones", async () => {
+    const graph = {
+      id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
+      name: "Soft",
+      points: [
+        { x: 0, y: -10, i: "linear" as const },
+        { x: 10, y: 0, i: "linear" as const },
+      ],
+    };
+    const app = createApp();
+    const profiles = {
+      list: vi.fn(async () => []),
+      put: vi.fn(async () => undefined),
+      remove: vi.fn(async () => undefined),
+    };
+    app.useAssetStores({ profiles });
+    const store = createStore({ profiles: [graph] });
+    const autosave = new SettingsAutosave(app, store, { delayMs: 0 });
+    await autosave.ready;
+    expect(app.profiles.graphs).toEqual([graph]);
+    await vi.waitFor(() => expect(profiles.put).toHaveBeenCalledWith(graph));
+    app.palette.add("#123456");
+    await vi.waitFor(() => expect(store.save).toHaveBeenCalled());
+    expect(store.value).not.toHaveProperty("profiles");
+    autosave.stop();
+  });
 });

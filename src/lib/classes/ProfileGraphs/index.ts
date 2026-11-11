@@ -84,8 +84,9 @@ export interface ProfileGraphDraft {
 }
 
 /**
- * The user's own profile graphs, alongside the ones PaintCanvas comes with (`PROFILE_PRESETS`). Kept in memory; the app
- * settings save and restore them (see `set` and the `change` event). Each gets a UUID when it's first saved.
+ * The user's own profile graphs, alongside the ones PaintCanvas comes with (`PROFILE_PRESETS`). Kept in memory; a
+ * profile store keeps them (see `PaintCanvas.useAssetStores`), or save and restore them yourself (see `set`, `merge` and
+ * the `change` event). Each gets a UUID when it's first saved.
  *
  * Dispatches a `change` event when the user's graphs change.
  *
@@ -99,6 +100,11 @@ export default class ProfileGraphs extends EventTarget {
 
   /** The user's own graphs, in the order they were first saved */
   get graphs(): readonly ProfileGraph[] {
+    return this.values;
+  }
+
+  /** The user's own graphs (the same as `graphs`, so a store can keep them, see `AssetSync`) */
+  get items(): readonly ProfileGraph[] {
     return this.values;
   }
 
@@ -191,6 +197,22 @@ export default class ProfileGraphs extends EventTarget {
     const next = sanitiseProfiles(graphs);
     if (!next) return;
     this.values = next;
+    this.dispatchEvent(new Event("change"));
+  }
+
+  /**
+   * Add graphs (e.g. loaded from a store or imported), replacing the user's graphs with the same IDs and keeping the
+   * others, up to `MAX_SAVED_PROFILES`. Invalid graphs are left out (see `sanitiseProfiles`).
+   *
+   * @example
+   * profiles.merge(await store.list());
+   */
+  merge(graphs: unknown): void {
+    const added = sanitiseProfiles(graphs);
+    if (!added?.length) return;
+    const byId = new Map(this.values.map((graph) => [graph.id, graph]));
+    for (const graph of added) byId.set(graph.id, graph);
+    this.values = [...byId.values()].slice(0, MAX_SAVED_PROFILES);
     this.dispatchEvent(new Event("change"));
   }
 }

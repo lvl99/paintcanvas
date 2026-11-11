@@ -31,7 +31,8 @@ import Layer, {
   type LayerConfig,
 } from "../Layer";
 import LayerAutosave, { type AutosaveOptions } from "../LayerAutosave";
-import type { LayerStoreLike } from "../../storage";
+import type { AssetStores, LayerStoreLike } from "../../storage";
+import type { ProfileGraph } from "../../profiles";
 import { brushPresets, eraserPresets } from "../../brushes";
 import type { AssetAuthor, BrushConfig } from "../../brushes/types";
 import {
@@ -39,7 +40,8 @@ import {
   UNKNOWN_AUTHOR,
   authorHandle,
 } from "../../brushes/authors";
-import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
+import CustomPresets from "../CustomPresets";
+import AssetSync from "../AssetSync";
 import InputSettings from "../InputSettings";
 import UiSettings, { DEFAULT_UI_SETTINGS, type Rendering } from "../UiSettings";
 import Palette from "../Palette";
@@ -122,9 +124,6 @@ export const DEFAULT_BACKGROUND_COLOUR = "#ffffff";
  * (painted by the eraser and Delete when the layer's alpha lock is on, and by background fills).
  */
 export type ColourSlot = "foreground" | "background";
-
-/** Owner of the custom presets when the `ownerId` option isn't given */
-export const DEFAULT_OWNER_ID = "local";
 
 /** Author name of presets made with `newPreset` when the `presetAuthor` option isn't given */
 export const DEFAULT_AUTHOR = UNKNOWN_AUTHOR;
@@ -247,10 +246,8 @@ export interface PaintCanvasOptions {
    * given (replaceable for tests).
    */
   createCanvas?: CanvasFactory;
-  /** Where custom brush presets are kept (defaults to keeping them in memory only) */
-  presetStore?: PresetStoreLike;
-  /** Who the custom presets belong to, passed to the preset store (default `DEFAULT_OWNER_ID`) */
-  ownerId?: string;
+  /** Where the user's assets (brush presets, colour palettes, profile graphs) are kept (see `useAssetStores`) */
+  stores?: AssetStores;
   /** Gives the author of presets made with `newPreset` (asked each time, so it can follow name changes) */
   presetAuthor?: () => AssetAuthor;
   /** Names to use instead of PaintCanvas's own (see `DEFAULT_NAMES`) */
@@ -317,6 +314,12 @@ export default class PaintCanvas extends EventTarget {
 
   /** The user's own profile graphs (and the presets), for shaping how brush settings vary */
   readonly profiles = new ProfileGraphs();
+
+  /** Where the user's assets are kept */
+  private stores: AssetStores = {};
+
+  /** Keeps the profile graphs in their store */
+  private profilesAutosave?: AssetSync<ProfileGraph>;
 
   /** The user's keyboard shortcuts: each configurable action's key combination */
   readonly shortcuts = new ShortcutSettings();
@@ -447,7 +450,6 @@ export default class PaintCanvas extends EventTarget {
   readonly createCanvas: CanvasFactory;
 
   /** Who the custom presets belong to (passed to the preset store) */
-  readonly ownerId: string;
 
   /** The largest canvas width or height allowed */
   readonly maxCanvasSize: number;
@@ -468,7 +470,6 @@ export default class PaintCanvas extends EventTarget {
     super();
     // Nothing is logged for debugging until the debug log shows
     this.strokeLog.enabled = false;
-    this.ownerId = options.ownerId ?? DEFAULT_OWNER_ID;
     this.maxCanvasSize = options.maxCanvasSize ?? MAX_CANVAS_SIZE;
     this.maxLayers = options.maxLayers ?? DEFAULT_MAX_LAYERS;
     this.names = { ...DEFAULT_NAMES, ...options.names };
@@ -476,11 +477,11 @@ export default class PaintCanvas extends EventTarget {
       options.presetAuthor ?? (() => ({ name: DEFAULT_AUTHOR }));
     this.tips.preload(this.brush.presets);
     this.tips.preload(this.eraser.presets);
-    this.customPresets = new CustomPresets(this.ownerId, options.presetStore);
+    this.customPresets = new CustomPresets();
     this.customPresets.addEventListener("change", () =>
       this.listCustomPresets(),
     );
-    void this.customPresets.load().catch(() => undefined);
+    this.useAssetStores(options.stores ?? {});
     this.rendering = options.rendering ?? DEFAULT_UI_SETTINGS.rendering;
     this.ui = new UiSettings({ rendering: this.rendering });
     this.createCanvas =
@@ -801,6 +802,34 @@ export default class PaintCanvas extends EventTarget {
       );
     this.layerStack.select(activeLayer);
     this.history.clear();
+  }
+
+  /** Where the user's assets are kept (see `useAssetStores`) */
+  get assetStores(): Readonly<AssetStores> {
+    return this.stores;
+  }
+
+  /** Keeps the user's profile graphs in their store, while one is used (see `useAssetStores`) */
+  get profileSync(): AssetSync<ProfileGraph> | undefined {
+    return this.profilesAutosave;
+  }
+
+  /**
+   * Keep the user's assets in stores, by kind: custom brush presets are loaded from theirs (in place of the current
+   * ones) and saved when they change; profile graphs saved there are added and changes saved (see `AssetSync`). Assets
+   * of a kind without a store are kept in memory only. Colour palette stores are kept for the palettes to use.
+   *
+   * @example
+   * canvas.useAssetStores({ brushes: new IndexedDbAssetStore("brushes"), profiles: new IndexedDbAssetStore("profiles") });
+   */
+  useAssetStores(stores: AssetStores): void {
+    this.stores = { ...stores };
+    void this.customPresets.useStore(stores.brushes).catch(() => undefined);
+    this.profilesAutosave?.stop();
+    this.profilesAutosave = stores.profiles
+      ? new AssetSync(this.profiles, stores.profiles)
+      : undefined;
+    this.notify();
   }
 
   /** Keeps the user's layers in a store, while one is used (see `useLayerStore`) */

@@ -172,4 +172,37 @@ describe("ProfileGraphs", () => {
     expect(profiles.graphs).toHaveLength(1);
     expect(change).toHaveBeenCalledOnce();
   });
+
+  it("should add graphs, replacing the user's graphs with the same IDs, up to the most graphs", () => {
+    const profiles = new ProfileGraphs();
+    profiles.set([
+      { id: "a", name: "A", points: curved() },
+      { id: "b", name: "B", points: curved() },
+    ]);
+    const change = vi.fn();
+    profiles.addEventListener("change", change);
+    profiles.merge([
+      { id: "b", name: "Bee", points: curved() },
+      { id: "c", name: "C", points: curved() },
+      { id: "linear", name: "Mine", points: curved() },
+    ]);
+    expect(profiles.items.map(({ id, name }) => `${id}:${name}`)).toEqual([
+      "a:A",
+      "b:Bee",
+      "c:C",
+    ]);
+    expect(profiles.items).toBe(profiles.graphs);
+    profiles.merge([]);
+    profiles.merge("nothing");
+    expect(change).toHaveBeenCalledOnce();
+    profiles.merge(
+      Array.from({ length: MAX_SAVED_PROFILES }, (_, i) => ({
+        id: `n${i}`,
+        name: `N${i}`,
+        points: curved(),
+      })),
+    );
+    expect(profiles.graphs).toHaveLength(MAX_SAVED_PROFILES);
+    expect(profiles.graphs[0]?.id).toBe("a");
+  });
 });
