@@ -5,7 +5,7 @@ import type { AppSettings } from "../settings/schema";
 import type { BrushConfig } from "../brushes/types";
 import type { ColourPalette } from "../palette/schema";
 import type { ProfileGraph } from "../profiles";
-import type { DocumentInfo } from "../document/schema";
+import type { DocumentInfo, DrawingDocument } from "../document/schema";
 import { isRendering, type Rendering } from "../classes/UiSettings";
 
 /** Version of a saved drawing's shape, so drawings saved by other versions can be recognised */
@@ -395,6 +395,24 @@ export class IndexedDbAssetStore<T extends Asset> implements AssetStoreLike<T> {
   private keys(): IDBKeyRange {
     return IDBKeyRange.bound([this.name], [this.name, []]);
   }
+}
+
+/**
+ * Where whole documents are kept away from the browser, e.g. a user's account online (see `RemoteDocumentAutosave`).
+ * Saving can be slow, so it's done less often than keeping the drawing in the browser.
+ */
+export interface DocumentStoreLike {
+  /** Names the store for the user, e.g. "Bluesky" (shown while saving) */
+  readonly label?: string;
+  /**
+   * Save a document, replacing the one with the same ID. Call `onProgress` with how much is done (0 to 1), if known.
+   */
+  save(
+    document: DrawingDocument,
+    onProgress?: (done: number) => void,
+  ): Promise<void>;
+  /** A saved document by ID, or undefined if there's none */
+  load(id: string): Promise<DrawingDocument | undefined>;
 }
 
 /** Where the user's assets are kept, by kind. Assets of a kind without a store are kept in memory only. */

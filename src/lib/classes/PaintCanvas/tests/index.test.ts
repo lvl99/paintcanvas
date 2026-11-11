@@ -13,6 +13,7 @@ import {
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { AutosaveState } from "../../LayerAutosave";
 import { BlendMode } from "../../Layer";
+import { MemoryDocumentStore } from "../../../../testing/documentStore";
 
 const createApp = (options = {}) =>
   new PaintCanvas({ createCanvas: createFakeCanvasFactory(), ...options });
@@ -437,6 +438,24 @@ describe("PaintCanvas", () => {
     app.profiles.remove(graph.id);
     expect(profiles.remove).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(brushes.list).toHaveBeenCalled());
+  });
+
+  it("should keep the drawing in a remote store, replacing or stopping the one before", () => {
+    const store = new MemoryDocumentStore();
+    const app = createApp({ remoteDocumentStore: store });
+    const first = app.remoteAutosave!;
+    expect(first.store).toBe(store);
+    const stop = vi.spyOn(first, "stop");
+    const changed = vi.fn();
+    app.addEventListener("change", changed);
+    const other = new MemoryDocumentStore();
+    expect(app.useRemoteDocumentStore(other, { intervalMs: 10 })?.store).toBe(
+      other,
+    );
+    expect(stop).toHaveBeenCalledOnce();
+    expect(changed).toHaveBeenCalledOnce();
+    expect(app.useRemoteDocumentStore(undefined)).toBeUndefined();
+    expect(app.remoteAutosave).toBeUndefined();
   });
 
   it("should keep working when custom presets can't be loaded", async () => {

@@ -31,7 +31,14 @@ import Layer, {
   type LayerConfig,
 } from "../Layer";
 import LayerAutosave, { type AutosaveOptions } from "../LayerAutosave";
-import type { AssetStores, LayerStoreLike } from "../../storage";
+import type {
+  AssetStores,
+  DocumentStoreLike,
+  LayerStoreLike,
+} from "../../storage";
+import RemoteDocumentAutosave, {
+  type RemoteAutosaveOptions,
+} from "../RemoteDocumentAutosave";
 import type { ProfileGraph } from "../../profiles";
 import { brushPresets, eraserPresets } from "../../brushes";
 import type { AssetAuthor, BrushConfig } from "../../brushes/types";
@@ -255,6 +262,8 @@ export interface PaintCanvasOptions {
   names?: Partial<PaintCanvasNames>;
   /** Where to keep the user's layers so the drawing survives reloading the page (see `useLayerStore`) */
   layerStore?: LayerStoreLike;
+  /** Where to keep the whole drawing away from the browser, saved less often (see `useRemoteDocumentStore`) */
+  remoteDocumentStore?: DocumentStoreLike;
   /**
    * The system clipboard, which copying and cutting also put a PNG of the copied image data on so other apps (and brush
    * shapes) can use it (the browser's by default; `null` for none)
@@ -318,6 +327,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** The drawing's details (see `documentInfo`) */
   private info: DocumentInfo;
+
+  /** Keeps the drawing in a remote store */
+  private remoteDocumentAutosave?: RemoteDocumentAutosave;
 
   /** The user's own colour palettes (the one PaintCanvas comes with is `palette`) */
   readonly palettes = new ColourPalettes();
@@ -539,6 +551,8 @@ export default class PaintCanvas extends EventTarget {
       );
     }
     if (options.layerStore) this.useLayerStore(options.layerStore);
+    if (options.remoteDocumentStore)
+      this.useRemoteDocumentStore(options.remoteDocumentStore);
   }
   /** Canvas width in pixels */
   get width(): number {
@@ -948,6 +962,32 @@ export default class PaintCanvas extends EventTarget {
       ? new AssetSync(this.palettes, stores.palettes)
       : undefined;
     this.notify();
+  }
+
+  /** Keeps the drawing in a remote store, while one is used (see `useRemoteDocumentStore`) */
+  get remoteAutosave(): RemoteDocumentAutosave | undefined {
+    return this.remoteDocumentAutosave;
+  }
+
+  /**
+   * Keep the whole drawing in a remote store (e.g. the user's account online), or stop, without one: changes are saved
+   * every few minutes (see `RemoteDocumentAutosave`), or when asked with `canvas.remoteAutosave.save()`. Returns the
+   * autosave.
+   *
+   * @example
+   * canvas.useRemoteDocumentStore(myAccountStore, { intervalMs: 10 * 60 * 1000 });
+   */
+  useRemoteDocumentStore(
+    store: DocumentStoreLike | undefined,
+    options?: RemoteAutosaveOptions,
+  ): RemoteDocumentAutosave | undefined {
+    this.remoteDocumentAutosave?.stop();
+    this.remoteDocumentAutosave = store
+      ? new RemoteDocumentAutosave(this, store, options)
+      : undefined;
+    this.remoteDocumentAutosave?.start();
+    this.notify();
+    return this.remoteDocumentAutosave;
   }
 
   /** Keeps the user's layers in a store, while one is used (see `useLayerStore`) */
