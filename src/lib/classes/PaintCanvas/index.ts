@@ -65,7 +65,6 @@ import { REDO_EVENT, UNDO_EVENT, type HistoryStepDetail } from "../History";
 import {
   base64ToBytes,
   boundingBoxSize,
-  bytesToBase64,
   decodeRgbaDeflate,
   encodeRgbaDeflate,
   ImageEncoding,
@@ -73,10 +72,15 @@ import {
 } from "../../image";
 import { drawLayers } from "../../rendering/compositing";
 import {
-  DOCUMENT_FORMAT,
-  DOCUMENT_VERSION,
-  isValidDocument,
-  type PaintCanvasDocument,
+  MAX_DOCUMENT_SIZE,
+  THUMBNAIL_SIZE,
+  documentFromFile,
+  documentToFile,
+  newDocumentInfo,
+  withAuthor,
+  type DocumentFile,
+  type DocumentInfo,
+  type DrawingDocument,
 } from "../../document";
 import {
   SAMPLE_PIXELS,
@@ -171,24 +175,19 @@ export interface CanvasStats {
 }
 
 /**
- * A canvas's pixels as a PNG data URL.
+ * A canvas's pixels as a PNG.
  */
-const toPngDataUrl = async (canvas: OffscreenCanvas): Promise<string> => {
+const toPng = (canvas: OffscreenCanvas): Promise<Blob> => {
   // A canvas that was never drawn on has no context yet, and can't be encoded without one
   canvas.getContext("2d");
-  const blob = await canvas.convertToBlob({ type: "image/png" });
-  return `data:image/png;base64,${bytesToBase64(new Uint8Array(await blob.arrayBuffer()))}`;
+  return canvas.convertToBlob({ type: "image/png" });
 };
 
-/**
- * Decode a PNG data URL into an image.
- */
-const fromPngDataUrl = (dataUrl: string): Promise<ImageBitmap> =>
-  createImageBitmap(
-    new Blob([base64ToBytes(dataUrl.slice(dataUrl.indexOf(",") + 1))], {
-      type: "image/png",
-    }),
-  );
+/** Options for `PaintCanvas.createDocument` */
+export interface CreateDocumentOptions {
+  /** Whether to include a thumbnail (default true) */
+  thumbnail?: boolean;
+}
 
 /** Receives the drawing messages PaintCanvas sends; a returned promise that rejects means a patch wasn't delivered */
 export type MessageListener = (message: CanvasMessage) => void | Promise<void>;
@@ -316,6 +315,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** The user's own profile graphs (and the presets), for shaping how brush settings vary */
   readonly profiles = new ProfileGraphs();
+
+  /** The drawing's details (see `documentInfo`) */
+  private info: DocumentInfo;
 
   /** The user's own colour palettes (the one PaintCanvas comes with is `palette`) */
   readonly palettes = new ColourPalettes();
@@ -483,6 +485,7 @@ export default class PaintCanvas extends EventTarget {
     this.names = { ...DEFAULT_NAMES, ...options.names };
     this.presetAuthor =
       options.presetAuthor ?? (() => ({ name: DEFAULT_AUTHOR }));
+    this.info = newDocumentInfo(this.author);
     this.tips.preload(this.brush.presets);
     this.tips.preload(this.eraser.presets);
     this.customPresets = new CustomPresets();
@@ -704,86 +707,184 @@ export default class PaintCanvas extends EventTarget {
     return true;
   }
 
+  /** The drawing's details: its ID, name, authors and when it was made and last opened */
+  get documentInfo(): Readonly<DocumentInfo> {
+    return this.info;
+  }
+
   /**
-   * The drawing as a document: its size, the user's layers and drawings from elsewhere, with PNG images (see
-   * `PaintCanvasDocument`). Turn it into JSON to save it as a file.
+   * Rename the drawing. Returns whether it was renamed (not if the name is empty).
    *
    * @example
-   * const json = JSON.stringify(await canvas.exportDocument());
+   * canvas.renameDocument("Sunset at sea");
    */
-  async exportDocument(): Promise<PaintCanvasDocument> {
+  renameDocument(name: string): boolean {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    this.setDocumentInfo({ ...this.info, name: trimmed });
+    return true;
+  }
+
+  /**
+   * Use details of a drawing being restored (e.g. kept in the browser), marking it opened now.
+   */
+  restoreDocumentInfo(info: DocumentInfo): void {
+    this.setDocumentInfo({ ...info, dateOpened: new Date().toISOString() });
+  }
+
+  /**
+   * Start a new drawing: new details (a new ID, the user as its author, made now), and the layers replaced with one
+   * empty layer. Undo history starts again.
+   *
+   * @example
+   * canvas.newDocument("Sketch");
+   */
+  newDocument(name?: string): void {
+    this.layerStack.replace([{ name: "Layer 1" }]);
+    this.history.clear();
+    this.setDocumentInfo(newDocumentInfo(this.author, name));
+  }
+
+  /**
+   * The drawing as a document (see `DrawingDocument`): its details, size, the user's layers and drawings from elsewhere
+   * as PNG blobs, and a thumbnail (at most `THUMBNAIL_SIZE` pixels on its longest side) unless left out. The user is
+   * added to its authors.
+   *
+   * @example
+   * await myStore.save(await canvas.createDocument());
+   */
+  async createDocument({
+    thumbnail = true,
+  }: CreateDocumentOptions = {}): Promise<DrawingDocument> {
+    const author = withAuthor(this.info.author, this.author);
+    if (author.length !== this.info.author.length)
+      this.setDocumentInfo({ ...this.info, author });
+    const { width, height } = this;
+    const scale = Math.min(1, THUMBNAIL_SIZE / Math.max(width, height));
+    const thumbnailWidth = Math.max(1, Math.round(width * scale));
+    const thumbnailHeight = Math.max(1, Math.round(height * scale));
     const layers = this.layerStack.layers;
+    const [layerImages, sheetImages, thumbnailImage] = await Promise.all([
+      Promise.all(layers.map((layer) => toPng(layer.canvas))),
+      Promise.all(
+        this.externalSheets.sheets.map(({ canvas }) => toPng(canvas)),
+      ),
+      thumbnail
+        ? toPng(
+            this.flatten(
+              { x: 0, y: 0, width, height },
+              thumbnailWidth,
+              thumbnailHeight,
+            ),
+          )
+        : undefined,
+    ]);
     return {
-      format: DOCUMENT_FORMAT,
-      version: DOCUMENT_VERSION,
-      width: this.canvasWidth,
-      height: this.canvasHeight,
-      layers: await Promise.all(
-        layers.map(async (layer) => {
-          const { name, visible, opacity, blendMode, alphaLock } =
-            layer.toConfig();
-          return {
-            name,
-            visible,
-            opacity,
-            blendMode,
-            alphaLock,
-            image: await toPngDataUrl(layer.canvas),
-          };
-        }),
-      ),
-      activeLayer: layers.indexOf(this.layerStack.active),
-      external: await Promise.all(
-        this.externalSheets.sheets.map(async ({ source, canvas }) => ({
-          source,
-          image: await toPngDataUrl(canvas),
-        })),
-      ),
+      ...structuredClone(this.info),
+      width,
+      height,
+      layers: layers.map((layer, i) => {
+        const { id, name, visible, opacity, blendMode, alphaLock } =
+          layer.toConfig();
+        return {
+          id,
+          name,
+          visible,
+          opacity,
+          blendingMode: blendMode,
+          alphaLock,
+          content: layerImages[i] as Blob,
+        };
+      }),
+      activeLayer: this.layerStack.active.id,
+      external: this.externalSheets.sheets.map(({ source }, i) => ({
+        source,
+        content: sheetImages[i] as Blob,
+      })),
+      ...(thumbnailImage
+        ? {
+            thumbnail: {
+              width: thumbnailWidth,
+              height: thumbnailHeight,
+              content: thumbnailImage,
+            },
+          }
+        : {}),
     };
   }
 
   /**
-   * Replace the drawing with a document (e.g. read from a file): its size, layers and drawings from elsewhere. Undo
-   * history starts again. Returns whether it was loaded: not when the document is invalid or an image can't be
-   * decoded, and then nothing changes.
+   * Replace the drawing with a document (e.g. from a store): its details (marked opened now), size, layers and drawings
+   * from elsewhere. Undo history starts again. Returns whether it was opened: not when it has too many layers, is too
+   * big, doesn't have its selected layer, or an image can't be decoded, and then nothing changes.
+   *
+   * @example
+   * await canvas.openDocument(await myStore.load(id));
+   */
+  async openDocument(document: DrawingDocument): Promise<boolean> {
+    const { layers, external, width, height, activeLayer } = document;
+    if (
+      layers.length === 0 ||
+      layers.length > this.maxLayers ||
+      Math.max(width, height) >
+        Math.min(this.maxCanvasSize, MAX_DOCUMENT_SIZE) ||
+      !layers.some((layer) => layer.id === activeLayer)
+    )
+      return false;
+    const images = await Promise.all(
+      [...layers, ...external].map((item) => createImageBitmap(item.content)),
+    ).catch(() => undefined);
+    if (!images) return false;
+    this.restoreLayers(
+      width,
+      height,
+      layers.map(({ id, name, visible, opacity, blendingMode, alphaLock }) => ({
+        id,
+        name,
+        visible,
+        opacity,
+        blendMode: blendingMode as BlendMode,
+        alphaLock,
+      })),
+      images,
+      activeLayer,
+    );
+    external.forEach((sheet, i) =>
+      this.externalSheets.restore(
+        sheet.source,
+        images[layers.length + i] as ImageBitmap,
+      ),
+    );
+    const { id, name, author, dateCreated, dateOpened } = document;
+    this.restoreDocumentInfo({ id, name, author, dateCreated, dateOpened });
+    return true;
+  }
+
+  /**
+   * The drawing as a document file (see `DocumentFile`): turn it into JSON to save it as a file.
+   *
+   * @example
+   * const json = JSON.stringify(await canvas.exportDocument());
+   */
+  async exportDocument(): Promise<DocumentFile> {
+    return documentToFile(await this.createDocument());
+  }
+
+  /**
+   * Replace the drawing with a document file (e.g. read from a file, see `documentFromFile`). Returns whether it was
+   * opened: not when it isn't a valid document or can't be opened (see `openDocument`), and then nothing changes.
    *
    * @example
    * await canvas.importDocument(JSON.parse(text));
    */
-  async importDocument(document: unknown): Promise<boolean> {
-    const result = isValidDocument(document);
-    if (!result.valid || result.value.layers.length > this.maxLayers)
+  async importDocument(file: unknown): Promise<boolean> {
+    let document: DrawingDocument;
+    try {
+      document = documentFromFile(file);
+    } catch {
       return false;
-    const doc = result.value;
-    const images = await Promise.all([
-      ...doc.layers.map((layer) => fromPngDataUrl(layer.image)),
-      ...doc.external.map((sheet) => fromPngDataUrl(sheet.image)),
-    ]).catch(() => undefined);
-    if (!images) return false;
-    const configs = doc.layers.map(
-      ({ name, visible, opacity, blendMode, alphaLock }) => ({
-        id: crypto.randomUUID(),
-        name,
-        visible,
-        opacity,
-        blendMode: blendMode as BlendMode,
-        alphaLock,
-      }),
-    );
-    this.restoreLayers(
-      doc.width,
-      doc.height,
-      configs,
-      images,
-      (configs[doc.activeLayer] as LayerConfig & { id: string }).id,
-    );
-    doc.external.forEach((sheet, i) =>
-      this.externalSheets.restore(
-        sheet.source,
-        images[configs.length + i] as ImageBitmap,
-      ),
-    );
-    return true;
+    }
+    return this.openDocument(document);
   }
 
   /**
@@ -1722,6 +1823,12 @@ export default class PaintCanvas extends EventTarget {
   /**
    * Dispatch a `change` event.
    */
+  /** Use the drawing's details and tell listeners */
+  private setDocumentInfo(info: DocumentInfo): void {
+    this.info = info;
+    this.notify();
+  }
+
   protected notify(): void {
     this.dispatchEvent(new Event("change"));
   }

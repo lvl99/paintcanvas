@@ -6,14 +6,15 @@ sidebar_position: 9
 
 PaintCanvas describes its assets with JSON schemas (draft 2020-12), published at `https://lvl99.github.io/paintcanvas/schemas/`. Each schema's `$id` is its URL and names its version, e.g. `brush-preset-1.0.0.json`. Its `@type` names the kind of thing it describes.
 
-| Schema                                 | `@type`                               | What it is                |
-| -------------------------------------- | ------------------------------------- | ------------------------- |
-| `brush-preset-1.0.0.json`              | `PaintCanvas/BrushConfig`             | A brush preset            |
-| `brush-preset-collection-1.0.0.json`   | `PaintCanvas/BrushConfigCollection`   | A file of brush presets   |
-| `colour-palette-1.0.0.json`            | `PaintCanvas/ColourPalette`           | A named list of colours   |
-| `colour-palette-collection-1.0.0.json` | `PaintCanvas/ColourPaletteCollection` | A file of colour palettes |
-| `profile-graph-1.0.0.json`             | `PaintCanvas/ProfileGraph`            | A profile graph           |
-| `profile-graph-collection-1.0.0.json`  | `PaintCanvas/ProfileGraphCollection`  | A file of profile graphs  |
+| Schema                                 | `@type`                               | What it is                                                    |
+| -------------------------------------- | ------------------------------------- | ------------------------------------------------------------- |
+| `brush-preset-1.0.0.json`              | `PaintCanvas/BrushConfig`             | A brush preset                                                |
+| `brush-preset-collection-1.0.0.json`   | `PaintCanvas/BrushConfigCollection`   | A file of brush presets                                       |
+| `colour-palette-1.0.0.json`            | `PaintCanvas/ColourPalette`           | A named list of colours                                       |
+| `colour-palette-collection-1.0.0.json` | `PaintCanvas/ColourPaletteCollection` | A file of colour palettes                                     |
+| `profile-graph-1.0.0.json`             | `PaintCanvas/ProfileGraph`            | A profile graph                                               |
+| `profile-graph-collection-1.0.0.json`  | `PaintCanvas/ProfileGraphCollection`  | A file of profile graphs                                      |
+| `document-1.0.0.json`                  | `PaintCanvas/Document`                | A drawing (see [Saving and opening drawings](./documents.md)) |
 
 Assets have an `id` (a UUID for the user's own; built-in profile graphs keep their names, e.g. `overweight`) and an optional `author`: a name, or `{ did, name, handle, email, homepage }`.
 

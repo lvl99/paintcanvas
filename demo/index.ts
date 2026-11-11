@@ -62,7 +62,7 @@ find("#new-drawing").addEventListener("click", () => {
   dialog.addEventListener("pc-choose", (event) => {
     dialog.remove();
     if ((event as CustomEvent<{ value: string }>).detail.value === "new")
-      app.layers.replace([{ name: "Layer 1" }]);
+      app.newDocument();
   });
   document.body.append(dialog);
 });

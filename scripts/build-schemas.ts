@@ -14,6 +14,7 @@ import {
   profileGraphCollectionSchema,
   profileGraphSchema,
 } from "../src/lib/profiles/schema.ts";
+import { documentSchema } from "../src/lib/document/schema.ts";
 import { SCHEMA_BASE_URL } from "../src/lib/schemas/index.ts";
 
 /** Where the schema files are kept */
@@ -29,6 +30,7 @@ export const PUBLISHED_SCHEMAS: readonly { $id: string }[] = [
   colourPaletteCollectionSchema,
   profileGraphSchema,
   profileGraphCollectionSchema,
+  documentSchema,
 ];
 
 /**

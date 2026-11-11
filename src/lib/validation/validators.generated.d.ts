@@ -2,7 +2,7 @@
 import type { AssetCollectionFile } from "../assets/schema";
 import type { BrushConfig } from "../brushes/types";
 import type { ProfileGraph } from "../profiles";
-import type { PaintCanvasDocument } from "../document/schema";
+import type { DocumentFile } from "../document/schema";
 import type { ColourPalette } from "../palette/schema";
 import type { AppSettings, SettingsFile } from "../settings/schema";
 import type {
@@ -38,6 +38,6 @@ export declare const validateProfileGraphCollection: Validator<
 export declare const validatePatchMessage: Validator<PatchMessage>;
 export declare const validateStrokeMessage: Validator<StrokeMessage>;
 export declare const validateHistoryMessage: Validator<HistoryMessage>;
-export declare const validateDocument: Validator<PaintCanvasDocument>;
+export declare const validateDocument: Validator<DocumentFile>;
 export declare const validateSettings: Validator<AppSettings>;
 export declare const validateSettingsFile: Validator<SettingsFile>;

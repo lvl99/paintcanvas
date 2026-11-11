@@ -38,35 +38,52 @@ const setup = async () => {
 
 describe("PaintCanvas documents", () => {
   it("should save the drawing as a document that loads back the same", async () => {
-    const saved = await (await setup()).exportDocument();
+    const source = await setup();
+    source.renameDocument(" Sunset ");
+    const saved = await source.exportDocument();
     expect(saved).toMatchObject({
-      format: "paintcanvas-document",
-      version: 1,
+      $schema:
+        "https://lvl99.github.io/paintcanvas/schemas/document-1.0.0.json",
+      "@type": "PaintCanvas/Document",
+      id: source.documentInfo.id,
+      name: "Sunset",
+      author: [{ name: "Unknown" }],
       width: 20,
       height: 10,
-      activeLayer: 1,
+      activeLayer: source.layers.layers[1]!.id,
       layers: [
         {
           name: "Layer 2",
           opacity: 0.5,
-          blendMode: "multiply",
+          blendingMode: "multiply",
           alphaLock: true,
         },
         {
           name: "Layer 1",
           opacity: 1,
-          blendMode: "source-over",
+          blendingMode: "source-over",
           visible: true,
         },
       ],
       external: [{ source: "ann" }],
+      thumbnail: { width: 20, height: 10 },
     });
 
-    const loaded = new PaintCanvas({ width: 5, height: 5 });
+    const loaded = new PaintCanvas({
+      width: 5,
+      height: 5,
+      presetAuthor: () => ({ name: "Ann", handle: "ann.test" }),
+    });
     loaded.layers.create();
     expect(await loaded.importDocument(JSON.parse(JSON.stringify(saved)))).toBe(
       true,
     );
+    expect(loaded.documentInfo).toMatchObject({
+      id: saved.id,
+      name: "Sunset",
+      dateCreated: saved.dateCreated,
+    });
+    expect(loaded.documentInfo.dateOpened >= saved.dateOpened).toBe(true);
     expect([loaded.width, loaded.height]).toEqual([20, 10]);
     expect(loaded.layers.layers.map((layer) => layer.name)).toEqual([
       "Layer 2",
@@ -88,23 +105,72 @@ describe("PaintCanvas documents", () => {
       0, 0, 255, 255,
     ]);
     expect(loaded.history.canUndo).toBe(false);
+    // Whoever saves it next is added to its authors
+    const again = await loaded.createDocument({ thumbnail: false });
+    expect(again.author).toEqual([
+      { name: "Unknown" },
+      { name: "Ann", handle: "ann.test" },
+    ]);
+    expect(again).not.toHaveProperty("thumbnail");
   });
 
-  it("should change nothing for an invalid document or one whose images can't be decoded", async () => {
+  it("should draw the shown drawing small in the thumbnail", async () => {
+    const canvas = new PaintCanvas({ width: 400, height: 100 });
+    canvas.layers.active.context.fillStyle = "#00ff00";
+    canvas.layers.active.context.fillRect(0, 0, 400, 100);
+    const { thumbnail } = await canvas.createDocument();
+    expect([thumbnail?.width, thumbnail?.height]).toEqual([200, 50]);
+    const image = await createImageBitmap(thumbnail!.content);
+    const small = new OffscreenCanvas(200, 50);
+    small.getContext("2d")!.drawImage(image, 0, 0);
+    expect(pixel(small, 100, 25)).toEqual([0, 255, 0, 255]);
+  });
+
+  it("should change nothing for an invalid document or one that can't be opened", async () => {
     const canvas = await setup();
+    const info = canvas.documentInfo;
     const saved = await canvas.exportDocument();
     expect(await canvas.importDocument({ ...saved, width: 0 })).toBe(false);
     const broken = {
       ...saved,
-      layers: [{ ...saved.layers[0]!, image: "data:image/png;base64,AAAA" }],
-      activeLayer: 0,
+      layers: [{ ...saved.layers[0]!, content: "data:image/png;base64,AAAA" }],
+      activeLayer: saved.layers[0]!.id,
     };
     expect(await canvas.importDocument(broken)).toBe(false);
+    const document = await canvas.createDocument();
+    expect(
+      await canvas.openDocument({ ...document, activeLayer: "gone" }),
+    ).toBe(false);
+    expect(await canvas.openDocument({ ...document, layers: [] })).toBe(false);
+    expect(await canvas.openDocument({ ...document, width: 20000 })).toBe(
+      false,
+    );
     // More layers than this canvas allows
     const oneLayer = new PaintCanvas({ width: 20, height: 10, maxLayers: 1 });
     expect(await oneLayer.importDocument(saved)).toBe(false);
     expect(canvas.layers.layers).toHaveLength(2);
     expect(canvas.width).toBe(20);
+    expect(canvas.documentInfo.id).toBe(info.id);
+  });
+
+  it("should rename the drawing and start a new one", async () => {
+    const canvas = await setup();
+    const { id } = canvas.documentInfo;
+    expect(canvas.renameDocument("  ")).toBe(false);
+    expect(canvas.renameDocument("Sea")).toBe(true);
+    expect(canvas.documentInfo.name).toBe("Sea");
+    canvas.newDocument("Sketch");
+    expect(canvas.documentInfo).toMatchObject({
+      name: "Sketch",
+      author: [{ name: "Unknown" }],
+    });
+    expect(canvas.documentInfo.id).not.toBe(id);
+    expect(canvas.layers.layers.map((layer) => layer.name)).toEqual([
+      "Layer 1",
+    ]);
+    expect(canvas.history.canUndo).toBe(false);
+    canvas.newDocument();
+    expect(canvas.documentInfo.name).toBe("Untitled");
   });
 
   it("should report its size, layers, sheets, memory and undo steps", async () => {
