@@ -82,4 +82,20 @@ Useful building blocks:
 - Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>` (an on/off switch, used instead of plain checkboxes; `size="s"` for a 16px switch instead of 20px, both pressable over 24px of height), `<pc-slider>`, `<pc-slider-range>` (a range: one track with low and high handles that can't cross, and a number slider for each end; with `single`, one value with its number slider before or after the track, `number-position`), `<pc-number-slider>` (a number dragged right or up to raise it and left or down to lower it, or tapped to type a value), `<pc-menu>`, `<pc-context-menu>`, `<pc-button-menu>` (a row of pill buttons for actions, which becomes one ⋮ menu while `menu` is set or, with `menu-below="900"`, in windows narrower than that), `<pc-dialog-window>` (a window over the page, centred and never bigger than the screen, with header, body and footer slots; only its body scrolls), `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>` (a floating box, optionally with an arrow pointing at the button that opens it), `<pc-panel>`, `<pc-pane>`.
 - `PcElement`, the base class for your own elements: gives them `t()` for translated text, `iconUrl()` and the design tokens.
 
-Custom brush presets are kept in memory unless you pass a `presetStore` (e.g. backed by IndexedDB) in the options.
+## Keeping the user's assets
+
+The user's assets (custom brush presets, colour palettes and profile graphs) are kept in memory unless the canvas is given a store for each kind, with the `stores` option or `canvas.useAssetStores()`:
+
+```ts
+import { indexedDbStores } from "@lvl99dotcom/paintcanvas/lib/storage";
+
+const { settings, ...assets } = indexedDbStores("my-app");
+const canvas = new PaintCanvas({ stores: assets });
+// or later: canvas.useAssetStores(assets);
+```
+
+- Brush presets (`canvas.customPresets`) are loaded from their store, leaving out invalid ones, and saved and deleted as they change.
+- Profile graphs (`canvas.profiles`) saved in their store are added when it's used, and changes are saved soon after (`canvas.profileSync`, an `AssetSync`, dispatches `error` when that fails).
+- Colour palettes keep their store for the palettes to use.
+
+A store is anything with the `AssetStoreLike` methods: `list()` (the saved assets, in order; they're checked before use), `put(asset)` (save, replacing one with the same `id`) and `remove(id)`. `IndexedDbAssetStore` keeps them in the browser's IndexedDB, under a name. Use your own to keep them elsewhere, e.g. in a user's account.
