@@ -52,25 +52,32 @@ The engine has two colours, read with `canvas.colours` (`canvas.colour` is the f
 
 One of them is selected for configuration (`canvas.selectedColour`, the foreground by default): the colour sample tool sets it, and colour pickers can use it. Change it with `canvas.selectColour("background")`, and swap the colours with `canvas.swapColours()`.
 
-## Colour palette
+## Colour palettes
 
-`canvas.palette` holds the user's saved colours (`DEFAULT_PALETTE` to start with), each once as lowercase `#rrggbb`. Change them with `add`, `merge`, `remove` and `set`; it dispatches `change` when they change. Like the input settings, it is kept in memory: save and restore it yourself, or with the app settings store.
+`canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE` to start with), each once as lowercase `#rrggbb`. Change them with `add`, `merge`, `remove` and `set`; it dispatches `change` when they change. It can't be renamed or deleted, and its ID is `DEFAULT_PALETTE_ID`. It's kept with the app settings.
 
-Palettes are exported and imported as colour palette files (see [Schemas and asset files](./schemas.md)):
+`canvas.palettes` (a `ColourPalettes`) holds the user's own palettes, each with an ID, a name, an optional author and its colours:
+
+```ts
+const sunset = canvas.palettes.create("Sunset", ["#ff7700"], canvas.author);
+canvas.palettes.addColour(sunset.id, "#ff3355");
+canvas.palettes.rename(sunset.id, "Dusk");
+canvas.palettes.removeColour(sunset.id, 0);
+canvas.palettes.remove(sunset.id);
+```
+
+It dispatches `change` when they change. They're kept in the palette store (see [Keeping the user's assets](#keeping-the-users-assets)), or with the app settings without one.
+
+The user's palettes are exported and imported as colour palette files (see [Schemas and asset files](./schemas.md)):
 
 ```ts
 import { colourPaletteFile } from "@lvl99dotcom/paintcanvas/lib/palette";
 
-const text = colourPaletteFile.write([
-  {
-    id: crypto.randomUUID(),
-    name: "My palette",
-    colours: [...canvas.palette.colours],
-  },
-]);
-const palettes = colourPaletteFile.parse(text); // throws an AssetFileError for files it can't read
-canvas.palette.merge(palettes.flatMap((palette) => palette.colours));
+const text = colourPaletteFile.write(canvas.palettes.items);
+canvas.palettes.merge(colourPaletteFile.parse(text)); // throws an AssetFileError for files it can't read
 ```
+
+`<pc-panel-colours>` shows the user's palettes above PaintCanvas's, each with its own [+] to save the selected colour. Each of the user's palettes has a ⋮ menu (Rename…, Export, Delete…), and "New palette" makes one.
 
 ## Events
 
@@ -96,6 +103,6 @@ const canvas = new PaintCanvas({ stores: assets });
 
 - Brush presets (`canvas.customPresets`) are loaded from their store, leaving out invalid ones, and saved and deleted as they change.
 - Profile graphs (`canvas.profiles`) saved in their store are added when it's used, and changes are saved soon after (`canvas.profileSync`, an `AssetSync`, dispatches `error` when that fails).
-- Colour palettes keep their store for the palettes to use.
+- Colour palettes (`canvas.palettes`) work like profile graphs (`canvas.paletteSync`).
 
 A store is anything with the `AssetStoreLike` methods: `list()` (the saved assets, in order; they're checked before use), `put(asset)` (save, replacing one with the same `id`) and `remove(id)`. `IndexedDbAssetStore` keeps them in the browser's IndexedDB, under a name. Use your own to keep them elsewhere, e.g. in a user's account.

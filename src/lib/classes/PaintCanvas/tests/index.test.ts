@@ -53,6 +53,7 @@ describe("PaintCanvas", () => {
       presetAuthor: () => ({ name: "Ada", handle: "ada" }),
     });
     expect(app.authorHandle).toBe("ada");
+    expect(app.author).toEqual({ name: "Ada", handle: "ada" });
     expect(app.layers.maxLayers).toBe(2);
     app.setCanvasSize(100, 100);
     expect(app.layers.maxLayers).toBe(2);

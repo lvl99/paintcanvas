@@ -308,7 +308,7 @@ describe("pc-panel-colours", () => {
   it("should save the selected colour once with [+]", async () => {
     const { app, element } = await setup();
     const add = get<HTMLButtonElement>(element, ".add");
-    expect(add.getAttribute("aria-label")).toBe("Save #000000 to the palette");
+    expect(add.getAttribute("aria-label")).toBe("Save #000000 to PaintCanvas");
     add.click();
     await element.updateComplete;
     expect(app.palette.colours.at(-1)).toBe("#000000");
@@ -547,19 +547,21 @@ describe("pc-panel-colours", () => {
     window.removeEventListener("keydown", shortcut);
   });
 
-  it("should import a palette file, adding its new colours", async () => {
+  it("should import the palettes in a file as the user's own", async () => {
     const { app, element, toasts } = await setup();
     await element.importFile(
       paletteFile(["#ff0000", "#123456"], ["#abcdef", "#123456"]),
     );
-    expect(app.palette.colours).toEqual([
-      "#ff0000",
-      "#00ff00",
-      "#0000ff",
-      "#123456",
-      "#abcdef",
+    expect(
+      app.palettes.items.map(({ name, colours }) => [name, colours]),
+    ).toEqual([
+      ["Palette 1", ["#ff0000", "#123456"]],
+      ["Palette 2", ["#abcdef", "#123456"]],
     ]);
-    expect(toasts).toEqual([{ message: "Added 2 colors", kind: "success" }]);
+    expect(app.palette.colours).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
+    expect(toasts).toEqual([
+      { message: "Imported 2 color palettes", kind: "success" },
+    ]);
   });
 
   it("should import a palette file from before versioned schemas, of any format", async () => {
@@ -576,8 +578,12 @@ describe("pc-panel-colours", () => {
         "p.json",
       ),
     );
-    expect(app.palette.colours).toEqual(["#123456"]);
-    expect(toasts.map((toast) => toast.message)).toEqual(["Added 1 color"]);
+    expect(app.palettes.items.map(({ colours }) => colours)).toEqual([
+      ["#123456"],
+    ]);
+    expect(toasts.map((toast) => toast.message)).toEqual([
+      "Imported 1 color palette",
+    ]);
   });
 
   it("should show an error for files that can't be read or aren't palette files", async () => {
@@ -598,7 +604,7 @@ describe("pc-panel-colours", () => {
     const unreadable = new File(["x"], "x.json");
     vi.spyOn(unreadable, "text").mockRejectedValue(new Error("No"));
     await element.importFile(unreadable);
-    vi.spyOn(app.palette, "merge").mockImplementation(() => {
+    vi.spyOn(app.palettes, "merge").mockImplementation(() => {
       throw new Error("Unexpected");
     });
     await element.importFile(paletteFile());
@@ -648,27 +654,140 @@ describe("pc-panel-colours", () => {
     Reflect.deleteProperty(window, "showSaveFilePicker");
   });
 
-  it("should export the saved colours as a palette file, showing an error when it fails", async () => {
+  it("should export the user's palettes, or say there are none, showing an error when it fails", async () => {
     const { app, element, toasts } = await setup();
     const saved: { blob: Blob; name: string }[] = [];
     element.saveFile = vi.fn(async (blob: Blob, name: string) => {
       saved.push({ blob, name });
       return "download" as const;
     });
+    await element.exportFile();
+    const sunset = app.palettes.create("Sunset", ["#ff7700"])!;
     get(element, "button.export").click();
     await vi.waitFor(() => expect(saved).toHaveLength(1));
     expect(saved[0]!.name).toMatch(/^paintcanvas-colour-palettes-.*\.json$/);
     expect(colourPaletteFile.parse(await saved[0]!.blob.text())).toEqual([
-      {
-        id: expect.any(String),
-        name: "Color palette",
-        colours: app.palette.colours,
-      },
+      sunset,
     ]);
     vi.mocked(element.saveFile).mockRejectedValueOnce(new Error("denied"));
     await element.exportFile();
     expect(toasts).toEqual([
+      { message: "No color palettes to export", kind: "error" },
       { message: "Error exporting color palette JSON file", kind: "error" },
     ]);
+  });
+
+  it("should show the user's palettes above PaintCanvas's, each saving the selected colour with its [+]", async () => {
+    const { app, element } = await setup();
+    const sunset = app.palettes.create("Sunset", ["#ff7700"])!;
+    await element.updateComplete;
+    const headings = queryAll(element, ".palette-heading h3").map(
+      (heading) => heading.textContent,
+    );
+    expect(headings).toEqual(["Sunset", "PaintCanvas"]);
+    const group = get(element, `.swatches[data-palette="${sunset.id}"]`);
+    expect(group.getAttribute("aria-labelledby")).toBe(`palette-${sunset.id}`);
+    // Only the user's palettes have a menu
+    expect(queryAll(element, "pc-context-menu")).toHaveLength(1);
+    (group.querySelector(".add") as HTMLButtonElement).click();
+    expect(app.palettes.get(sunset.id)?.colours).toEqual([
+      "#ff7700",
+      "#000000",
+    ]);
+    expect(app.palette.colours).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
+    (group.querySelector(".swatch") as HTMLButtonElement).click();
+    expect(app.colour).toBe("#ff7700");
+  });
+
+  it("should delete a colour from the user's palette after asking, and move between its colours with the keyboard", async () => {
+    const { app, element } = await setup();
+    const sunset = app.palettes.create("Sunset", ["#ff7700", "#ff3355"])!;
+    await element.updateComplete;
+    const swatch = (index: number) =>
+      get<HTMLButtonElement>(
+        element,
+        `.swatches[data-palette="${sunset.id}"] .swatch[data-index="${index}"]`,
+      );
+    expect(swatch(0).tabIndex).toBe(0);
+    swatch(0).focus();
+    swatch(0).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    );
+    await element.updateComplete;
+    expect(swatch(1).tabIndex).toBe(0);
+    swatch(1).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Delete", bubbles: true }),
+    );
+    await element.updateComplete;
+    const dialog = await vi.waitFor(() =>
+      query<PcDialog>(element, "pc-dialog"),
+    );
+    dialog.choose("delete");
+    expect(app.palettes.get(sunset.id)?.colours).toEqual(["#ff7700"]);
+    await element.updateComplete;
+    expect(swatch(0).tabIndex).toBe(0);
+  });
+
+  it("should make a palette, asking for its name, with the user as its author", async () => {
+    const { app, element } = await setup();
+    element.prompt = vi.fn(async () => "Sunset");
+    get(element, "button.new-palette").click();
+    await vi.waitFor(() => expect(app.palettes.items).toHaveLength(1));
+    expect(app.palettes.items[0]).toMatchObject({
+      name: "Sunset",
+      author: { name: "Ada" },
+      colours: [],
+    });
+    expect(element.prompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        heading: "New color palette",
+        value: "My palette",
+      }),
+    );
+    element.prompt = async () => null;
+    expect(await element.createPalette()).toBeUndefined();
+    expect(app.palettes.items).toHaveLength(1);
+  });
+
+  it("should rename, export and delete the user's palettes from their menu", async () => {
+    const { app, element } = await setup();
+    const sunset = app.palettes.create("Sunset", ["#ff7700"])!;
+    await element.updateComplete;
+    element.prompt = vi.fn(async () => "Dusk");
+    element.confirm = vi.fn(async () => false);
+    const saved: string[] = [];
+    element.saveFile = vi.fn(async (blob: Blob) => {
+      saved.push(await blob.text());
+      return "download" as const;
+    });
+    const menu = get(element, "pc-context-menu");
+    menu.dispatchEvent(
+      new CustomEvent("pc-select", { detail: { value: "rename" } }),
+    );
+    await vi.waitFor(() =>
+      expect(app.palettes.get(sunset.id)?.name).toBe("Dusk"),
+    );
+    await element.actOnPalette(sunset.id, "export");
+    expect(colourPaletteFile.parse(saved[0]!)).toEqual([
+      { ...sunset, name: "Dusk" },
+    ]);
+    await element.actOnPalette(sunset.id, "delete");
+    expect(element.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        heading: "Delete color palette",
+        message: 'Delete "Dusk"? This can\'t be undone.',
+      }),
+    );
+    expect(app.palettes.items).toHaveLength(1);
+    element.prompt = async () => null;
+    await element.actOnPalette(sunset.id, "rename");
+    expect(app.palettes.get(sunset.id)?.name).toBe("Dusk");
+    element.confirm = async () => true;
+    await element.actOnPalette(sunset.id, "delete");
+    expect(app.palettes.items).toEqual([]);
+    // Palettes that are gone, and canvases that aren't there, are left alone
+    await element.actOnPalette(sunset.id, "rename");
+    element.app = undefined;
+    expect(await element.createPalette()).toBeUndefined();
   });
 });

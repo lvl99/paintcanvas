@@ -145,14 +145,35 @@
   outline-offset: 1px;
 }
 
-/* Saved colours: square swatches in a grid that scrolls */
+/* The palettes, the user's own above PaintCanvas's, scrolling together */
+.palettes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pc-space-2);
+  max-height: 264px;
+  overflow-y: auto;
+}
+.palette-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pc-space-1);
+  min-height: var(--pc-control-size);
+}
+.palette-heading h3 {
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--pc-font-size-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A palette's colours: square swatches in a grid */
 .swatches {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
   align-content: start;
-  min-height: 64px;
-  max-height: 132px;
-  overflow-y: auto;
   border: 1px solid var(--pc-border);
   background: var(--pc-bar);
 }
@@ -204,9 +225,13 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--pc-space-2);
 }
-/* Import and Export share the row */
+/* New palette has a row of its own, above Import and Export */
 .actions button.pill-s {
   flex: 1;
+}
+.actions button.new-palette {
+  flex-basis: 100%;
 }

@@ -11,6 +11,7 @@ import { PcPanel } from "../PcPanel";
 import ChangeController from "../../ChangeController";
 import "../PcColourPair";
 import "../PcMenu";
+import "../PcContextMenu";
 import "../PcDialog";
 import type { MenuItem } from "../PcMenu";
 import { CANCEL_CHOICE, type DialogChoice } from "../PcDialog";
@@ -27,8 +28,14 @@ import {
   type Hsl,
   type Rgb,
 } from "../../../lib/utils/colour";
-import { MAX_PALETTE_COLOURS, colourPaletteFile } from "../../../lib/palette";
+import {
+  MAX_PALETTE_COLOURS,
+  colourPaletteFile,
+  type ColourPalette,
+} from "../../../lib/palette";
+import { DEFAULT_PALETTE_ID } from "../../../lib/classes/ColourPalettes";
 import { AssetFileError } from "../../../lib/assets";
+import { askConfirm, askText, type ConfirmFn, type PromptFn } from "../../ask";
 import {
   JSON_FILE_TYPE,
   saveFile,
@@ -103,6 +110,24 @@ export const LONG_PRESS_MS = 500;
 /** How far a touch can move and still count as held still (CSS pixels) */
 const LONG_PRESS_SLOP = 10;
 
+/** A palette shown in the panel: one of the user's own, or the one PaintCanvas comes with */
+interface ShownPalette {
+  id: string;
+  name: string;
+  colours: readonly string[];
+  /** Whether it's one of the user's own (which can be renamed, exported and deleted) */
+  own: boolean;
+}
+
+/** A saved colour: its palette's ID and its position */
+interface SwatchRef {
+  palette: string;
+  index: number;
+}
+
+/** Actions in a palette's menu */
+const PALETTE_ACTIONS = ["rename", "export", "delete"] as const;
+
 /** Translation keys of the messages shown when importing a palette file fails, by reason */
 const IMPORT_ERROR_KEYS: Record<string, string> = {
   invalid: "paintCanvas.palette.fileIncompatible",
@@ -127,10 +152,12 @@ const clampWhole = (value: number, max: number): number =>
 
 /**
  * The colour palette menu: the foreground and background colours (the selected one is configured), its hex value, RGB
- * and HSL sliders, the saved colours, and buttons to import and export them as a JSON file.
+ * and HSL sliders, the colour palettes (the user's own above the one PaintCanvas comes with), and buttons to make a
+ * palette and to import and export the user's palettes as a JSON file.
  *
  * - Pressing the foreground or background colour selects it.
- * - Pressing a saved colour sets the selected colour; [+] saves the selected colour.
+ * - Pressing a saved colour sets the selected colour; a palette's [+] saves the selected colour in it.
+ * - Each of the user's palettes has a ⋮ menu to rename, export or delete it (deleting asks first).
  * - A saved colour is deleted, after asking, by clicking it with Alt/Option held (the cursor shows an "X"), from its
  *   menu (right-click, a long press on touch screens, or the context menu key), or with Delete or Backspace. Arrow keys,
  *   Home and End move between saved colours.
@@ -168,10 +195,16 @@ export class PcPanelColours extends PcPanel {
   declare hexDraft?: string;
 
   /** The saved colour whose menu is open, and where */
-  declare menu?: { index: number; x: number; y: number };
+  declare menu?: SwatchRef & { x: number; y: number };
 
   /** The saved colour being deleted, while asking */
-  declare confirming?: number;
+  declare confirming?: SwatchRef;
+
+  /** Asks the user to confirm, in a dialog (replaceable for tests) */
+  confirm: ConfirmFn = (options) => askConfirm(this.renderRoot, options);
+
+  /** Asks the user for text, in a dialog (replaceable for tests) */
+  prompt: PromptFn = (options) => askText(this.renderRoot, options);
 
   /** Saves exported files (replaceable for tests) */
   saveFile: (blob: Blob, name: string) => Promise<SaveMethod | undefined> = (
@@ -182,8 +215,8 @@ export class PcPanelColours extends PcPanel {
   /** The HSL values shown, kept while they give the selected colour (so hue stays put for greys) */
   private hsl: Hsl = { h: 0, s: 0, l: 0 };
 
-  /** The saved colour that is reached with Tab (the others with arrow keys) */
-  private focusIndex = 0;
+  /** The saved colour that is reached with Tab in its palette (the others with arrow keys; other palettes' first) */
+  private focused: SwatchRef = { palette: DEFAULT_PALETTE_ID, index: 0 };
 
   /** A touch being held on a saved colour, until it opens its menu */
   private press?: {
@@ -198,6 +231,7 @@ export class PcPanelColours extends PcPanel {
   private changes = new ChangeController(this, () => [
     this.app,
     this.app?.palette,
+    this.app?.palettes,
   ]);
 
   // Holding Alt/Option shows the delete cursor over saved colours
@@ -239,8 +273,43 @@ export class PcPanelColours extends PcPanel {
     if (!this.app) return;
     // Show the selected colour's HSL, unless the HSL shown already gives it
     if (hslToHex(this.hsl) !== this.colour) this.hsl = hexToHsl(this.colour);
-    const count = this.app.palette.colours.length;
-    this.focusIndex = Math.max(0, Math.min(this.focusIndex, count - 1));
+    const shown = this.shown().find(({ id }) => id === this.focused.palette);
+    this.focused = shown
+      ? {
+          palette: shown.id,
+          index: Math.max(
+            0,
+            Math.min(this.focused.index, shown.colours.length - 1),
+          ),
+        }
+      : { palette: DEFAULT_PALETTE_ID, index: 0 };
+  }
+
+  /** The palettes shown: the user's own, then the one PaintCanvas comes with (named after the app) */
+  shown(): ShownPalette[] {
+    const app = this.app as PaintCanvas;
+    return [
+      ...app.palettes.items.map((palette) => ({ ...palette, own: true })),
+      {
+        id: DEFAULT_PALETTE_ID,
+        name: app.names.app,
+        colours: app.palette.colours,
+        own: false,
+      },
+    ];
+  }
+
+  /** A palette's colours */
+  private coloursOf(palette: string): readonly string[] {
+    const app = this.app as PaintCanvas;
+    return palette === DEFAULT_PALETTE_ID
+      ? app.palette.colours
+      : (app.palettes.get(palette)?.colours ?? []);
+  }
+
+  /** The saved colour at a position */
+  private colourAt({ palette, index }: SwatchRef): string | undefined {
+    return this.coloursOf(palette)[index];
   }
 
   /** Set the selected colour */
@@ -316,28 +385,28 @@ export class PcPanelColours extends PcPanel {
   }
 
   /** Set the selected colour from a saved colour, or ask to delete it with Alt/Option held */
-  private onSwatchClick(event: MouseEvent, index: number): void {
-    this.focusIndex = index;
+  private onSwatchClick(event: MouseEvent, swatch: SwatchRef): void {
+    this.focused = swatch;
     if (this.longPressed) {
       this.longPressed = false;
       return;
     }
     if (event.altKey) {
-      this.confirming = index;
+      this.confirming = swatch;
       return;
     }
-    this.setColour(this.app?.palette.colours[index] as string);
+    this.setColour(this.colourAt(swatch) as string);
   }
 
   /** Open a saved colour's menu where it was right-clicked */
-  private onSwatchContextMenu(event: MouseEvent, index: number): void {
+  private onSwatchContextMenu(event: MouseEvent, swatch: SwatchRef): void {
     event.preventDefault();
-    this.focusIndex = index;
-    this.menu = { index, x: event.clientX, y: event.clientY };
+    this.focused = swatch;
+    this.menu = { ...swatch, x: event.clientX, y: event.clientY };
   }
 
   /** Start waiting for a touch held on a saved colour to open its menu */
-  private onSwatchPointerDown(event: PointerEvent, index: number): void {
+  private onSwatchPointerDown(event: PointerEvent, swatch: SwatchRef): void {
     this.longPressed = false;
     if (event.pointerType !== "touch") return;
     this.cancelPress();
@@ -348,8 +417,8 @@ export class PcPanelColours extends PcPanel {
       timer: setTimeout(() => {
         this.press = undefined;
         this.longPressed = true;
-        this.focusIndex = index;
-        this.menu = { index, x, y };
+        this.focused = swatch;
+        this.menu = { ...swatch, x, y };
       }, LONG_PRESS_MS),
     };
   }
@@ -375,11 +444,12 @@ export class PcPanelColours extends PcPanel {
    * Move between saved colours, ask to delete one, or open its menu, with the keyboard. Keys used here don't reach the
    * keyboard shortcuts (e.g. Delete doesn't also delete the masked image data).
    */
-  private onSwatchKeyDown(event: KeyboardEvent, index: number): void {
+  private onSwatchKeyDown(event: KeyboardEvent, swatch: SwatchRef): void {
+    const { palette, index } = swatch;
     if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault();
       event.stopPropagation();
-      this.confirming = index;
+      this.confirming = swatch;
       return;
     }
     if (
@@ -389,11 +459,11 @@ export class PcPanelColours extends PcPanel {
       event.preventDefault();
       event.stopPropagation();
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      this.menu = { index, x: rect.left, y: rect.bottom };
+      this.menu = { ...swatch, x: rect.left, y: rect.bottom };
       return;
     }
-    const last = (this.app as PaintCanvas).palette.colours.length - 1;
-    const columns = this.columns();
+    const last = this.coloursOf(palette).length - 1;
+    const columns = this.columns(palette);
     const next = {
       ArrowRight: index + 1,
       ArrowLeft: index - 1,
@@ -405,42 +475,111 @@ export class PcPanelColours extends PcPanel {
     if (next === undefined || next < 0 || next > last) return;
     event.preventDefault();
     event.stopPropagation();
-    void this.focusSwatch(next);
+    void this.focusSwatch({ palette, index: next });
   }
 
-  /** How many saved colours fit in a row */
-  private columns(): number {
-    // Only asked while a saved colour has focus, so there is one
-    const grid = this.renderRoot.querySelector(".swatches") as HTMLElement;
+  /** How many saved colours fit in a row of a palette */
+  private columns(palette: string): number {
+    // Only asked while one of the palette's colours has focus, so there is one
+    const grid = this.renderRoot.querySelector(
+      `.swatches[data-palette="${palette}"]`,
+    ) as HTMLElement;
     const width = (grid.querySelector(".swatch") as HTMLElement).offsetWidth;
     return width > 0 ? Math.max(1, Math.floor(grid.clientWidth / width)) : 1;
   }
 
   /** Focus a saved colour */
-  private async focusSwatch(index: number): Promise<void> {
-    this.focusIndex = index;
+  private async focusSwatch(swatch: SwatchRef): Promise<void> {
+    this.focused = swatch;
     this.requestUpdate();
     await this.updateComplete;
     this.renderRoot
-      .querySelector<HTMLButtonElement>(`.swatch[data-index="${index}"]`)
+      .querySelector<HTMLButtonElement>(
+        `.swatches[data-palette="${swatch.palette}"] .swatch[data-index="${swatch.index}"]`,
+      )
       ?.focus();
   }
 
-  /** Save the selected colour */
-  private onAdd(): void {
-    this.app?.palette.add(this.colour);
+  /** Save the selected colour in a palette */
+  private onAdd(palette: string): void {
+    const app = this.app as PaintCanvas;
+    if (palette === DEFAULT_PALETTE_ID) app.palette.add(this.colour);
+    else app.palettes.addColour(palette, this.colour);
   }
 
   /** Delete the saved colour that was asked about, if confirmed */
   private onConfirm(event: CustomEvent<{ value: string }>): void {
     event.stopPropagation();
-    const index = this.confirming as number;
+    const swatch = this.confirming as SwatchRef;
     this.confirming = undefined;
-    const { palette } = this.app as PaintCanvas;
-    if (event.detail.value === DELETE_CHOICE) palette.remove(index);
+    const app = this.app as PaintCanvas;
+    if (event.detail.value === DELETE_CHOICE) {
+      if (swatch.palette === DEFAULT_PALETTE_ID)
+        app.palette.remove(swatch.index);
+      else app.palettes.removeColour(swatch.palette, swatch.index);
+    }
     // Back to the colour, or the one that took its place
-    const count = palette.colours.length;
-    if (count > 0) void this.focusSwatch(Math.min(index, count - 1));
+    const count = this.coloursOf(swatch.palette).length;
+    if (count > 0)
+      void this.focusSwatch({
+        palette: swatch.palette,
+        index: Math.min(swatch.index, count - 1),
+      });
+  }
+
+  /**
+   * Make a palette, asking for its name. The user is its author (see `PaintCanvas.author`).
+   */
+  async createPalette(): Promise<ColourPalette | undefined> {
+    const app = this.app;
+    if (!app) return undefined;
+    const name = await this.prompt({
+      heading: this.t("paintCanvas.palette.newPaletteHeading"),
+      label: this.t("paintCanvas.palette.name"),
+      value: this.t("paintCanvas.palette.defaultName"),
+      confirm: this.t("paintCanvas.common.save"),
+      cancel: this.t("paintCanvas.common.cancel"),
+    });
+    return name === null
+      ? undefined
+      : app.palettes.create(name, [], app.author);
+  }
+
+  /**
+   * Do one of a palette's menu actions: rename it (asking for a name), export it, or delete it (asking first).
+   */
+  async actOnPalette(
+    id: string,
+    action: (typeof PALETTE_ACTIONS)[number],
+  ): Promise<void> {
+    const app = this.app;
+    const palette = app?.palettes.get(id);
+    if (!app || !palette) return;
+    if (action === "export") {
+      await this.exportFile([palette]);
+      return;
+    }
+    if (action === "rename") {
+      const name = await this.prompt({
+        heading: this.t("paintCanvas.palette.renameHeading"),
+        label: this.t("paintCanvas.palette.name"),
+        value: palette.name,
+        confirm: this.t("paintCanvas.common.save"),
+        cancel: this.t("paintCanvas.common.cancel"),
+      });
+      if (name !== null) app.palettes.rename(id, name);
+      return;
+    }
+    const confirmed = await this.confirm({
+      heading: this.t("paintCanvas.palette.deletePaletteHeading"),
+      message: this.t("paintCanvas.palette.deletePaletteConfirm", {
+        name: palette.name,
+      }),
+      confirm: this.t("paintCanvas.common.delete"),
+      cancel: this.t("paintCanvas.common.cancel"),
+      cancelling: true,
+    });
+    if (confirmed) app.palettes.remove(id);
   }
 
   /** Close the palette with Escape (unless a dialog or menu is open, which closes first) */
@@ -458,17 +597,14 @@ export class PcPanelColours extends PcPanel {
   }
 
   /**
-   * Import the colours of the palettes in a colour palette file, adding them after the saved ones (leaving out ones
-   * already saved).
+   * Import the palettes in a colour palette file as the user's own, replacing ones with the same IDs.
    */
   async importFile(file: File): Promise<void> {
     const app = this.app;
     if (!app) return;
     try {
       const palettes = colourPaletteFile.parse(await file.text());
-      const count = app.palette.merge(
-        palettes.flatMap((palette) => palette.colours),
-      );
+      const count = app.palettes.merge(palettes);
       emit(this, "pc-toast", {
         message: this.t("paintCanvas.palette.imported", { count }),
         kind: "success",
@@ -482,30 +618,27 @@ export class PcPanelColours extends PcPanel {
   }
 
   /**
-   * Export the saved colours as a colour palette file holding one palette.
+   * Export palettes (the user's own by default) as a colour palette file, or say there are none.
    */
-  async exportFile(): Promise<void> {
+  async exportFile(
+    palettes: readonly ColourPalette[] = this.app?.palettes.items ?? [],
+  ): Promise<void> {
     const app = this.app;
     if (!app) return;
     try {
       await this.saveFile(
-        new Blob(
-          [
-            colourPaletteFile.write([
-              {
-                id: crypto.randomUUID(),
-                name: this.t("paintCanvas.palette.label"),
-                colours: [...app.palette.colours],
-              },
-            ]),
-          ],
-          { type: "application/json" },
-        ),
+        new Blob([colourPaletteFile.write(palettes)], {
+          type: "application/json",
+        }),
         colourPaletteFile.fileName(undefined, app.names.filePrefix),
       );
-    } catch {
+    } catch (error) {
       emit(this, "pc-toast", {
-        message: this.t("paintCanvas.palette.exportFailed"),
+        message: this.t(
+          error instanceof AssetFileError && error.reason === "empty"
+            ? "paintCanvas.palette.nothingToExport"
+            : "paintCanvas.palette.exportFailed",
+        ),
         kind: "error",
       });
     }
@@ -573,19 +706,49 @@ export class PcPanelColours extends PcPanel {
     </div>`;
   }
 
-  /** The saved colours and the [+] button */
-  private renderSwatches(app: PaintCanvas) {
-    const colours = app.palette.colours;
+  /** A palette: its name (and the ⋮ menu of the user's own), its colours and its [+] button */
+  private renderPalette(palette: ShownPalette) {
+    const { colours, id } = palette;
     const canAdd =
       !colours.includes(this.colour) && colours.length < MAX_PALETTE_COLOURS;
-    return html`<div
-      class="swatches"
-      role="group"
-      aria-label=${this.t("paintCanvas.palette.saved")}
-    >
-      ${colours.map(
-        (colour, index) =>
-          html`<button
+    const focused = this.focused.palette === id ? this.focused.index : 0;
+    const add = this.t("paintCanvas.palette.add", {
+      colour: this.colour,
+      name: palette.name,
+    });
+    const menu: MenuItem[] = PALETTE_ACTIONS.map((action) => ({
+      value: action,
+      label: this.t(`paintCanvas.palette.${action}Palette`),
+      danger: action === "delete",
+    }));
+    return html`<section class="palette-group" data-palette=${id}>
+      <div class="palette-heading">
+        <h3 id="palette-${id}">${palette.name}</h3>
+        ${
+          palette.own
+            ? html`<pc-context-menu
+                label=${this.t("paintCanvas.palette.paletteActions", {
+                  name: palette.name,
+                })}
+                .items=${menu}
+                @pc-select=${(event: CustomEvent<{ value: string }>) =>
+                  void this.actOnPalette(
+                    id,
+                    event.detail.value as (typeof PALETTE_ACTIONS)[number],
+                  )}
+              ></pc-context-menu>`
+            : nothing
+        }
+      </div>
+      <div
+        class="swatches"
+        data-palette=${id}
+        role="group"
+        aria-labelledby="palette-${id}"
+      >
+        ${colours.map((colour, index) => {
+          const swatch = { palette: id, index };
+          return html`<button
             type="button"
             class="swatch"
             data-index=${index}
@@ -594,29 +757,30 @@ export class PcPanelColours extends PcPanel {
             aria-label=${colour}
             aria-haspopup="menu"
             aria-pressed=${colour === this.colour}
-            tabindex=${index === this.focusIndex ? 0 : -1}
-            @click=${(e: MouseEvent) => this.onSwatchClick(e, index)}
-            @contextmenu=${(e: MouseEvent) => this.onSwatchContextMenu(e, index)}
-            @pointerdown=${(e: PointerEvent) => this.onSwatchPointerDown(e, index)}
+            tabindex=${index === focused ? 0 : -1}
+            @click=${(e: MouseEvent) => this.onSwatchClick(e, swatch)}
+            @contextmenu=${(e: MouseEvent) =>
+              this.onSwatchContextMenu(e, swatch)}
+            @pointerdown=${(e: PointerEvent) =>
+              this.onSwatchPointerDown(e, swatch)}
             @pointermove=${this.onSwatchPointerMove}
             @pointerup=${this.cancelPress}
             @pointercancel=${this.cancelPress}
-            @keydown=${(e: KeyboardEvent) => this.onSwatchKeyDown(e, index)}
-          ></button>`,
-      )}
-      <button
-        type="button"
-        class="add"
-        title=${this.t("paintCanvas.palette.add", { colour: this.colour })}
-        aria-label=${this.t("paintCanvas.palette.add", {
-          colour: this.colour,
+            @keydown=${(e: KeyboardEvent) => this.onSwatchKeyDown(e, swatch)}
+          ></button>`;
         })}
-        ?disabled=${!canAdd}
-        @click=${this.onAdd}
-      >
-        +
-      </button>
-    </div>`;
+        <button
+          type="button"
+          class="add"
+          title=${add}
+          aria-label=${add}
+          ?disabled=${!canAdd}
+          @click=${() => this.onAdd(id)}
+        >
+          +
+        </button>
+      </div>
+    </section>`;
   }
 
   /** The saved colour's menu, while open */
@@ -635,14 +799,16 @@ export class PcPanelColours extends PcPanel {
       .x=${menu.x}
       .y=${menu.y}
       label=${this.t("paintCanvas.palette.colourActions", {
-        colour: (this.app as PaintCanvas).palette.colours[menu.index] as string,
+        colour: this.colourAt(menu) as string,
       })}
       .items=${items}
-      @pc-select=${() => (this.confirming = menu.index)}
+      @pc-select=${() =>
+        (this.confirming = { palette: menu.palette, index: menu.index })}
       @pc-close=${() => {
         this.menu = undefined;
         // Back to the colour, unless the dialog asking to delete it takes focus
-        if (this.confirming === undefined) void this.focusSwatch(menu.index);
+        if (this.confirming === undefined)
+          void this.focusSwatch({ palette: menu.palette, index: menu.index });
       }}
     ></pc-menu>`;
   }
@@ -704,8 +870,21 @@ export class PcPanelColours extends PcPanel {
           </div>
           ${this.renderChannels()}
         </div>
-        ${this.renderSwatches(app)}
+        <div
+          class="palettes"
+          role="group"
+          aria-label=${this.t("paintCanvas.palette.saved")}
+        >
+          ${this.shown().map((palette) => this.renderPalette(palette))}
+        </div>
         <div class="actions">
+          <button
+            type="button"
+            class="pill-s new-palette"
+            @click=${() => void this.createPalette()}
+          >
+            ${this.t("paintCanvas.palette.newPalette")}
+          </button>
           <button
             type="button"
             class="pill-s import"

@@ -1,6 +1,6 @@
 // A full-page PaintCanvas with the layout's layers pane on the right, an app menu with input settings, keyboard shortcuts and
 // settings import/export, a theme picker and a "New drawing" button. The drawing, the app settings (including the
-// theme and language) and the user's brush presets and profile graphs are kept in the browser (`store="demo"`,
+// theme and language) and the user's brush presets, colour palettes and profile graphs are kept in the browser (`store="demo"`,
 // `settings-store="demo"`), so they survive reloading the page.
 // The demo's own text is translated like an app's would be: its locales are added after PaintCanvas's, with `demo.` keys.
 import "../src/ui";

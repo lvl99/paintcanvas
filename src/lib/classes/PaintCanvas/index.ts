@@ -1460,6 +1460,16 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
+   * The author of assets the user makes, e.g. colour palettes (from the `presetAuthor` option).
+   *
+   * @example
+   * app.palettes.create("Sunset", [], app.author);
+   */
+  get author(): AssetAuthor {
+    return this.presetAuthor();
+  }
+
+  /**
    * Make a new custom preset from settings: a new ID, the given name, and the author from the `presetAuthor` option.
    *
    * @example
