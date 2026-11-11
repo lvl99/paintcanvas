@@ -56,20 +56,21 @@ One of them is selected for configuration (`canvas.selectedColour`, the foregrou
 
 `canvas.palette` holds the user's saved colours (`DEFAULT_PALETTE` to start with), each once as lowercase `#rrggbb`. Change them with `add`, `merge`, `remove` and `set`; it dispatches `change` when they change. Like the input settings, it is kept in memory: save and restore it yourself, or with the app settings store.
 
-Palettes are exported and imported as JSON files matching `paletteFileSchema` from `@lvl99dotcom/paintcanvas/lib/palette`:
+Palettes are exported and imported as colour palette files (see [Schemas and asset files](./schemas.md)):
 
 ```ts
-import {
-  exportPaletteFile,
-  parsePaletteFile,
-  paletteFileName,
-} from "@lvl99dotcom/paintcanvas/lib/palette";
+import { colourPaletteFile } from "@lvl99dotcom/paintcanvas/lib/palette";
 
-const text = exportPaletteFile(canvas.palette.colours); // { "format": "paintcanvas-palette", "version": 1, "colours": [...] }
-canvas.palette.merge(parsePaletteFile(text)); // throws a PaletteFileError for files that aren't compatible
+const text = colourPaletteFile.write([
+  {
+    id: crypto.randomUUID(),
+    name: "My palette",
+    colours: [...canvas.palette.colours],
+  },
+]);
+const palettes = colourPaletteFile.parse(text); // throws an AssetFileError for files it can't read
+canvas.palette.merge(palettes.flatMap((palette) => palette.colours));
 ```
-
-Set your own file format name with the `names.paletteFileFormat` option, like `names.presetFileFormat` for brush presets.
 
 ## Events
 
