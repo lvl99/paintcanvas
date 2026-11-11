@@ -415,16 +415,22 @@ describe("PaintCanvas", () => {
       remove: vi.fn(async () => undefined),
     });
     const profiles = store();
-    const app = createApp({ stores: { profiles } });
+    const palette = { id: graph.id, name: "Sunset", colours: ["#ff7700"] };
+    const palettes = store();
+    palettes.list.mockResolvedValue([palette]);
+    const app = createApp({ stores: { profiles, palettes } });
     expect(app.assetStores.profiles).toBe(profiles);
     await app.profileSync?.ready;
+    await app.paletteSync?.ready;
     expect(app.profiles.graphs).toEqual([graph]);
+    expect(app.palettes.items).toEqual([palette]);
     const changed = vi.fn();
     app.addEventListener("change", changed);
     const brushes = store();
     brushes.list.mockResolvedValue([]);
     app.useAssetStores({ brushes });
     expect(app.profileSync).toBeUndefined();
+    expect(app.paletteSync).toBeUndefined();
     expect(app.assetStores).toEqual({ brushes });
     expect(changed).toHaveBeenCalled();
     app.profiles.remove(graph.id);

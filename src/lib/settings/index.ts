@@ -38,29 +38,35 @@ export const isValidSettings = (input: unknown): SettingsValidationResult =>
     ? { valid: true, value: input }
     : { valid: false, errors: formatErrors(validateSettings.errors) };
 
+/** Assets that app settings can hold */
+export type SettingsAsset = "palettes" | "profiles";
+
 /** What `collectSettings` leaves out */
 export interface CollectSettingsOptions {
-  /** Leave out the profile graphs, e.g. when a profile store keeps them */
-  withoutProfiles?: boolean;
+  /** Assets to leave out, e.g. ones kept in stores of their own */
+  without?: readonly SettingsAsset[];
 }
 
 /**
- * The app settings of a canvas: its input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme
+ * The app settings of a canvas: its input settings, keyboard shortcuts, colour palettes, colours, profile graphs, theme
  * and language.
  *
  * @example
  * collectSettings(canvas).palette; // ["#2c6bff", ...]
- * collectSettings(canvas, { withoutProfiles: true }).profiles; // undefined
+ * collectSettings(canvas, { without: ["profiles"] }).profiles; // undefined
  */
 export const collectSettings = (
   app: PaintCanvas,
-  { withoutProfiles = false }: CollectSettingsOptions = {},
+  { without = [] }: CollectSettingsOptions = {},
 ): AppSettings => ({
   input: structuredClone(app.input.data) as InputSettingsData,
   shortcuts: structuredClone(app.shortcuts.bindings),
   palette: [...app.palette.colours],
+  ...(without.includes("palettes")
+    ? {}
+    : { palettes: structuredClone([...app.palettes.items]) }),
   colours: { ...app.colours },
-  ...(withoutProfiles
+  ...(without.includes("profiles")
     ? {}
     : { profiles: structuredClone([...app.profiles.graphs]) }),
   ui: { ...app.ui.data },
@@ -68,8 +74,8 @@ export const collectSettings = (
 
 /**
  * Use app settings on a canvas, e.g. ones kept in the browser or imported. Parts left out stay as they are; invalid
- * values within a part are left out (see each part's sanitising). Profile graphs are added to the user's own, replacing
- * those with the same IDs.
+ * values within a part are left out (see each part's sanitising). Colour palettes and profile graphs are added to the
+ * user's own, replacing those with the same IDs.
  *
  * @example
  * applySettings(canvas, { colours: { foreground: "#ff0000", background: "#ffffff" } });
@@ -81,6 +87,7 @@ export const applySettings = (
   if (settings.input) app.input.update(settings.input);
   if (settings.shortcuts) app.shortcuts.load(settings.shortcuts);
   if (settings.palette) app.palette.set(settings.palette);
+  if (settings.palettes) app.palettes.merge(settings.palettes);
   if (settings.colours) {
     app.setColour(settings.colours.foreground, "foreground");
     app.setColour(settings.colours.background, "background");

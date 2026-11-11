@@ -21,9 +21,9 @@ export interface SettingsAutosaveOptions {
 /**
  * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and
  * language) in a store: the saved settings are restored when it starts (invalid ones are ignored), then changes are
- * saved soon after they happen. While the canvas keeps profile graphs in a store of their own (see
- * `PaintCanvas.useAssetStores`), they are left out of the saved settings (ones restored from older settings are added
- * to the graphs, so that store keeps them).
+ * saved soon after they happen. While the canvas keeps colour palettes or profile graphs in stores of their own (see
+ * `PaintCanvas.useAssetStores`), they are left out of the saved settings (ones restored from older settings are added,
+ * so those stores keep them).
  *
  * Dispatches an `error` event (with the error as `detail`) when loading or saving fails.
  *
@@ -68,7 +68,15 @@ export default class SettingsAutosave extends EventTarget {
   /** The canvas parts whose changes are saved */
   private get sources(): EventTarget[] {
     const { app } = this;
-    return [app, app.input, app.shortcuts, app.palette, app.profiles, app.ui];
+    return [
+      app,
+      app.input,
+      app.shortcuts,
+      app.palette,
+      app.palettes,
+      app.profiles,
+      app.ui,
+    ];
   }
 
   /**
@@ -115,10 +123,13 @@ export default class SettingsAutosave extends EventTarget {
       source.addEventListener("change", this.onChange);
   }
 
-  /** The canvas's settings to save */
+  /** The canvas's settings to save, without the assets kept in stores of their own */
   private collect() {
+    const stores = this.app.assetStores;
     return collectSettings(this.app, {
-      withoutProfiles: this.app.assetStores.profiles !== undefined,
+      without: (["palettes", "profiles"] as const).filter(
+        (kind) => stores[kind] !== undefined,
+      ),
     });
   }
 

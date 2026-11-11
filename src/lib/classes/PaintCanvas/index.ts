@@ -42,6 +42,8 @@ import {
 } from "../../brushes/authors";
 import CustomPresets from "../CustomPresets";
 import AssetSync from "../AssetSync";
+import ColourPalettes from "../ColourPalettes";
+import type { ColourPalette } from "../../palette";
 import InputSettings from "../InputSettings";
 import UiSettings, { DEFAULT_UI_SETTINGS, type Rendering } from "../UiSettings";
 import Palette from "../Palette";
@@ -315,8 +317,14 @@ export default class PaintCanvas extends EventTarget {
   /** The user's own profile graphs (and the presets), for shaping how brush settings vary */
   readonly profiles = new ProfileGraphs();
 
+  /** The user's own colour palettes (the one PaintCanvas comes with is `palette`) */
+  readonly palettes = new ColourPalettes();
+
   /** Where the user's assets are kept */
   private stores: AssetStores = {};
+
+  /** Keeps the colour palettes in their store */
+  private palettesAutosave?: AssetSync<ColourPalette>;
 
   /** Keeps the profile graphs in their store */
   private profilesAutosave?: AssetSync<ProfileGraph>;
@@ -814,10 +822,15 @@ export default class PaintCanvas extends EventTarget {
     return this.profilesAutosave;
   }
 
+  /** Keeps the user's colour palettes in their store, while one is used (see `useAssetStores`) */
+  get paletteSync(): AssetSync<ColourPalette> | undefined {
+    return this.palettesAutosave;
+  }
+
   /**
    * Keep the user's assets in stores, by kind: custom brush presets are loaded from theirs (in place of the current
-   * ones) and saved when they change; profile graphs saved there are added and changes saved (see `AssetSync`). Assets
-   * of a kind without a store are kept in memory only. Colour palette stores are kept for the palettes to use.
+   * ones) and saved when they change; colour palettes and profile graphs saved there are added and changes saved (see
+   * `AssetSync`). Assets of a kind without a store are kept in memory only.
    *
    * @example
    * canvas.useAssetStores({ brushes: new IndexedDbAssetStore("brushes"), profiles: new IndexedDbAssetStore("profiles") });
@@ -828,6 +841,10 @@ export default class PaintCanvas extends EventTarget {
     this.profilesAutosave?.stop();
     this.profilesAutosave = stores.profiles
       ? new AssetSync(this.profiles, stores.profiles)
+      : undefined;
+    this.palettesAutosave?.stop();
+    this.palettesAutosave = stores.palettes
+      ? new AssetSync(this.palettes, stores.palettes)
       : undefined;
     this.notify();
   }

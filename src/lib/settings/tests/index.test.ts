@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { withoutType } from "../../validation/standalone";
 import { profileGraphSchema } from "../../profiles/schema";
+import { colourPaletteSchema } from "../../palette/schema";
 import {
   SETTINGS_FILE_ERRORS,
   SETTINGS_FILE_FORMAT,
@@ -42,9 +43,12 @@ describe("settings schemas", () => {
   it("should compile in ajv strict mode and validate settings and files", () => {
     const ajv = new Ajv2020({
       strict: true,
-      schemas: [profileGraphSchema, keyComboSchema, settingsSchema].map(
-        withoutType,
-      ),
+      schemas: [
+        profileGraphSchema,
+        colourPaletteSchema,
+        keyComboSchema,
+        settingsSchema,
+      ].map(withoutType),
     });
     const validateSettings = ajv.getSchema(settingsSchema.$id)!;
     const validateFile = ajv.compile(settingsFileSchema);
@@ -158,16 +162,22 @@ describe("collectSettings and applySettings", () => {
       input: app.input.data,
       shortcuts: defaultShortcutBindings(),
       palette: DEFAULT_PALETTE,
+      palettes: [],
       colours: { foreground: "#000000", background: "#ffffff" },
       profiles: [],
       ui: { theme: "system", rendering: "cpu" },
     });
   });
 
-  it("should leave out the profile graphs when asked", () => {
+  it("should leave out assets when asked", () => {
     const app = createApp();
-    expect(collectSettings(app, { withoutProfiles: true })).not.toHaveProperty(
-      "profiles",
+    const settings = collectSettings(app, {
+      without: ["palettes", "profiles"],
+    });
+    expect(settings).not.toHaveProperty("profiles");
+    expect(settings).not.toHaveProperty("palettes");
+    expect(collectSettings(app, { without: ["profiles"] })).toHaveProperty(
+      "palettes",
     );
   });
 
@@ -205,6 +215,7 @@ describe("collectSettings and applySettings", () => {
     source.setColour("#00ff00", "background");
     source.ui.update({ theme: "dark", locale: "fr", rendering: "gpu" });
     source.profiles.save({ name: "Soft", points: PROFILE_PRESETS[1]!.points });
+    source.palettes.create("Sunset", ["#ff7700"], "Ada");
     const target = createApp();
     applySettings(target, collectSettings(source));
     expect(collectSettings(target)).toEqual(collectSettings(source));

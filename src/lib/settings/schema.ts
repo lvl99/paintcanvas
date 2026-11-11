@@ -9,7 +9,13 @@ import {
   type UiSettingsData,
 } from "../classes/UiSettings/index.ts";
 import type { KeyCombo } from "../utils/shortcuts";
-import { HEX_COLOUR_PATTERN, paletteColoursSchema } from "../palette/schema.ts";
+import {
+  HEX_COLOUR_PATTERN,
+  MAX_PALETTES_PER_FILE,
+  colourPaletteSchema,
+  paletteColoursSchema,
+  type ColourPalette,
+} from "../palette/schema.ts";
 import type { ProfileGraph } from "../profiles/index.ts";
 import { MAX_SAVED_PROFILES, profileGraphSchema } from "../profiles/schema.ts";
 
@@ -34,8 +40,10 @@ export interface AppSettings {
   input?: Partial<InputSettingsData>;
   /** Each configurable keyboard shortcut action's key combination, by ID (null when it has none) */
   shortcuts?: Record<string, KeyCombo | null>;
-  /** The colour palette's colours, as `#rrggbb` */
+  /** The colours of the palette PaintCanvas comes with, as `#rrggbb` */
   palette?: string[];
+  /** The user's own colour palettes */
+  palettes?: ColourPalette[];
   /** The foreground and background colours, as `#rrggbb` */
   colours?: { foreground: string; background: string };
   /** The user's own profile graphs */
@@ -101,6 +109,11 @@ export const settingsSchema = {
       },
     },
     palette: paletteColoursSchema,
+    palettes: {
+      type: "array",
+      maxItems: MAX_PALETTES_PER_FILE,
+      items: { $ref: colourPaletteSchema.$id },
+    },
     colours: {
       type: "object",
       additionalProperties: false,
