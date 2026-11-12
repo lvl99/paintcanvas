@@ -2,6 +2,25 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.9.0 (2026-11-12)
+
+Assets with a header and their content, and 2.0.0 schemas.
+
+### Added
+
+- `Asset<T>` (`lib/assets`): every brush preset, colour palette and profile graph has a header (`@type`, `id`, `name`, `author`, and an optional `group` and `version`, the asset's own version) and its `content`. New types `BrushPreset`, `ColourPaletteConfig` and `ProfileGraphConfig`.
+- Assets of version 1 are upgraded when read from files, settings files, and the stores and settings kept in the browser (which are saved again, upgraded). Ones without a name are called "Untitled brush", "Untitled palette" or "Untitled graph", and ones without an author are given the user (`canvas.author`), or "Unknown". `upgradeAsset`, `toAsset` and `assetsToVersion2` (`lib/assets`), `upgradeSettings` and `hasOlderAssets` (`lib/settings`), and `sanitiseBrushPresets` (`classes/CustomPresets`).
+- `canvas.brush.name` (and the eraser's): the name of the current brush settings, shown in the tool bar and brushes menu and edited in the configuration window.
+
+### Changed
+
+- **Breaking:** brush preset, colour palette and profile graph schemas, their collection schemas and the app settings schema are now 2.0.0. `@type`, `name` and `author` are required. Brush presets' `@type` is `PaintCanvas/BrushPreset` (collection `PaintCanvas/BrushPresetCollection`). Older versions can't read the new files.
+- **Breaking:** `BrushConfig` is only a brush's settings (no `id`, `name`, `group`, `version` or `author`): `canvas.brush.preset`, `newPreset`'s settings and stroke messages use it. Palettes' colours are in `content.colours` and profile graphs' points in `content.points`.
+- **Breaking:** the drawing message protocol is version 2: a stroke's `preset` holds only its brush settings.
+- **Breaking:** `<pc-brush-config>` takes `presetName`, and its `pc-save` gives `{ config, name }`. `BrushSettings.apply` takes an optional name.
+- **Breaking:** the storage module's `Asset` type is replaced by `Asset<T>` from `lib/assets`. `AssetFile.read` and `parse`, `parseSettingsFile`, `isValidSettings`, `ColourPalettes` and `ProfileGraphs` (`set`, `merge`), `AssetSync` and `CustomPresets` take the author given to older assets without one.
+- Brush tips are kept by their shape image instead of the preset's ID.
+
 ## 0.8.1 (2026-11-12)
 
 Much smaller validators.
