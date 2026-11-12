@@ -63,6 +63,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build:validators": "node scripts/build-validators.ts",
+    "build:schemas": "node scripts/build-schemas.ts",
     "icons:build": "node scripts/build-icons.ts",
     "dev": "pnpm icons:build && vite --config vite.demo.config.ts --port 5190 --strictPort --open",
     "demo": "pnpm dev",

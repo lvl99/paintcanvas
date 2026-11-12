@@ -52,24 +52,32 @@ The engine has two colours, read with `canvas.colours` (`canvas.colour` is the f
 
 One of them is selected for configuration (`canvas.selectedColour`, the foreground by default): the colour sample tool sets it, and colour pickers can use it. Change it with `canvas.selectColour("background")`, and swap the colours with `canvas.swapColours()`.
 
-## Colour palette
+## Colour palettes
 
-`canvas.palette` holds the user's saved colours (`DEFAULT_PALETTE` to start with), each once as lowercase `#rrggbb`. Change them with `add`, `merge`, `remove` and `set`; it dispatches `change` when they change. Like the input settings, it is kept in memory: save and restore it yourself, or with the app settings store.
+`canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE`), each once as lowercase `#rrggbb`. Its ID is `DEFAULT_PALETTE_ID`. Users can't change it: picking one of its colours sets the selected foreground or background colour, and changing that colour afterwards doesn't change the palette. It isn't saved with the app settings; colours older versions saved in it are moved to a palette of the user's own named "My colours" (`keepOlderPalette` from `@lvl99dotcom/paintcanvas/lib/settings`). An implementer can give it other colours with `set`.
 
-Palettes are exported and imported as JSON files matching `paletteFileSchema` from `@lvl99dotcom/paintcanvas/lib/palette`:
+`canvas.palettes` (a `ColourPalettes`) holds the user's own palettes, each with an ID, a name, an optional author and its colours:
 
 ```ts
-import {
-  exportPaletteFile,
-  parsePaletteFile,
-  paletteFileName,
-} from "@lvl99dotcom/paintcanvas/lib/palette";
-
-const text = exportPaletteFile(canvas.palette.colours); // { "format": "paintcanvas-palette", "version": 1, "colours": [...] }
-canvas.palette.merge(parsePaletteFile(text)); // throws a PaletteFileError for files that aren't compatible
+const sunset = canvas.palettes.create("Sunset", ["#ff7700"], canvas.author);
+canvas.palettes.addColour(sunset.id, "#ff3355");
+canvas.palettes.rename(sunset.id, "Dusk");
+canvas.palettes.removeColour(sunset.id, 0);
+canvas.palettes.remove(sunset.id);
 ```
 
-Set your own file format name with the `names.paletteFileFormat` option, like `names.presetFileFormat` for brush presets.
+It dispatches `change` when they change. They're kept in the palette store (see [Keeping the user's assets](#keeping-the-users-assets)), or with the app settings without one.
+
+The user's palettes are exported and imported as colour palette files (see [Schemas and asset files](./schemas.md)):
+
+```ts
+import { colourPaletteFile } from "@lvl99dotcom/paintcanvas/lib/palette";
+
+const text = colourPaletteFile.write(canvas.palettes.items);
+canvas.palettes.merge(colourPaletteFile.parse(text)); // throws an AssetFileError for files it can't read
+```
+
+`<pc-panel-colours>` shows the user's palettes above PaintCanvas's, each with its own [+] to save the selected colour (PaintCanvas's has none, and its colours can't be deleted). Each of the user's palettes has a ⋮ menu (Rename…, Export, Delete…), and "New palette" makes one.
 
 ## Events
 
@@ -81,4 +89,20 @@ Useful building blocks:
 - Base elements: `<pc-button>`, `<pc-button-group>`, `<pc-icon>`, `<pc-icon-toggle>`, `<pc-toggle-checkbox>` (an on/off switch, used instead of plain checkboxes; `size="s"` for a 16px switch instead of 20px, both pressable over 24px of height), `<pc-slider>`, `<pc-slider-range>` (a range: one track with low and high handles that can't cross, and a number slider for each end; with `single`, one value with its number slider before or after the track, `number-position`), `<pc-number-slider>` (a number dragged right or up to raise it and left or down to lower it, or tapped to type a value), `<pc-menu>`, `<pc-context-menu>`, `<pc-button-menu>` (a row of pill buttons for actions, which becomes one ⋮ menu while `menu` is set or, with `menu-below="900"`, in windows narrower than that), `<pc-dialog-window>` (a window over the page, centred and never bigger than the screen, with header, body and footer slots; only its body scrolls), `<pc-dialog>`, `<pc-toast>`, `<pc-info-tip>`, `<pc-popover>` (a floating box, optionally with an arrow pointing at the button that opens it), `<pc-panel>`, `<pc-pane>`.
 - `PcElement`, the base class for your own elements: gives them `t()` for translated text, `iconUrl()` and the design tokens.
 
-Custom brush presets are kept in memory unless you pass a `presetStore` (e.g. backed by IndexedDB) in the options.
+## Keeping the user's assets
+
+The user's assets (custom brush presets, colour palettes and profile graphs) are kept in memory unless the canvas is given a store for each kind, with the `stores` option or `canvas.useAssetStores()`:
+
+```ts
+import { indexedDbStores } from "@lvl99dotcom/paintcanvas/lib/storage";
+
+const { settings, ...assets } = indexedDbStores("my-app");
+const canvas = new PaintCanvas({ stores: assets });
+// or later: canvas.useAssetStores(assets);
+```
+
+- Brush presets (`canvas.customPresets`) are loaded from their store, leaving out invalid ones, and saved and deleted as they change.
+- Profile graphs (`canvas.profiles`) saved in their store are added when it's used, and changes are saved soon after (`canvas.profileSync`, an `AssetSync`, dispatches `error` when that fails).
+- Colour palettes (`canvas.palettes`) work like profile graphs (`canvas.paletteSync`).
+
+A store is anything with the `AssetStoreLike` methods: `list()` (the saved assets, in order; they're checked before use), `put(asset)` (save, replacing one with the same `id`) and `remove(id)`. `IndexedDbAssetStore` keeps them in the browser's IndexedDB, under a name. Use your own to keep them elsewhere, e.g. in a user's account.

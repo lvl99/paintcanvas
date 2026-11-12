@@ -31,7 +31,15 @@ import Layer, {
   type LayerConfig,
 } from "../Layer";
 import LayerAutosave, { type AutosaveOptions } from "../LayerAutosave";
-import type { LayerStoreLike } from "../../storage";
+import type {
+  AssetStores,
+  DocumentStoreLike,
+  LayerStoreLike,
+} from "../../storage";
+import RemoteDocumentAutosave, {
+  type RemoteAutosaveOptions,
+} from "../RemoteDocumentAutosave";
+import type { ProfileGraph } from "../../profiles";
 import { brushPresets, eraserPresets } from "../../brushes";
 import type { AssetAuthor, BrushConfig } from "../../brushes/types";
 import {
@@ -39,15 +47,16 @@ import {
   UNKNOWN_AUTHOR,
   authorHandle,
 } from "../../brushes/authors";
-import { BRUSH_PRESET_FILE_FORMAT } from "../../presets";
-import CustomPresets, { type PresetStoreLike } from "../CustomPresets";
+import CustomPresets from "../CustomPresets";
+import AssetSync from "../AssetSync";
+import ColourPalettes from "../ColourPalettes";
+import type { ColourPalette } from "../../palette";
 import InputSettings from "../InputSettings";
 import UiSettings, { DEFAULT_UI_SETTINGS, type Rendering } from "../UiSettings";
 import Palette from "../Palette";
 import ProfileGraphs from "../ProfileGraphs";
 import ShortcutSettings from "../ShortcutSettings";
-import { PALETTE_FILE_FORMAT } from "../../palette";
-import { SETTINGS_FILE_FORMAT } from "../../settings/schema";
+import SettingsExtensions from "../SettingsExtensions";
 import ExternalSheets from "../ExternalSheets";
 import PatchSender from "../../messages/PatchSender";
 import {
@@ -63,7 +72,6 @@ import { REDO_EVENT, UNDO_EVENT, type HistoryStepDetail } from "../History";
 import {
   base64ToBytes,
   boundingBoxSize,
-  bytesToBase64,
   decodeRgbaDeflate,
   encodeRgbaDeflate,
   ImageEncoding,
@@ -71,10 +79,15 @@ import {
 } from "../../image";
 import { drawLayers } from "../../rendering/compositing";
 import {
-  DOCUMENT_FORMAT,
-  DOCUMENT_VERSION,
-  isValidDocument,
-  type PaintCanvasDocument,
+  MAX_DOCUMENT_SIZE,
+  THUMBNAIL_SIZE,
+  documentFromFile,
+  documentToFile,
+  newDocumentInfo,
+  withAuthor,
+  type DocumentFile,
+  type DocumentInfo,
+  type DrawingDocument,
 } from "../../document";
 import {
   SAMPLE_PIXELS,
@@ -125,9 +138,6 @@ export const DEFAULT_BACKGROUND_COLOUR = "#ffffff";
  */
 export type ColourSlot = "foreground" | "background";
 
-/** Owner of the custom presets when the `ownerId` option isn't given */
-export const DEFAULT_OWNER_ID = "local";
-
 /** Author name of presets made with `newPreset` when the `presetAuthor` option isn't given */
 export const DEFAULT_AUTHOR = UNKNOWN_AUTHOR;
 
@@ -137,12 +147,6 @@ export interface PaintCanvasNames {
   app: string;
   /** Start of the names of saved files, e.g. screenshots and exported presets */
   filePrefix: string;
-  /** The `format` written in exported brush preset files */
-  presetFileFormat: string;
-  /** The `format` written in exported colour palette files */
-  paletteFileFormat: string;
-  /** The `format` written in exported settings files */
-  settingsFileFormat: string;
   /** Author name of presets made by a user without a handle, e.g. from `presetAuthor` */
   unknownAuthor: string;
 }
@@ -151,9 +155,6 @@ export interface PaintCanvasNames {
 export const DEFAULT_NAMES: Readonly<PaintCanvasNames> = {
   app: BUILT_IN_AUTHOR,
   filePrefix: "paintcanvas",
-  presetFileFormat: BRUSH_PRESET_FILE_FORMAT,
-  paletteFileFormat: PALETTE_FILE_FORMAT,
-  settingsFileFormat: SETTINGS_FILE_FORMAT,
   unknownAuthor: UNKNOWN_AUTHOR,
 };
 
@@ -178,24 +179,19 @@ export interface CanvasStats {
 }
 
 /**
- * A canvas's pixels as a PNG data URL.
+ * A canvas's pixels as a PNG.
  */
-const toPngDataUrl = async (canvas: OffscreenCanvas): Promise<string> => {
+const toPng = (canvas: OffscreenCanvas): Promise<Blob> => {
   // A canvas that was never drawn on has no context yet, and can't be encoded without one
   canvas.getContext("2d");
-  const blob = await canvas.convertToBlob({ type: "image/png" });
-  return `data:image/png;base64,${bytesToBase64(new Uint8Array(await blob.arrayBuffer()))}`;
+  return canvas.convertToBlob({ type: "image/png" });
 };
 
-/**
- * Decode a PNG data URL into an image.
- */
-const fromPngDataUrl = (dataUrl: string): Promise<ImageBitmap> =>
-  createImageBitmap(
-    new Blob([base64ToBytes(dataUrl.slice(dataUrl.indexOf(",") + 1))], {
-      type: "image/png",
-    }),
-  );
+/** Options for `PaintCanvas.createDocument` */
+export interface CreateDocumentOptions {
+  /** Whether to include a thumbnail (default true) */
+  thumbnail?: boolean;
+}
 
 /** Receives the drawing messages PaintCanvas sends; a returned promise that rejects means a patch wasn't delivered */
 export type MessageListener = (message: CanvasMessage) => void | Promise<void>;
@@ -255,16 +251,16 @@ export interface PaintCanvasOptions {
    * given (replaceable for tests).
    */
   createCanvas?: CanvasFactory;
-  /** Where custom brush presets are kept (defaults to keeping them in memory only) */
-  presetStore?: PresetStoreLike;
-  /** Who the custom presets belong to, passed to the preset store (default `DEFAULT_OWNER_ID`) */
-  ownerId?: string;
+  /** Where the user's assets (brush presets, colour palettes, profile graphs) are kept (see `useAssetStores`) */
+  stores?: AssetStores;
   /** Gives the author of presets made with `newPreset` (asked each time, so it can follow name changes) */
   presetAuthor?: () => AssetAuthor;
   /** Names to use instead of PaintCanvas's own (see `DEFAULT_NAMES`) */
   names?: Partial<PaintCanvasNames>;
   /** Where to keep the user's layers so the drawing survives reloading the page (see `useLayerStore`) */
   layerStore?: LayerStoreLike;
+  /** Where to keep the whole drawing away from the browser, saved less often (see `useRemoteDocumentStore`) */
+  remoteDocumentStore?: DocumentStoreLike;
   /**
    * The system clipboard, which copying and cutting also put a PNG of the copied image data on so other apps (and brush
    * shapes) can use it (the browser's by default; `null` for none)
@@ -325,6 +321,27 @@ export default class PaintCanvas extends EventTarget {
 
   /** The user's own profile graphs (and the presets), for shaping how brush settings vary */
   readonly profiles = new ProfileGraphs();
+
+  /** The drawing's details (see `documentInfo`) */
+  private info: DocumentInfo;
+
+  /** Keeps the drawing in a remote store */
+  private remoteDocumentAutosave?: RemoteDocumentAutosave;
+
+  /** Settings wrapper apps add to the app settings (see `SettingsExtension`) */
+  readonly settingsExtensions = new SettingsExtensions();
+
+  /** The user's own colour palettes (the one PaintCanvas comes with is `palette`) */
+  readonly palettes = new ColourPalettes();
+
+  /** Where the user's assets are kept */
+  private stores: AssetStores = {};
+
+  /** Keeps the colour palettes in their store */
+  private palettesAutosave?: AssetSync<ColourPalette>;
+
+  /** Keeps the profile graphs in their store */
+  private profilesAutosave?: AssetSync<ProfileGraph>;
 
   /** The user's keyboard shortcuts: each configurable action's key combination */
   readonly shortcuts = new ShortcutSettings();
@@ -455,7 +472,6 @@ export default class PaintCanvas extends EventTarget {
   readonly createCanvas: CanvasFactory;
 
   /** Who the custom presets belong to (passed to the preset store) */
-  readonly ownerId: string;
 
   /** The largest canvas width or height allowed */
   readonly maxCanvasSize: number;
@@ -476,19 +492,19 @@ export default class PaintCanvas extends EventTarget {
     super();
     // Nothing is logged for debugging until the debug log shows
     this.strokeLog.enabled = false;
-    this.ownerId = options.ownerId ?? DEFAULT_OWNER_ID;
     this.maxCanvasSize = options.maxCanvasSize ?? MAX_CANVAS_SIZE;
     this.maxLayers = options.maxLayers ?? DEFAULT_MAX_LAYERS;
     this.names = { ...DEFAULT_NAMES, ...options.names };
     this.presetAuthor =
       options.presetAuthor ?? (() => ({ name: DEFAULT_AUTHOR }));
+    this.info = newDocumentInfo(this.author);
     this.tips.preload(this.brush.presets);
     this.tips.preload(this.eraser.presets);
-    this.customPresets = new CustomPresets(this.ownerId, options.presetStore);
+    this.customPresets = new CustomPresets();
     this.customPresets.addEventListener("change", () =>
       this.listCustomPresets(),
     );
-    void this.customPresets.load().catch(() => undefined);
+    this.useAssetStores(options.stores ?? {});
     this.rendering = options.rendering ?? DEFAULT_UI_SETTINGS.rendering;
     this.ui = new UiSettings({ rendering: this.rendering });
     this.createCanvas =
@@ -535,6 +551,8 @@ export default class PaintCanvas extends EventTarget {
       );
     }
     if (options.layerStore) this.useLayerStore(options.layerStore);
+    if (options.remoteDocumentStore)
+      this.useRemoteDocumentStore(options.remoteDocumentStore);
   }
   /** Canvas width in pixels */
   get width(): number {
@@ -703,86 +721,184 @@ export default class PaintCanvas extends EventTarget {
     return true;
   }
 
+  /** The drawing's details: its ID, name, authors and when it was made and last opened */
+  get documentInfo(): Readonly<DocumentInfo> {
+    return this.info;
+  }
+
   /**
-   * The drawing as a document: its size, the user's layers and drawings from elsewhere, with PNG images (see
-   * `PaintCanvasDocument`). Turn it into JSON to save it as a file.
+   * Rename the drawing. Returns whether it was renamed (not if the name is empty).
    *
    * @example
-   * const json = JSON.stringify(await canvas.exportDocument());
+   * canvas.renameDocument("Sunset at sea");
    */
-  async exportDocument(): Promise<PaintCanvasDocument> {
+  renameDocument(name: string): boolean {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    this.setDocumentInfo({ ...this.info, name: trimmed });
+    return true;
+  }
+
+  /**
+   * Use details of a drawing being restored (e.g. kept in the browser), marking it opened now.
+   */
+  restoreDocumentInfo(info: DocumentInfo): void {
+    this.setDocumentInfo({ ...info, dateOpened: new Date().toISOString() });
+  }
+
+  /**
+   * Start a new drawing: new details (a new ID, the user as its author, made now), and the layers replaced with one
+   * empty layer. Undo history starts again.
+   *
+   * @example
+   * canvas.newDocument("Sketch");
+   */
+  newDocument(name?: string): void {
+    this.layerStack.replace([{ name: "Layer 1" }]);
+    this.history.clear();
+    this.setDocumentInfo(newDocumentInfo(this.author, name));
+  }
+
+  /**
+   * The drawing as a document (see `DrawingDocument`): its details, size, the user's layers and drawings from elsewhere
+   * as PNG blobs, and a thumbnail (at most `THUMBNAIL_SIZE` pixels on its longest side) unless left out. The user is
+   * added to its authors.
+   *
+   * @example
+   * await myStore.save(await canvas.createDocument());
+   */
+  async createDocument({
+    thumbnail = true,
+  }: CreateDocumentOptions = {}): Promise<DrawingDocument> {
+    const author = withAuthor(this.info.author, this.author);
+    if (author.length !== this.info.author.length)
+      this.setDocumentInfo({ ...this.info, author });
+    const { width, height } = this;
+    const scale = Math.min(1, THUMBNAIL_SIZE / Math.max(width, height));
+    const thumbnailWidth = Math.max(1, Math.round(width * scale));
+    const thumbnailHeight = Math.max(1, Math.round(height * scale));
     const layers = this.layerStack.layers;
+    const [layerImages, sheetImages, thumbnailImage] = await Promise.all([
+      Promise.all(layers.map((layer) => toPng(layer.canvas))),
+      Promise.all(
+        this.externalSheets.sheets.map(({ canvas }) => toPng(canvas)),
+      ),
+      thumbnail
+        ? toPng(
+            this.flatten(
+              { x: 0, y: 0, width, height },
+              thumbnailWidth,
+              thumbnailHeight,
+            ),
+          )
+        : undefined,
+    ]);
     return {
-      format: DOCUMENT_FORMAT,
-      version: DOCUMENT_VERSION,
-      width: this.canvasWidth,
-      height: this.canvasHeight,
-      layers: await Promise.all(
-        layers.map(async (layer) => {
-          const { name, visible, opacity, blendMode, alphaLock } =
-            layer.toConfig();
-          return {
-            name,
-            visible,
-            opacity,
-            blendMode,
-            alphaLock,
-            image: await toPngDataUrl(layer.canvas),
-          };
-        }),
-      ),
-      activeLayer: layers.indexOf(this.layerStack.active),
-      external: await Promise.all(
-        this.externalSheets.sheets.map(async ({ source, canvas }) => ({
-          source,
-          image: await toPngDataUrl(canvas),
-        })),
-      ),
+      ...structuredClone(this.info),
+      width,
+      height,
+      layers: layers.map((layer, i) => {
+        const { id, name, visible, opacity, blendMode, alphaLock } =
+          layer.toConfig();
+        return {
+          id,
+          name,
+          visible,
+          opacity,
+          blendingMode: blendMode,
+          alphaLock,
+          content: layerImages[i] as Blob,
+        };
+      }),
+      activeLayer: this.layerStack.active.id,
+      external: this.externalSheets.sheets.map(({ source }, i) => ({
+        source,
+        content: sheetImages[i] as Blob,
+      })),
+      ...(thumbnailImage
+        ? {
+            thumbnail: {
+              width: thumbnailWidth,
+              height: thumbnailHeight,
+              content: thumbnailImage,
+            },
+          }
+        : {}),
     };
   }
 
   /**
-   * Replace the drawing with a document (e.g. read from a file): its size, layers and drawings from elsewhere. Undo
-   * history starts again. Returns whether it was loaded: not when the document is invalid or an image can't be
-   * decoded, and then nothing changes.
+   * Replace the drawing with a document (e.g. from a store): its details (marked opened now), size, layers and drawings
+   * from elsewhere. Undo history starts again. Returns whether it was opened: not when it has too many layers, is too
+   * big, doesn't have its selected layer, or an image can't be decoded, and then nothing changes.
+   *
+   * @example
+   * await canvas.openDocument(await myStore.load(id));
+   */
+  async openDocument(document: DrawingDocument): Promise<boolean> {
+    const { layers, external, width, height, activeLayer } = document;
+    if (
+      layers.length === 0 ||
+      layers.length > this.maxLayers ||
+      Math.max(width, height) >
+        Math.min(this.maxCanvasSize, MAX_DOCUMENT_SIZE) ||
+      !layers.some((layer) => layer.id === activeLayer)
+    )
+      return false;
+    const images = await Promise.all(
+      [...layers, ...external].map((item) => createImageBitmap(item.content)),
+    ).catch(() => undefined);
+    if (!images) return false;
+    this.restoreLayers(
+      width,
+      height,
+      layers.map(({ id, name, visible, opacity, blendingMode, alphaLock }) => ({
+        id,
+        name,
+        visible,
+        opacity,
+        blendMode: blendingMode as BlendMode,
+        alphaLock,
+      })),
+      images,
+      activeLayer,
+    );
+    external.forEach((sheet, i) =>
+      this.externalSheets.restore(
+        sheet.source,
+        images[layers.length + i] as ImageBitmap,
+      ),
+    );
+    const { id, name, author, dateCreated, dateOpened } = document;
+    this.restoreDocumentInfo({ id, name, author, dateCreated, dateOpened });
+    return true;
+  }
+
+  /**
+   * The drawing as a document file (see `DocumentFile`): turn it into JSON to save it as a file.
+   *
+   * @example
+   * const json = JSON.stringify(await canvas.exportDocument());
+   */
+  async exportDocument(): Promise<DocumentFile> {
+    return documentToFile(await this.createDocument());
+  }
+
+  /**
+   * Replace the drawing with a document file (e.g. read from a file, see `documentFromFile`). Returns whether it was
+   * opened: not when it isn't a valid document or can't be opened (see `openDocument`), and then nothing changes.
    *
    * @example
    * await canvas.importDocument(JSON.parse(text));
    */
-  async importDocument(document: unknown): Promise<boolean> {
-    const result = isValidDocument(document);
-    if (!result.valid || result.value.layers.length > this.maxLayers)
+  async importDocument(file: unknown): Promise<boolean> {
+    let document: DrawingDocument;
+    try {
+      document = documentFromFile(file);
+    } catch {
       return false;
-    const doc = result.value;
-    const images = await Promise.all([
-      ...doc.layers.map((layer) => fromPngDataUrl(layer.image)),
-      ...doc.external.map((sheet) => fromPngDataUrl(sheet.image)),
-    ]).catch(() => undefined);
-    if (!images) return false;
-    const configs = doc.layers.map(
-      ({ name, visible, opacity, blendMode, alphaLock }) => ({
-        id: crypto.randomUUID(),
-        name,
-        visible,
-        opacity,
-        blendMode: blendMode as BlendMode,
-        alphaLock,
-      }),
-    );
-    this.restoreLayers(
-      doc.width,
-      doc.height,
-      configs,
-      images,
-      (configs[doc.activeLayer] as LayerConfig & { id: string }).id,
-    );
-    doc.external.forEach((sheet, i) =>
-      this.externalSheets.restore(
-        sheet.source,
-        images[configs.length + i] as ImageBitmap,
-      ),
-    );
-    return true;
+    }
+    return this.openDocument(document);
   }
 
   /**
@@ -809,6 +925,69 @@ export default class PaintCanvas extends EventTarget {
       );
     this.layerStack.select(activeLayer);
     this.history.clear();
+  }
+
+  /** Where the user's assets are kept (see `useAssetStores`) */
+  get assetStores(): Readonly<AssetStores> {
+    return this.stores;
+  }
+
+  /** Keeps the user's profile graphs in their store, while one is used (see `useAssetStores`) */
+  get profileSync(): AssetSync<ProfileGraph> | undefined {
+    return this.profilesAutosave;
+  }
+
+  /** Keeps the user's colour palettes in their store, while one is used (see `useAssetStores`) */
+  get paletteSync(): AssetSync<ColourPalette> | undefined {
+    return this.palettesAutosave;
+  }
+
+  /**
+   * Keep the user's assets in stores, by kind: custom brush presets are loaded from theirs (in place of the current
+   * ones) and saved when they change; colour palettes and profile graphs saved there are added and changes saved (see
+   * `AssetSync`). Assets of a kind without a store are kept in memory only.
+   *
+   * @example
+   * canvas.useAssetStores({ brushes: new IndexedDbAssetStore("brushes"), profiles: new IndexedDbAssetStore("profiles") });
+   */
+  useAssetStores(stores: AssetStores): void {
+    this.stores = { ...stores };
+    void this.customPresets.useStore(stores.brushes).catch(() => undefined);
+    this.profilesAutosave?.stop();
+    this.profilesAutosave = stores.profiles
+      ? new AssetSync(this.profiles, stores.profiles)
+      : undefined;
+    this.palettesAutosave?.stop();
+    this.palettesAutosave = stores.palettes
+      ? new AssetSync(this.palettes, stores.palettes)
+      : undefined;
+    this.notify();
+  }
+
+  /** Keeps the drawing in a remote store, while one is used (see `useRemoteDocumentStore`) */
+  get remoteAutosave(): RemoteDocumentAutosave | undefined {
+    return this.remoteDocumentAutosave;
+  }
+
+  /**
+   * Keep the whole drawing in a remote store (e.g. the user's account online), or stop, without one: changes are saved
+   * every few minutes (see `RemoteDocumentAutosave`), or when asked with `canvas.remoteAutosave.save()`. Returns the
+   * autosave.
+   *
+   * @example
+   * canvas.useRemoteDocumentStore(myAccountStore, { intervalMs: 10 * 60 * 1000 });
+   */
+  useRemoteDocumentStore(
+    store: DocumentStoreLike | undefined,
+    options?: RemoteAutosaveOptions,
+  ): RemoteDocumentAutosave | undefined {
+    this.remoteDocumentAutosave?.stop();
+    this.remoteDocumentAutosave = store
+      ? new RemoteDocumentAutosave(this, store, options)
+      : undefined;
+    this.remoteDocumentAutosave?.start();
+    this.notify();
+    return this.remoteDocumentAutosave;
   }
 
   /** Keeps the user's layers in a store, while one is used (see `useLayerStore`) */
@@ -1422,6 +1601,16 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
+   * The author of assets the user makes, e.g. colour palettes (from the `presetAuthor` option).
+   *
+   * @example
+   * app.palettes.create("Sunset", [], app.author);
+   */
+  get author(): AssetAuthor {
+    return this.presetAuthor();
+  }
+
+  /**
    * Make a new custom preset from settings: a new ID, the given name, and the author from the `presetAuthor` option.
    *
    * @example
@@ -1674,6 +1863,12 @@ export default class PaintCanvas extends EventTarget {
   /**
    * Dispatch a `change` event.
    */
+  /** Use the drawing's details and tell listeners */
+  private setDocumentInfo(info: DocumentInfo): void {
+    this.info = info;
+    this.notify();
+  }
+
   protected notify(): void {
     this.dispatchEvent(new Event("change"));
   }

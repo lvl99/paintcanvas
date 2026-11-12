@@ -1,5 +1,7 @@
-// JSON schemas for the user's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs,
-// theme and language), as kept in the browser and in exported settings files.
+// JSON schemas for the user's app settings (UI, input settings, keyboard shortcuts, colours, and their colour palettes,
+// profile graphs and brush presets): as kept in the browser (`settingsSchema`) and in exported settings files
+// (`appSettingsSchema`, published). Wrapper apps can add settings of their own (see `SettingsExtension`).
+// Imported with extensions, as the validator build script runs this file in Node
 import type { InputSettingsData } from "../classes/InputSettings";
 import {
   LOCALE_PATTERN,
@@ -11,57 +13,67 @@ import {
 import type { KeyCombo } from "../utils/shortcuts";
 import {
   HEX_COLOUR_PATTERN,
-  MAX_PALETTE_COLOURS,
-  paletteFileSchema,
+  MAX_PALETTES_PER_FILE,
+  colourPaletteSchema,
+  paletteColoursSchema,
+  type ColourPalette,
 } from "../palette/schema.ts";
 import type { ProfileGraph } from "../profiles/index.ts";
 import { MAX_SAVED_PROFILES, profileGraphSchema } from "../profiles/schema.ts";
+import { MAX_PRESETS_PER_FILE, brushPresetSchema } from "../presets/schema.ts";
+import type { BrushConfig } from "../brushes/types/index.ts";
+import { fileSchemaUrlSchema } from "../assets/schema.ts";
+import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
-/** The `format` of a settings file, unless the implementer names their own (see `PaintCanvasNames`) */
-export const SETTINGS_FILE_FORMAT = "paintcanvas-settings";
+/** Version of the app settings schema */
+export const APP_SETTINGS_SCHEMA_VERSION = "1.0.0";
 
-/** Formats of settings files that are imported by default */
-export const SETTINGS_FILE_FORMATS: readonly string[] = [SETTINGS_FILE_FORMAT];
-
-/** The version of the settings file format */
-export const SETTINGS_FILE_VERSION = 1;
-
-/** Longest settings file format name (characters) */
-export const MAX_SETTINGS_FILE_FORMAT_LENGTH = 100;
+/** `@type` of an app settings file */
+export const APP_SETTINGS_TYPE = "PaintCanvas/AppSettings";
 
 /** Most keyboard shortcuts in saved settings */
 export const MAX_SAVED_SHORTCUTS = 200;
 
-/** The user's app settings. Each part is optional, so a file can hold only some of them. */
+/**
+ * The user's app settings. Each part is optional, so a file can hold only some of them. Wrapper apps add their own
+ * parts under keys of their own (see `SettingsExtension`).
+ */
 export interface AppSettings {
   /** How input devices control the canvas */
   input?: Partial<InputSettingsData>;
   /** Each configurable keyboard shortcut action's key combination, by ID (null when it has none) */
   shortcuts?: Record<string, KeyCombo | null>;
-  /** The colour palette's colours, as `#rrggbb` */
+  /**
+   * Colours saved in PaintCanvas's palette by older versions, as `#rrggbb` (no longer saved: applying them moves them
+   * to one of the user's palettes, see `keepOlderPalette`)
+   */
   palette?: string[];
+  /** The user's own colour palettes */
+  palettes?: ColourPalette[];
   /** The foreground and background colours, as `#rrggbb` */
   colours?: { foreground: string; background: string };
   /** The user's own profile graphs */
   profiles?: ProfileGraph[];
+  /** The user's own and imported brush presets */
+  brushes?: BrushConfig[];
   /** The theme, language and where canvases draw */
   ui?: Partial<UiSettingsData>;
+  /** Parts added by wrapper apps, by their keys */
+  [extension: string]: unknown;
 }
 
-/** A settings file: what users export and import */
-export interface SettingsFile {
-  /** Names the app or kind of file, e.g. `SETTINGS_FILE_FORMAT` */
-  format: string;
-  version: typeof SETTINGS_FILE_VERSION;
-  settings: AppSettings;
-}
+/** An app settings file: what users export and import */
+export type AppSettingsFile = Omit<AppSettings, "palette"> & {
+  /** URL of the schema, which names its version */
+  $schema: string;
+  "@type": typeof APP_SETTINGS_TYPE;
+};
 
 /** A `#rrggbb` colour */
 const hexColour = { type: "string", pattern: HEX_COLOUR_PATTERN } as const;
 
 /** Schema of a key combination */
 export const keyComboSchema = {
-  $id: "paintcanvas/key-combo",
   type: "object",
   additionalProperties: false,
   required: ["key"],
@@ -74,83 +86,91 @@ export const keyComboSchema = {
   },
 } as const;
 
-/** Schema of the user's app settings */
-export const settingsSchema = {
-  $id: "paintcanvas/settings",
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    input: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        scrollPan: { type: "boolean" },
-        pinchZoom: { type: "boolean" },
-        modifierScrollZoom: { type: "boolean" },
-        focusPen: { type: "boolean" },
-        gestures: {
-          type: "object",
-          maxProperties: 20,
-          additionalProperties: { type: "string", maxLength: 50 },
-        },
+/** Schemas of each part of the app settings PaintCanvas has */
+const settingsProperties = {
+  input: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      scrollPan: { type: "boolean" },
+      pinchZoom: { type: "boolean" },
+      modifierScrollZoom: { type: "boolean" },
+      focusPen: { type: "boolean" },
+      gestures: {
+        type: "object",
+        maxProperties: 20,
+        additionalProperties: { type: "string", maxLength: 50 },
       },
     },
-    shortcuts: {
-      type: "object",
-      maxProperties: MAX_SAVED_SHORTCUTS,
-      propertyNames: { maxLength: 64 },
-      // Resolved against this schema's $id, so it is "paintcanvas/key-combo"
-      additionalProperties: {
-        anyOf: [{ type: "null" }, { $ref: "key-combo" }],
+  },
+  shortcuts: {
+    type: "object",
+    maxProperties: MAX_SAVED_SHORTCUTS,
+    propertyNames: { maxLength: 64 },
+    additionalProperties: {
+      anyOf: [{ type: "null" }, keyComboSchema],
+    },
+  },
+  palettes: {
+    type: "array",
+    maxItems: MAX_PALETTES_PER_FILE,
+    items: { $ref: colourPaletteSchema.$id },
+  },
+  colours: {
+    type: "object",
+    additionalProperties: false,
+    required: ["foreground", "background"],
+    properties: { foreground: hexColour, background: hexColour },
+  },
+  profiles: {
+    type: "array",
+    maxItems: MAX_SAVED_PROFILES,
+    items: { $ref: profileGraphSchema.$id },
+  },
+  brushes: {
+    type: "array",
+    maxItems: MAX_PRESETS_PER_FILE,
+    items: { $ref: brushPresetSchema.$id },
+  },
+  ui: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      theme: { enum: THEMES },
+      locale: {
+        type: "string",
+        minLength: 1,
+        maxLength: MAX_LOCALE_LENGTH,
+        pattern: LOCALE_PATTERN,
       },
-    },
-    palette: {
-      type: "array",
-      maxItems: MAX_PALETTE_COLOURS,
-      items: paletteFileSchema.properties.colours.items,
-    },
-    colours: {
-      type: "object",
-      additionalProperties: false,
-      required: ["foreground", "background"],
-      properties: { foreground: hexColour, background: hexColour },
-    },
-    profiles: {
-      type: "array",
-      maxItems: MAX_SAVED_PROFILES,
-      items: profileGraphSchema,
-    },
-    ui: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        theme: { enum: THEMES },
-        locale: {
-          type: "string",
-          minLength: 1,
-          maxLength: MAX_LOCALE_LENGTH,
-          pattern: LOCALE_PATTERN,
-        },
-        rendering: { enum: RENDERINGS },
-      },
+      rendering: { enum: RENDERINGS },
     },
   },
 } as const;
 
-/** Schema of a settings file */
-export const settingsFileSchema = {
-  $id: "paintcanvas/settings-file",
+/**
+ * Schema of the user's app settings as kept in the browser: parts PaintCanvas doesn't know are left for wrapper apps
+ * to check (see `SettingsExtension`), and colours older versions saved in PaintCanvas's palette (`palette`) are allowed.
+ */
+export const settingsSchema = {
+  $id: "paintcanvas/settings",
   type: "object",
-  additionalProperties: false,
-  required: ["format", "version", "settings"],
+  properties: { ...settingsProperties, palette: paletteColoursSchema },
+} as const;
+
+/**
+ * Schema of an app settings file. Parts it doesn't name are added by wrapper apps, which check them (see
+ * `SettingsExtension`), and can publish schemas of their own that extend this one.
+ */
+export const appSettingsSchema = {
+  $schema: SCHEMA_DIALECT,
+  $id: schemaUrl("app-settings", APP_SETTINGS_SCHEMA_VERSION),
+  "@type": APP_SETTINGS_TYPE,
+  type: "object",
+  required: ["$schema", "@type"],
   properties: {
-    format: {
-      type: "string",
-      minLength: 1,
-      maxLength: MAX_SETTINGS_FILE_FORMAT_LENGTH,
-    },
-    version: { const: SETTINGS_FILE_VERSION },
-    // Resolved against this schema's $id, so it is "paintcanvas/settings"
-    settings: { $ref: "settings" },
+    $schema: fileSchemaUrlSchema,
+    "@type": { const: APP_SETTINGS_TYPE },
+    ...settingsProperties,
   },
 } as const;

@@ -1,11 +1,9 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
-import { PresetFileError } from "../../../../lib/brushes/presetFile";
 import { previewSizes, type PcPanelBrushes } from "..";
 import type { PcBrushSize } from "../../PcBrushSize";
 import type { PcNumberSlider } from "../../PcNumberSlider";
-import { PRESET_FILE_ERRORS } from "../../../../lib/brushes/presetFile";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import {
   mount,
@@ -218,12 +216,12 @@ describe("pc-panel-brushes", () => {
     query(element, "button.export").click();
     await vi.waitFor(() => expect(saved).toHaveLength(1));
     expect(saved[0]!.name).toMatch(/^paintcanvas-brush-presets-.*\.json$/);
-    expect(JSON.parse(saved[0]!.text).presets).toEqual([mine, theirs]);
+    expect(JSON.parse(saved[0]!.text).items).toEqual([mine, theirs]);
     vi.mocked(element.saveFile).mockRejectedValueOnce(new Error("denied"));
     await element.exportFile();
     expect(toasts).toEqual([
-      `error: ${PRESET_FILE_ERRORS.empty}`,
-      `error: ${PRESET_FILE_ERRORS.export}`,
+      "error: No brush presets to export",
+      "error: Error exporting brush preset JSON file",
     ]);
   });
 
@@ -239,9 +237,10 @@ describe("pc-panel-brushes", () => {
       new File(
         [
           JSON.stringify({
-            format: "paintcanvas-brush-presets",
-            version: 1,
-            presets,
+            $schema:
+              "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-1.0.0.json",
+            "@type": "PaintCanvas/BrushConfigCollection",
+            items: presets,
           }),
         ],
         "presets.json",
@@ -268,6 +267,18 @@ describe("pc-panel-brushes", () => {
       file([preset, { ...preset, id: crypto.randomUUID() }]),
     );
     await element.importFile(new File(["{"], "bad.json"));
+    await element.importFile(new File(["{}"], "other.json"));
+    await element.importFile(
+      new File(
+        [
+          JSON.stringify({
+            $schema:
+              "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.0.0.json",
+          }),
+        ],
+        "newer.json",
+      ),
+    );
     const unreadable = new File(["x"], "x.json");
     vi.spyOn(unreadable, "text").mockRejectedValue(new Error("gone"));
     await element.importFile(unreadable);
@@ -278,9 +289,11 @@ describe("pc-panel-brushes", () => {
     expect(toasts).toEqual([
       "success: Imported 1 brush preset",
       "success: Imported 2 brush presets",
-      `error: ${PRESET_FILE_ERRORS.incompatible}`,
-      `error: ${PRESET_FILE_ERRORS.read}`,
-      `error: ${PRESET_FILE_ERRORS.read}`,
+      "error: Failed to read brush preset JSON file",
+      "error: Brush preset JSON file not compatible",
+      "error: Unsupported brush presets file version",
+      "error: Failed to read brush preset JSON file",
+      "error: Failed to read brush preset JSON file",
     ]);
   });
 
@@ -341,7 +354,7 @@ describe("previewSizes", () => {
     });
   });
 
-  it("should show other preset file errors as they are", async () => {
+  it("should say exporting failed for other errors", async () => {
     const app = createApp();
     await app.customPresets.save(app.newPreset(app.brush.preset, "Mine"));
     const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
@@ -349,8 +362,10 @@ describe("previewSizes", () => {
     element.addEventListener("pc-toast", (e) =>
       toasts.push((e as CustomEvent).detail),
     );
-    element.saveFile = () => Promise.reject(new PresetFileError("Disk full"));
+    element.saveFile = () => Promise.reject(new Error("Disk full"));
     await element.exportFile();
-    expect(toasts).toEqual([{ message: "Disk full", kind: "error" }]);
+    expect(toasts).toEqual([
+      { message: "Error exporting brush preset JSON file", kind: "error" },
+    ]);
   });
 });

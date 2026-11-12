@@ -143,6 +143,7 @@ describe("LayerAutosave", () => {
     expect(store.saves).toHaveLength(1);
     expect(store.saves[0]?.drawing).toEqual({
       version: SAVED_DRAWING_VERSION,
+      document: canvas.documentInfo,
       width: 4,
       height: 2,
       layers: [first.toConfig()],
@@ -236,6 +237,39 @@ describe("LayerAutosave", () => {
     await settle();
     expect(imageIds(store.saves[0])).toEqual(["top"]);
     expect(store.saved?.images.get("bottom")).toBe(images.get("bottom"));
+  });
+
+  it("should restore the drawing's details, marked opened now, and save when they change", async () => {
+    const document = {
+      id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
+      name: "Sunset",
+      author: [{ name: "Ada" }],
+      dateCreated: "2026-01-01T00:00:00.000Z",
+      dateOpened: "2026-01-02T00:00:00.000Z",
+    };
+    const { store } = savedStore();
+    store.saved = {
+      ...store.saved!,
+      drawing: { ...store.saved!.drawing, document },
+    };
+    const { canvas } = setup(store);
+    await settle();
+    expect(canvas.documentInfo).toMatchObject({
+      id: document.id,
+      name: "Sunset",
+      dateCreated: document.dateCreated,
+    });
+    expect(canvas.documentInfo.dateOpened).not.toBe(document.dateOpened);
+    expect(store.saves).toHaveLength(0);
+    // Other changes to the canvas don't save
+    canvas.toggleInterface();
+    await settle();
+    expect(store.saves).toHaveLength(0);
+    canvas.renameDocument("Dusk");
+    await settle();
+    expect(store.saves).toHaveLength(1);
+    expect(store.saves[0]?.drawing.document?.name).toBe("Dusk");
+    expect(imageIds(store.saves[0])).toEqual([]);
   });
 
   it("should draw each saved image onto its layer", async () => {

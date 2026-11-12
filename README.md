@@ -130,6 +130,7 @@ Tests sit in a `tests` folder beside the code. Unit tests (`*.test.ts`) run in j
 | `pnpm coverage`         | Runs both, with a coverage report in `coverage/`                                    |
 | `pnpm build`            | Builds the package into `dist/`: ES modules matching `src/`, with types             |
 | `pnpm build:validators` | Regenerates the validators after changing the preset, message or document schemas   |
+| `pnpm build:schemas`    | Writes new versions of the published JSON schemas into `schemas/`                   |
 | `pnpm icons:build`      | Optimises the icons' SVGs and makes their PNGs (`pnpm build` and `pnpm dev` run it) |
 | `pnpm dev`              | Starts the demo, reloading it when files change (`pnpm demo` does the same)         |
 | `pnpm docs`             | Starts the documentation site (`pnpm docs:build` builds it into `docs/build/`)      |

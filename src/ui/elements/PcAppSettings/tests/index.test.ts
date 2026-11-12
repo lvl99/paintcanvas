@@ -7,9 +7,9 @@ import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
 import { events, mount, query } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 import {
-  SETTINGS_FILE_FORMAT,
   collectSettings,
   exportSettingsFile,
+  parseSettingsFile,
 } from "../../../../lib/settings";
 
 afterEach(() => {
@@ -112,49 +112,67 @@ describe("pc-app-settings", () => {
   it("should import a settings file, using its settings", async () => {
     const { app, element, toasts } = await setup();
     const source = createApp();
-    source.palette.set(["#123456"]);
+    source.palettes.create("Sunset", ["#123456"]);
+    await source.customPresets.save(
+      source.newPreset(source.brush.preset, "Mine"),
+    );
     source.shortcuts.set("tool-brush", { key: "p" });
     await element.importFile(
       new File([exportSettingsFile(collectSettings(source))], "s.json"),
     );
-    expect(app.palette.colours).toEqual(["#123456"]);
+    expect(app.palettes.items).toEqual(source.palettes.items);
+    expect(app.customPresets.presets).toEqual(source.customPresets.presets);
     expect(app.shortcuts.combo("tool-brush")).toEqual({ key: "p" });
     expect(toasts).toEqual([{ message: "Settings imported", kind: "success" }]);
   });
 
-  it("should import the implementer's own settings file format", async () => {
+  it("should import a settings file from before versioned schemas, of any format", async () => {
     const { app, element } = await setup();
-    Object.assign(app.names, { settingsFileFormat: "myapp-settings" });
     await element.importFile(
       new File(
-        [exportSettingsFile({ palette: [] }, "myapp-settings")],
+        [
+          JSON.stringify({
+            format: "myapp-settings",
+            version: 1,
+            settings: {
+              colours: { foreground: "#111111", background: "#ffffff" },
+            },
+          }),
+        ],
         "s.json",
       ),
     );
-    expect(app.palette.colours).toEqual([]);
-    await element.importFile(
-      new File(
-        [exportSettingsFile({ palette: ["#000000"] }, SETTINGS_FILE_FORMAT)],
-        "s.json",
-      ),
-    );
-    expect(app.palette.colours).toEqual(["#000000"]);
+    expect(app.colour).toBe("#111111");
   });
 
   it("should show an error for files that can't be read or aren't settings files", async () => {
     const { app, element, toasts } = await setup();
     await element.importFile(new File(["{"], "bad.json"));
+    await element.importFile(new File(["{}"], "other.json"));
+    await element.importFile(
+      new File(
+        [
+          JSON.stringify({
+            $schema:
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.0.0.json",
+          }),
+        ],
+        "newer.json",
+      ),
+    );
     const unreadable = new File(["x"], "x.json");
     vi.spyOn(unreadable, "text").mockRejectedValue(new Error("No"));
     await element.importFile(unreadable);
-    vi.spyOn(app.palette, "set").mockImplementation(() => {
+    vi.spyOn(app.palettes, "merge").mockImplementation(() => {
       throw new Error("Unexpected");
     });
     await element.importFile(
-      new File([exportSettingsFile({ palette: [] })], "s.json"),
+      new File([exportSettingsFile({ palettes: [] })], "s.json"),
     );
     expect(toasts).toEqual([
+      { message: "Failed to read settings JSON file", kind: "error" },
       { message: "Settings JSON file not compatible", kind: "error" },
+      { message: "Unsupported settings file version", kind: "error" },
       { message: "Failed to read settings JSON file", kind: "error" },
       { message: "Failed to read settings JSON file", kind: "error" },
     ]);
@@ -191,7 +209,7 @@ describe("pc-app-settings", () => {
     query<HTMLButtonElement>(element, "button.export").click();
     await vi.waitFor(() => expect(saved).toHaveLength(1));
     expect(saved[0]!.name).toMatch(/^paintcanvas-settings-.*\.json$/);
-    expect(JSON.parse(await saved[0]!.blob.text()).settings).toEqual(
+    expect(parseSettingsFile(await saved[0]!.blob.text())).toEqual(
       collectSettings(app),
     );
     vi.mocked(element.saveFile).mockRejectedValueOnce(new Error("denied"));

@@ -4,6 +4,7 @@ import { COLOUR_INTERVAL_MS, formatBytes, type PcStats } from "..";
 import { mount, query, queryAll } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
+import { MemoryDocumentStore } from "../../../../testing/documentStore";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -148,5 +149,50 @@ describe("pc-stats", () => {
     second.setPointer({ x: 3, y: 3 });
     vi.advanceTimersByTime(COLOUR_INTERVAL_MS);
     expect(secondSample).toHaveBeenCalledOnce();
+  });
+
+  it("should show saving to the remote store while under way, with its progress, and when it failed", async () => {
+    const app = createApp();
+    const store = new MemoryDocumentStore({ label: "Bluesky" });
+    let finish: () => void = () => undefined;
+    const progress: ((done: number) => void)[] = [];
+    vi.spyOn(store, "save").mockImplementation(
+      (_document, onProgress) =>
+        new Promise<void>((resolve) => {
+          progress.push(onProgress!);
+          finish = resolve;
+        }),
+    );
+    vi.spyOn(app, "createDocument").mockResolvedValue(
+      {} as Awaited<ReturnType<typeof app.createDocument>>,
+    );
+    const element = await mount<PcStats>("pc-stats", { app });
+    expect(queryAll(element, "li.remote")).toHaveLength(0);
+    const autosave = app.useRemoteDocumentStore(store)!;
+    await element.updateComplete;
+    expect(queryAll(element, "li.remote")).toHaveLength(0);
+    const saving = autosave.save();
+    await element.updateComplete;
+    expect(stat(element, "remote")).toBe("Saving to Bluesky…");
+    const bar = query<HTMLProgressElement>(element, "li.remote progress");
+    expect(bar.hasAttribute("value")).toBe(false);
+    expect(bar.getAttribute("aria-label")).toBe("Saving to Bluesky…");
+    expect(query(element, "li.remote").getAttribute("role")).toBe("status");
+    await vi.waitFor(() => expect(progress).toHaveLength(1));
+    progress[0]!(0.5);
+    await element.updateComplete;
+    expect(bar.getAttribute("value")).toBe("0.5");
+    finish();
+    await saving;
+    await element.updateComplete;
+    expect(queryAll(element, "li.remote")).toHaveLength(0);
+    // Without a label, and when it fails
+    const unnamed = new MemoryDocumentStore();
+    vi.spyOn(unnamed, "save").mockRejectedValue(new Error("offline"));
+    await app.useRemoteDocumentStore(unnamed)!.save();
+    await element.updateComplete;
+    expect(stat(element, "remote")).toBe("Couldn't save to the cloud");
+    expect(query(element, "li.remote").classList.contains("failed")).toBe(true);
+    app.useRemoteDocumentStore(undefined);
   });
 });

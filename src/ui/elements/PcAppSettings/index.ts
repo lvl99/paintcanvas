@@ -10,10 +10,8 @@ import "../PcShortcutSettings";
 import "../PcToggleCheckbox";
 import "../PcDialogWindow";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
+import { AssetFileError } from "../../../lib/assets";
 import {
-  SETTINGS_FILE_ERRORS,
-  SETTINGS_FILE_FORMAT,
-  SettingsFileError,
   applySettings,
   collectSettings,
   exportSettingsFile,
@@ -26,18 +24,18 @@ import {
   type SaveMethod,
 } from "../../../lib/rendering/screenshot";
 
-/** Translation keys of the settings file error messages */
-const SETTINGS_FILE_ERROR_KEYS: Record<string, string> = {
-  [SETTINGS_FILE_ERRORS.incompatible]: "paintCanvas.settings.fileIncompatible",
-  [SETTINGS_FILE_ERRORS.read]: "paintCanvas.settings.fileReadFailed",
+/** Translation keys of the messages shown when importing a settings file fails, by reason */
+const IMPORT_ERROR_KEYS: Record<string, string> = {
+  invalid: "paintCanvas.settings.fileIncompatible",
+  unsupported: "paintCanvas.settings.fileUnsupported",
 };
 
 /**
  * The user's app settings: a "Draw with the GPU" switch (the user's `ui.data.rendering`, used from the next start, so it
  * says when the page needs reloading), and buttons: "Keyboard shortcuts", which opens a window to change them (see
  * `pc-shortcut-settings`), and "Import settings" and "Export settings", which read and write a settings JSON file (input
- * settings, keyboard shortcuts, colour palette, colours, profile graphs, theme, language and rendering). The window is a shaded
- * `<pc-dialog-window>` over the whole page; it closes with its ⨉ button, Escape or a press outside it, and focus goes
+ * settings, keyboard shortcuts, colours, the user's colour palettes, profile graphs and brush presets, theme, language,
+ * rendering, and settings wrapper apps added). The window is a shaded `<pc-dialog-window>` over the whole page; it closes with its ⨉ button, Escape or a press outside it, and focus goes
  * back to the button. Fires `pc-toast` after importing, or when importing or exporting fails.
  *
  * @example
@@ -115,56 +113,41 @@ export class PcAppSettings extends PcElement {
   }
 
   /**
-   * Import the settings in a settings file, using the parts it has.
+   * Import the settings in a settings file, using the parts it has (the user's colour palettes, profile graphs and brush
+   * presets are added to theirs).
    */
   async importFile(file: File): Promise<void> {
     const app = this.app;
     if (!app) return;
-    let text: string;
     try {
-      text = await file.text();
-    } catch {
-      this.toastError(SETTINGS_FILE_ERRORS.read);
-      return;
-    }
-    try {
-      applySettings(
-        app,
-        parseSettingsFile(text, [
-          app.names.settingsFileFormat,
-          SETTINGS_FILE_FORMAT,
-        ]),
-      );
+      await applySettings(app, parseSettingsFile(await file.text()));
       emit(this, "pc-toast", {
         message: this.t("paintCanvas.settings.imported"),
         kind: "success",
       });
     } catch (error) {
-      this.toastError(
-        error instanceof SettingsFileError
-          ? error.message
-          : SETTINGS_FILE_ERRORS.read,
-      );
+      emit(this, "pc-toast", {
+        message: this.t(
+          (error instanceof AssetFileError &&
+            IMPORT_ERROR_KEYS[error.reason]) ||
+            "paintCanvas.settings.fileReadFailed",
+        ),
+        kind: "error",
+      });
     }
   }
 
   /**
-   * Export the settings as a settings file.
+   * Export the settings, with the user's colour palettes, profile graphs and brush presets, as a settings file.
    */
   async exportFile(): Promise<void> {
     const app = this.app;
     if (!app) return;
     try {
       await this.saveFile(
-        new Blob(
-          [
-            exportSettingsFile(
-              collectSettings(app),
-              app.names.settingsFileFormat,
-            ),
-          ],
-          { type: "application/json" },
-        ),
+        new Blob([exportSettingsFile(collectSettings(app))], {
+          type: "application/json",
+        }),
         settingsFileName(undefined, app.names.filePrefix),
       );
     } catch {
@@ -173,14 +156,6 @@ export class PcAppSettings extends PcElement {
         kind: "error",
       });
     }
-  }
-
-  /** Show a settings file error (one of `SETTINGS_FILE_ERRORS`) in the chosen language */
-  private toastError(message: string): void {
-    emit(this, "pc-toast", {
-      message: this.t(SETTINGS_FILE_ERROR_KEYS[message] as string),
-      kind: "error",
-    });
   }
 
   /** The keyboard shortcuts window, with its contents only while open */

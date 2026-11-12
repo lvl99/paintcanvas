@@ -6,8 +6,10 @@ import IndexedDbLayerStore, {
   DATABASE_NAME,
   DATABASE_VERSION,
   DEFAULT_SETTINGS_NAME,
+  IndexedDbAssetStore,
   IndexedDbSettingsStore,
   SAVED_DRAWING_VERSION,
+  indexedDbStores,
   loadRenderingChoice,
   renderingChoiceKey,
   saveRenderingChoice,
@@ -225,6 +227,59 @@ describe("database upgrades", () => {
     expect(await settings.load()).toEqual({ palette: ["#ff0000"] });
     const drawings = new IndexedDbLayerStore("drawing", factory);
     expect((await drawings.load())?.drawing).toEqual(drawingOf("a"));
+    const brushes = new IndexedDbAssetStore("brushes", "default", factory);
+    expect(await brushes.list()).toEqual([]);
+  });
+});
+
+describe("IndexedDbAssetStore", () => {
+  const a = { id: "a", name: "A" };
+  const b = { id: "b", name: "B" };
+
+  it("should keep assets of a kind under a name, in the order they were first saved", async () => {
+    const factory = new IDBFactory();
+    const store = new IndexedDbAssetStore<{ id: string; name: string }>(
+      "profiles",
+      "app",
+      factory,
+    );
+    expect(store.kind).toBe("profiles");
+    expect(store.name).toBe("app");
+    await store.put(b);
+    await store.put(a);
+    expect(await store.list()).toEqual([b, a]);
+    await store.put({ ...b, name: "Bee" });
+    expect(await store.list()).toEqual([{ ...b, name: "Bee" }, a]);
+    await store.remove("b");
+    expect(await store.list()).toEqual([a]);
+    // Other names and kinds keep their own
+    expect(
+      await new IndexedDbAssetStore("profiles", "other", factory).list(),
+    ).toEqual([]);
+    expect(
+      await new IndexedDbAssetStore("brushes", "app", factory).list(),
+    ).toEqual([]);
+  });
+
+  it("should use the default name and the browser's IndexedDB by default", async () => {
+    const store = new IndexedDbAssetStore("palettes");
+    expect(store.name).toBe(DEFAULT_SETTINGS_NAME);
+    await store.put(a);
+    expect(await store.list()).toEqual([a]);
+  });
+});
+
+describe("indexedDbStores", () => {
+  it("should make IndexedDB stores for the settings and each kind of asset under a name", async () => {
+    const factory = new IDBFactory();
+    const stores = indexedDbStores("app", factory);
+    expect(stores.settings).toBeInstanceOf(IndexedDbSettingsStore);
+    expect(stores.settings.name).toBe("app");
+    for (const kind of ["brushes", "palettes", "profiles"] as const) {
+      expect(stores[kind]).toBeInstanceOf(IndexedDbAssetStore);
+      expect((stores[kind] as IndexedDbAssetStore<never>).kind).toBe(kind);
+    }
+    expect(indexedDbStores().settings.name).toBe(DEFAULT_SETTINGS_NAME);
   });
 });
 

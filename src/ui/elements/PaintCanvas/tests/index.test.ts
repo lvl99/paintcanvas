@@ -14,7 +14,10 @@ import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { createFakeLocks } from "../../../../testing/locks";
 import { createRecordingContext } from "../../../../testing/recordingContext";
+import { PROFILE_PRESETS } from "../../../../lib/profiles";
+import type { BrushConfig } from "../../../../lib/brushes/types";
 import IndexedDbLayerStore, {
+  IndexedDbAssetStore,
   IndexedDbSettingsStore,
   loadRenderingChoice,
 } from "../../../../lib/storage";
@@ -495,23 +498,96 @@ describe("paint-canvas", () => {
     first.layout.settingsStore = name;
     await first.layout.updateComplete;
     await first.layout.settingsAutosave?.ready;
-    first.app.palette.set(["#123456"]);
+    first.app.setColour("#123456");
     first.app.shortcuts.set("tool-brush", { key: "p" });
     // Removing the name stops saving, saving the waiting change
     first.layout.settingsStore = undefined;
     await first.layout.updateComplete;
     const store = new IndexedDbSettingsStore(name);
     await vi.waitFor(async () =>
-      expect(await store.load()).toMatchObject({ palette: ["#123456"] }),
+      expect(await store.load()).toMatchObject({
+        colours: { foreground: "#123456" },
+      }),
     );
-    first.app.palette.set([]);
+    first.app.setColour("#000000");
     // Another layout with the same name restores them
     const second = await setup();
     second.layout.settingsStore = name;
     await second.layout.updateComplete;
     await second.layout.settingsAutosave?.ready;
-    expect(second.app.palette.colours).toEqual(["#123456"]);
+    expect(second.app.colour).toBe("#123456");
     expect(second.app.shortcuts.combo("tool-brush")).toEqual({ key: "p" });
+  });
+
+  it("should keep brush presets and profile graphs in the browser under its settings store name", async () => {
+    const name = `assets-${crypto.randomUUID()}`;
+    const first = await setup();
+    first.layout.settingsStore = name;
+    await first.layout.updateComplete;
+    await first.app.profileSync?.ready;
+    const preset = first.app.newPreset(first.app.brush.preset, "Mine");
+    await first.app.customPresets.save(preset);
+    const graph = first.app.profiles.save({
+      name: "Soft",
+      points: PROFILE_PRESETS[1]!.points,
+    })!;
+    await vi.waitFor(async () =>
+      expect(await new IndexedDbAssetStore("profiles", name).list()).toEqual([
+        graph,
+      ]),
+    );
+    // Removing the name takes the stores back
+    first.layout.settingsStore = undefined;
+    await first.layout.updateComplete;
+    expect(first.app.assetStores).toEqual({});
+    expect(first.app.customPresets.presets).toEqual([]);
+    // Another layout with the same name restores them
+    const second = await setup();
+    second.layout.settingsStore = name;
+    await second.layout.updateComplete;
+    await second.app.profileSync?.ready;
+    await vi.waitFor(() =>
+      expect(second.app.customPresets.presets).toEqual([preset]),
+    );
+    expect(second.app.profiles.graphs).toEqual([graph]);
+    // Another canvas takes the stores, and the previous canvas gives them back
+    const other = createApp();
+    second.layout.app = other;
+    await second.layout.updateComplete;
+    expect(second.app.assetStores).toEqual({});
+    expect(other.assetStores.brushes).toBeInstanceOf(IndexedDbAssetStore);
+  });
+
+  it("should leave the implementer's asset stores alone without a settings store name", async () => {
+    const brushes = new IndexedDbAssetStore<BrushConfig>("brushes", "mine");
+    const { layout, app } = await setup(
+      "",
+      1000,
+      createApp({ stores: { brushes } }),
+    );
+    layout.requestUpdate("settingsStore");
+    await layout.updateComplete;
+    expect(app.assetStores).toEqual({ brushes });
+  });
+
+  it("should show a toast when profile graphs can't be kept", async () => {
+    vi.spyOn(IndexedDbAssetStore.prototype, "list").mockRejectedValue(
+      new Error("No"),
+    );
+    const { layout } = await setup();
+    const toasts: unknown[] = [];
+    layout.addEventListener("pc-toast", (event) =>
+      toasts.push((event as CustomEvent).detail),
+    );
+    layout.settingsStore = `broken-${crypto.randomUUID()}`;
+    await layout.updateComplete;
+    await vi.waitFor(() =>
+      expect(toasts).toContainEqual({
+        message: "Couldn't keep your settings in this browser",
+        kind: "error",
+      }),
+    );
+    vi.restoreAllMocks();
   });
 
   it("should keep the rendering chosen with the app settings, and make its own canvas draw there", async () => {

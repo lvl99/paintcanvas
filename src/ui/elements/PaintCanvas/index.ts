@@ -11,10 +11,12 @@ import { isTouchDevice } from "../../../lib/classes/InputSettings";
 import type { Insets } from "../../../lib/classes/Viewport";
 import type { ShortcutAction } from "../../../lib/utils/shortcuts";
 import IndexedDbLayerStore, {
-  IndexedDbSettingsStore,
+  indexedDbStores,
+  type AssetStores,
   loadRenderingChoice,
   saveRenderingChoice,
 } from "../../../lib/storage";
+import { ASSET_SYNC_ERROR_EVENT } from "../../../lib/classes/AssetSync";
 import SettingsAutosave, {
   SETTINGS_AUTOSAVE_ERROR_EVENT,
 } from "../../../lib/classes/SettingsAutosave";
@@ -194,6 +196,9 @@ export class PaintCanvasElement extends PcElement {
   /** Keeps the app settings under the `settings-store` name, if any */
   private ownSettingsAutosave?: SettingsAutosave;
 
+  /** The asset stores the layout gave the canvas for `settings-store`, if any */
+  private ownAssetStores?: AssetStores;
+
   /** Stops keeping the rendering chosen in the canvas's UI settings under the `settings-store` name, if kept */
   private stopKeepingRendering?: () => void;
 
@@ -326,7 +331,7 @@ export class PaintCanvasElement extends PcElement {
     if (changed.has("app") || changed.has("store"))
       this.useStore(changed.get("app") as PaintCanvas | undefined);
     if (changed.has("app") || changed.has("settingsStore"))
-      this.useSettingsStore();
+      this.useSettingsStore(changed.get("app") as PaintCanvas | undefined);
     this.watchAutosaveErrors();
     if (
       this.isConnected &&
@@ -424,24 +429,35 @@ export class PaintCanvasElement extends PcElement {
   }
 
   /**
-   * Keep the canvas's app settings under the `settings-store` name, stopping the previous settings autosave (which
-   * saves any change waiting to be saved).
+   * Keep the canvas's app settings and assets (brush presets, colour palettes, profile graphs) under the
+   * `settings-store` name, stopping the previous settings autosave (which saves any change waiting to be saved). Asset
+   * stores the layout gave a previous canvas, or this one under another name, are taken back; ones the implementer gave
+   * are replaced only when there's a name.
    */
-  private useSettingsStore(): void {
+  private useSettingsStore(previousApp?: PaintCanvas): void {
+    const app = this.app as PaintCanvas;
     this.ownSettingsAutosave?.stop();
     this.stopKeepingRendering?.();
     const name = this.settingsStore || undefined;
     this.stopKeepingRendering =
       name === undefined ? undefined : this.keepRendering(name);
-    this.ownSettingsAutosave =
-      name === undefined
-        ? undefined
-        : new SettingsAutosave(
-            this.app as PaintCanvas,
-            new IndexedDbSettingsStore(name),
-          );
+    const { settings, ...assets } =
+      name === undefined ? { settings: undefined } : indexedDbStores(name);
+    this.ownSettingsAutosave = settings && new SettingsAutosave(app, settings);
     this.ownSettingsAutosave?.addEventListener(
       SETTINGS_AUTOSAVE_ERROR_EVENT,
+      this.onSettingsAutosaveError,
+    );
+    const own = this.ownAssetStores;
+    const isOwn = (canvas: PaintCanvas | undefined) =>
+      own !== undefined && canvas?.assetStores.brushes === own.brushes;
+    if (previousApp !== app && isOwn(previousApp))
+      previousApp?.useAssetStores({});
+    if (settings) app.useAssetStores(assets);
+    else if (isOwn(app)) app.useAssetStores({});
+    this.ownAssetStores = settings ? assets : undefined;
+    app.profileSync?.addEventListener(
+      ASSET_SYNC_ERROR_EVENT,
       this.onSettingsAutosaveError,
     );
   }

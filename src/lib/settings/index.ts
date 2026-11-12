@@ -1,27 +1,23 @@
-import { formatErrors } from "../presets";
+import { formatErrors, isValidBrushPreset } from "../presets";
 import {
+  validateAppSettings,
   validateSettings,
-  validateSettingsFile,
 } from "../validation/validators.generated.js";
+import { AssetFileError } from "../assets";
+import { compareVersions, majorVersion, parseSchemaUrl } from "../schemas";
+import type { BrushConfig } from "../brushes/types";
 import type PaintCanvas from "../classes/PaintCanvas";
 import type { InputSettingsData } from "../classes/InputSettings";
+import { sanitisePalette } from "../classes/Palette";
 import {
-  SETTINGS_FILE_FORMAT,
-  SETTINGS_FILE_FORMATS,
-  SETTINGS_FILE_VERSION,
+  APP_SETTINGS_SCHEMA_VERSION,
+  APP_SETTINGS_TYPE,
+  appSettingsSchema,
   type AppSettings,
+  type AppSettingsFile,
 } from "./schema";
 
 export * from "./schema";
-
-/** Messages shown when importing settings fails */
-export const SETTINGS_FILE_ERRORS = {
-  incompatible: "Settings JSON file not compatible",
-  read: "Failed to read settings JSON file",
-} as const;
-
-/** Importing settings failed, with a message for the user */
-export class SettingsFileError extends Error {}
 
 /** Result of checking settings */
 export type SettingsValidationResult =
@@ -38,42 +34,102 @@ export const isValidSettings = (input: unknown): SettingsValidationResult =>
     ? { valid: true, value: input }
     : { valid: false, errors: formatErrors(validateSettings.errors) };
 
+/** Assets that app settings can hold */
+export type SettingsAsset = "brushes" | "palettes" | "profiles";
+
+/** What `collectSettings` leaves out */
+export interface CollectSettingsOptions {
+  /** Assets to leave out, e.g. ones kept in stores of their own */
+  without?: readonly SettingsAsset[];
+}
+
 /**
- * The app settings of a canvas: its input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme
- * and language.
+ * The app settings of a canvas: its input settings, keyboard shortcuts, colours, the user's colour palettes, profile
+ * graphs and brush presets, theme and language, and settings wrapper apps added (see `SettingsExtension`).
  *
  * @example
- * collectSettings(canvas).palette; // ["#2c6bff", ...]
+ * collectSettings(canvas).palettes; // the user's own palettes
+ * collectSettings(canvas, { without: ["profiles"] }).profiles; // undefined
  */
-export const collectSettings = (app: PaintCanvas): AppSettings => ({
+export const collectSettings = (
+  app: PaintCanvas,
+  { without = [] }: CollectSettingsOptions = {},
+): AppSettings => ({
   input: structuredClone(app.input.data) as InputSettingsData,
   shortcuts: structuredClone(app.shortcuts.bindings),
-  palette: [...app.palette.colours],
+  ...(without.includes("palettes")
+    ? {}
+    : { palettes: structuredClone([...app.palettes.items]) }),
   colours: { ...app.colours },
-  profiles: structuredClone([...app.profiles.graphs]),
+  ...(without.includes("profiles")
+    ? {}
+    : { profiles: structuredClone([...app.profiles.graphs]) }),
+  ...(without.includes("brushes")
+    ? {}
+    : { brushes: structuredClone(app.customPresets.presets) }),
   ui: { ...app.ui.data },
+  ...structuredClone(app.settingsExtensions.collect()),
 });
+
+/** Name of the palette that colours saved in PaintCanvas's palette by older versions are moved to */
+export const OLDER_PALETTE_NAME = "My colours";
+
+/**
+ * Keep colours that older versions saved in PaintCanvas's palette (which can no longer be changed) in a palette of the
+ * user's own, named `OLDER_PALETTE_NAME`: unless they're PaintCanvas's colours, or one of the user's palettes already has
+ * them.
+ *
+ * @example
+ * keepOlderPalette(canvas, ["#123456"]); // the user now has a "My colours" palette with #123456
+ */
+export const keepOlderPalette = (
+  app: PaintCanvas,
+  colours: readonly string[],
+): void => {
+  const valid = sanitisePalette(colours) ?? [];
+  const same = (other: readonly string[]) =>
+    other.length === valid.length &&
+    other.every((colour, i) => colour === valid[i]);
+  if (
+    valid.length === 0 ||
+    same(app.palette.colours) ||
+    app.palettes.items.some((palette) => same(palette.colours))
+  )
+    return;
+  app.palettes.create(OLDER_PALETTE_NAME, valid, app.author);
+};
 
 /**
  * Use app settings on a canvas, e.g. ones kept in the browser or imported. Parts left out stay as they are; invalid
- * values within a part are left out (see each part's sanitising).
+ * values within a part are left out (see each part's sanitising). Colour palettes, profile graphs and brush presets are
+ * added to the user's own, replacing those with the same IDs. Colours older versions saved in PaintCanvas's palette are
+ * moved to one of the user's own (see `keepOlderPalette`). Other parts go to the settings extensions (see
+ * `SettingsExtensions.apply`).
  *
  * @example
- * applySettings(canvas, { colours: { foreground: "#ff0000", background: "#ffffff" } });
+ * await applySettings(canvas, { colours: { foreground: "#ff0000", background: "#ffffff" } });
  */
-export const applySettings = (
+export const applySettings = async (
   app: PaintCanvas,
   settings: AppSettings,
-): void => {
+): Promise<void> => {
   if (settings.input) app.input.update(settings.input);
   if (settings.shortcuts) app.shortcuts.load(settings.shortcuts);
-  if (settings.palette) app.palette.set(settings.palette);
+  if (settings.palette) keepOlderPalette(app, settings.palette);
+  if (settings.palettes) app.palettes.merge(settings.palettes);
   if (settings.colours) {
     app.setColour(settings.colours.foreground, "foreground");
     app.setColour(settings.colours.background, "background");
   }
-  if (settings.profiles) app.profiles.set(settings.profiles);
+  if (settings.profiles) app.profiles.merge(settings.profiles);
   if (settings.ui) app.ui.update(settings.ui);
+  app.settingsExtensions.apply(settings);
+  if (Array.isArray(settings.brushes))
+    await app.customPresets.save(
+      ...settings.brushes.filter(
+        (preset): preset is BrushConfig => isValidBrushPreset(preset).valid,
+      ),
+    );
 };
 
 /**
@@ -91,35 +147,58 @@ export const settingsFileName = (
 };
 
 /**
- * Write app settings to a settings file (JSON) of a format (see `PaintCanvasNames.settingsFileFormat`).
+ * Write app settings to an app settings file (JSON). Colours older versions saved in PaintCanvas's palette are left out.
  *
  * @example
- * exportSettingsFile(collectSettings(canvas)); // '{ "format": "paintcanvas-settings", "version": 1, "settings": {...} }'
+ * exportSettingsFile(collectSettings(canvas)); // '{ "$schema": ".../app-settings-1.0.0.json", "@type": "PaintCanvas/AppSettings", ... }'
  */
-export const exportSettingsFile = (
-  settings: AppSettings,
-  format: string = SETTINGS_FILE_FORMAT,
-): string =>
-  JSON.stringify({ format, version: SETTINGS_FILE_VERSION, settings }, null, 2);
+export const exportSettingsFile = (settings: AppSettings): string => {
+  const parts: AppSettings = { ...settings };
+  delete parts.palette;
+  const file: AppSettingsFile = {
+    $schema: appSettingsSchema.$id,
+    "@type": APP_SETTINGS_TYPE,
+    ...parts,
+  };
+  return JSON.stringify(file, null, 2);
+};
+
+/** Whether a value is a plain object */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
- * Read the app settings in a settings file of one of the given formats (PaintCanvas's by default). Throws a
- * `SettingsFileError` if it isn't valid JSON or a compatible file.
+ * Read the app settings in an app settings file. Settings files from before versioned schemas (`format`, `version: 1`
+ * and `settings`, of any format name) are read too. Throws an `AssetFileError`: `read` if it isn't JSON, `invalid` if it
+ * isn't a settings file or doesn't match its schema, `unsupported` if it's a version the app can't read.
  *
  * @example
- * applySettings(canvas, parseSettingsFile(text));
+ * await applySettings(canvas, parseSettingsFile(text));
  */
-export const parseSettingsFile = (
-  text: string,
-  formats: readonly string[] = SETTINGS_FILE_FORMATS,
-): AppSettings => {
+export const parseSettingsFile = (text: string): AppSettings => {
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
-    throw new SettingsFileError(SETTINGS_FILE_ERRORS.incompatible);
+    throw new AssetFileError("read");
   }
-  if (!validateSettingsFile(data) || !formats.includes(data.format))
-    throw new SettingsFileError(SETTINGS_FILE_ERRORS.incompatible);
-  return data.settings;
+  if (!isRecord(data)) throw new AssetFileError("invalid");
+  // Older files keep their settings in `settings`; those are checked as kept in the browser
+  if (typeof data.format === "string" && data.version === 1) {
+    const result = isValidSettings(data.settings);
+    if (!result.valid) throw new AssetFileError("invalid");
+    return result.value;
+  }
+  const named = parseSchemaUrl(data.$schema);
+  if (named?.name !== "app-settings") throw new AssetFileError("invalid");
+  if (
+    majorVersion(named.version) !== majorVersion(APP_SETTINGS_SCHEMA_VERSION) ||
+    compareVersions(named.version, APP_SETTINGS_SCHEMA_VERSION) > 0
+  )
+    throw new AssetFileError("unsupported");
+  if (!validateAppSettings(data)) throw new AssetFileError("invalid");
+  const settings: Record<string, unknown> = { ...data };
+  delete settings.$schema;
+  delete settings["@type"];
+  return settings as AppSettings;
 };

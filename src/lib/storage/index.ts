@@ -1,7 +1,11 @@
-// Keeping the user's layers in the browser, so a drawing survives reloading the page (see `LayerAutosave`), and the
-// user's app settings (see `SettingsAutosave`).
+// Keeping the user's layers in the browser, so a drawing survives reloading the page (see `LayerAutosave`), the
+// user's app settings (see `SettingsAutosave`) and their assets: brush presets, colour palettes and profile graphs.
 import type { LayerConfig } from "../classes/Layer";
 import type { AppSettings } from "../settings/schema";
+import type { BrushConfig } from "../brushes/types";
+import type { ColourPalette } from "../palette/schema";
+import type { ProfileGraph } from "../profiles";
+import type { DocumentInfo, DrawingDocument } from "../document/schema";
 import { isRendering, type Rendering } from "../classes/UiSettings";
 
 /** Version of a saved drawing's shape, so drawings saved by other versions can be recognised */
@@ -10,8 +14,8 @@ export const SAVED_DRAWING_VERSION = 1;
 /** Name of the IndexedDB database `IndexedDbLayerStore` keeps drawings in, and `IndexedDbSettingsStore` settings */
 export const DATABASE_NAME = "paintcanvas";
 
-/** Version of the database's object stores (2 added settings) */
-export const DATABASE_VERSION = 2;
+/** Version of the database's object stores (2 added settings; 3 added brushes, palettes and profiles) */
+export const DATABASE_VERSION = 3;
 
 /** Object store of saved drawings, by name */
 const DRAWINGS = "drawings";
@@ -22,16 +26,24 @@ const IMAGES = "images";
 /** Object store of app settings, by name */
 const SETTINGS = "settings";
 
+/** Kinds of asset kept in the database, each in its own object store, by settings name and asset ID */
+export const ASSET_KINDS = ["brushes", "palettes", "profiles"] as const;
+
+/** A kind of asset kept in the database */
+export type AssetKind = (typeof ASSET_KINDS)[number];
+
 /** Every object store, created when the database is first opened or upgraded */
-const OBJECT_STORES = [DRAWINGS, IMAGES, SETTINGS] as const;
+const OBJECT_STORES = [DRAWINGS, IMAGES, SETTINGS, ...ASSET_KINDS] as const;
 
 /** A saved layer's settings (its pixels are kept separately, as a PNG) */
 export type SavedLayer = Required<LayerConfig>;
 
-/** A saved drawing: its size, its layers (top first) without their pixels, and the selected layer */
+/** A saved drawing: its details, size, its layers (top first) without their pixels, and the selected layer */
 export interface SavedDrawing {
   /** The shape's version (see `SAVED_DRAWING_VERSION`) */
   version: number;
+  /** The drawing's details (drawings saved by older versions have none) */
+  document?: DocumentInfo;
   width: number;
   height: number;
   layers: SavedLayer[];
@@ -278,6 +290,159 @@ export class IndexedDbSettingsStore implements SettingsStoreLike {
     await done;
   }
 }
+
+/** An asset: anything with an ID */
+export interface Asset {
+  id: string;
+}
+
+/** Where assets of one kind (e.g. brush presets) are kept (see `IndexedDbAssetStore`) */
+export interface AssetStoreLike<T extends Asset> {
+  /** The saved assets (untrusted: check them before using them), in the order they were first saved */
+  list(): Promise<unknown[]>;
+  /** Save an asset, replacing one with the same ID */
+  put(asset: T): Promise<void>;
+  /** Delete an asset */
+  remove(id: string): Promise<void>;
+}
+
+/** The order of the asset last saved for the first time */
+let lastOrder = 0;
+
+/**
+ * The order of an asset saved for the first time: when it was saved, and always after the one before.
+ */
+const nextOrder = (): number =>
+  (lastOrder = Math.max(Date.now(), lastOrder + 1));
+
+/** A saved asset, with when it was first saved to keep them in order */
+interface AssetRecord {
+  asset: unknown;
+  order: number;
+}
+
+/**
+ * Keeps assets of one kind (e.g. brush presets) in the browser's IndexedDB database (`DATABASE_NAME`), under a name
+ * (like `IndexedDbSettingsStore`'s), each in its own record so saving one doesn't rewrite the others.
+ *
+ * @example
+ * const store = new IndexedDbAssetStore<BrushConfig>("brushes");
+ * await store.put(myPreset);
+ */
+export class IndexedDbAssetStore<T extends Asset> implements AssetStoreLike<T> {
+  readonly kind: AssetKind;
+
+  readonly name: string;
+
+  private readonly connection: DatabaseConnection;
+
+  /**
+   * @param kind - the kind of asset
+   * @param name - the settings' name the assets belong to (`DEFAULT_SETTINGS_NAME` by default)
+   * @param factory - the IndexedDB to use (the browser's by default)
+   */
+  constructor(
+    kind: AssetKind,
+    name: string = DEFAULT_SETTINGS_NAME,
+    factory: IDBFactory = indexedDB,
+  ) {
+    this.kind = kind;
+    this.name = name;
+    this.connection = new DatabaseConnection(factory);
+  }
+
+  async list(): Promise<unknown[]> {
+    const records = await result<AssetRecord[]>(
+      (await this.connection.open())
+        .transaction(this.kind, "readonly")
+        .objectStore(this.kind)
+        .getAll(this.keys()),
+    );
+    return records
+      .sort((a, b) => a.order - b.order)
+      .map((record) => record.asset);
+  }
+
+  async put(asset: T): Promise<void> {
+    const transaction = (await this.connection.open()).transaction(
+      this.kind,
+      "readwrite",
+    );
+    const done = completed(transaction);
+    const store = transaction.objectStore(this.kind);
+    const key = [this.name, asset.id];
+    // A replaced asset keeps its place
+    const existing = store.get(key);
+    existing.onsuccess = () => {
+      const order =
+        (existing.result as AssetRecord | undefined)?.order ?? nextOrder();
+      store.put({ asset, order } satisfies AssetRecord, key);
+    };
+    await done;
+  }
+
+  async remove(id: string): Promise<void> {
+    const transaction = (await this.connection.open()).transaction(
+      this.kind,
+      "readwrite",
+    );
+    const done = completed(transaction);
+    transaction.objectStore(this.kind).delete([this.name, id]);
+    await done;
+  }
+
+  /** The keys of this name's assets: `[name, id]` (arrays sort after strings) */
+  private keys(): IDBKeyRange {
+    return IDBKeyRange.bound([this.name], [this.name, []]);
+  }
+}
+
+/**
+ * Where whole documents are kept away from the browser, e.g. a user's account online (see `RemoteDocumentAutosave`).
+ * Saving can be slow, so it's done less often than keeping the drawing in the browser.
+ */
+export interface DocumentStoreLike {
+  /** Names the store for the user, e.g. "Bluesky" (shown while saving) */
+  readonly label?: string;
+  /**
+   * Save a document, replacing the one with the same ID. Call `onProgress` with how much is done (0 to 1), if known.
+   */
+  save(
+    document: DrawingDocument,
+    onProgress?: (done: number) => void,
+  ): Promise<void>;
+  /** A saved document by ID, or undefined if there's none */
+  load(id: string): Promise<DrawingDocument | undefined>;
+}
+
+/** Where the user's assets are kept, by kind. Assets of a kind without a store are kept in memory only. */
+export interface AssetStores {
+  brushes?: AssetStoreLike<BrushConfig>;
+  palettes?: AssetStoreLike<ColourPalette>;
+  profiles?: AssetStoreLike<ProfileGraph>;
+}
+
+/** Where the user's settings and assets are kept */
+export interface PaintCanvasStores extends AssetStores {
+  settings?: SettingsStoreLike;
+}
+
+/**
+ * Stores keeping the user's settings and assets in the browser's IndexedDB database, under a name.
+ *
+ * @example
+ * const { settings, ...assets } = indexedDbStores("my-app");
+ * canvas.useAssetStores(assets);
+ */
+export const indexedDbStores = (
+  name: string = DEFAULT_SETTINGS_NAME,
+  factory: IDBFactory = indexedDB,
+): Required<PaintCanvasStores> => ({
+  settings: new IndexedDbSettingsStore(name, factory),
+  brushes: new IndexedDbAssetStore("brushes", name, factory),
+  palettes: new IndexedDbAssetStore("palettes", name, factory),
+  profiles: new IndexedDbAssetStore("profiles", name, factory),
+});
 
 /**
  * The browser storage key that keeps the rendering chosen with the app settings of a name (see

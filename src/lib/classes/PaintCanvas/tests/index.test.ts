@@ -13,14 +13,16 @@ import {
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { AutosaveState } from "../../LayerAutosave";
 import { BlendMode } from "../../Layer";
+import { MemoryDocumentStore } from "../../../../testing/documentStore";
 
 const createApp = (options = {}) =>
   new PaintCanvas({ createCanvas: createFakeCanvasFactory(), ...options });
 
 describe("PaintCanvas", () => {
-  it("should own presets locally, allow canvases up to the maximum size and use a default preset author", () => {
+  it("should keep assets in memory, allow canvases up to the maximum size and use a default preset author", () => {
     const app = createApp();
-    expect(app.ownerId).toBe("local");
+    expect(app.assetStores).toEqual({});
+    expect(app.profileSync).toBeUndefined();
     expect(app.authorHandle).toBe("");
     expect(app.maxCanvasSize).toBe(MAX_CANVAS_SIZE);
     expect(app.maxLayers).toBe(5);
@@ -31,9 +33,6 @@ describe("PaintCanvas", () => {
     expect(app.names).toEqual({
       app: "PaintCanvas",
       filePrefix: "paintcanvas",
-      presetFileFormat: "paintcanvas-brush-presets",
-      paletteFileFormat: "paintcanvas-palette",
-      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });
@@ -42,22 +41,18 @@ describe("PaintCanvas", () => {
     expect(createApp({ names: { app: "My App" } }).names).toEqual({
       app: "My App",
       filePrefix: "paintcanvas",
-      presetFileFormat: "paintcanvas-brush-presets",
-      paletteFileFormat: "paintcanvas-palette",
-      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });
 
-  it("should use the given owner, maximum canvas size and preset author", () => {
+  it("should use the given maximum canvas size and preset author", () => {
     const app = createApp({
-      ownerId: "user-1",
       maxCanvasSize: 500,
       maxLayers: 2,
       presetAuthor: () => ({ name: "Ada", handle: "ada" }),
     });
     expect(app.authorHandle).toBe("ada");
-    expect(app.ownerId).toBe("user-1");
+    expect(app.author).toEqual({ name: "Ada", handle: "ada" });
     expect(app.layers.maxLayers).toBe(2);
     app.setCanvasSize(100, 100);
     expect(app.layers.maxLayers).toBe(2);
@@ -395,7 +390,7 @@ describe("PaintCanvas", () => {
       remove: vi.fn(async () => undefined),
     };
     const app = new PaintCanvas({
-      presetStore: store,
+      stores: { brushes: store },
       createCanvas: createFakeCanvasFactory(),
     });
     await vi.waitFor(() => expect(app.brush.presets[saved.id]).toEqual(saved));
@@ -403,6 +398,62 @@ describe("PaintCanvas", () => {
     expect(Object.keys(app.brush.presets)[0]).toBe("round1");
     expect(app.isBuiltInPreset("round1")).toBe(true);
     expect(app.isBuiltInPreset(saved.id)).toBe(false);
+  });
+
+  it("should keep profile graphs in their store, and use other stores", async () => {
+    const graph = {
+      id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
+      name: "Soft",
+      points: [
+        { x: 0, y: -10, i: "linear" },
+        { x: 10, y: 0, i: "linear" },
+      ],
+    };
+    const store = () => ({
+      list: vi.fn(async (): Promise<unknown[]> => [graph]),
+      put: vi.fn(async () => undefined),
+      remove: vi.fn(async () => undefined),
+    });
+    const profiles = store();
+    const palette = { id: graph.id, name: "Sunset", colours: ["#ff7700"] };
+    const palettes = store();
+    palettes.list.mockResolvedValue([palette]);
+    const app = createApp({ stores: { profiles, palettes } });
+    expect(app.assetStores.profiles).toBe(profiles);
+    await app.profileSync?.ready;
+    await app.paletteSync?.ready;
+    expect(app.profiles.graphs).toEqual([graph]);
+    expect(app.palettes.items).toEqual([palette]);
+    const changed = vi.fn();
+    app.addEventListener("change", changed);
+    const brushes = store();
+    brushes.list.mockResolvedValue([]);
+    app.useAssetStores({ brushes });
+    expect(app.profileSync).toBeUndefined();
+    expect(app.paletteSync).toBeUndefined();
+    expect(app.assetStores).toEqual({ brushes });
+    expect(changed).toHaveBeenCalled();
+    app.profiles.remove(graph.id);
+    expect(profiles.remove).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(brushes.list).toHaveBeenCalled());
+  });
+
+  it("should keep the drawing in a remote store, replacing or stopping the one before", () => {
+    const store = new MemoryDocumentStore();
+    const app = createApp({ remoteDocumentStore: store });
+    const first = app.remoteAutosave!;
+    expect(first.store).toBe(store);
+    const stop = vi.spyOn(first, "stop");
+    const changed = vi.fn();
+    app.addEventListener("change", changed);
+    const other = new MemoryDocumentStore();
+    expect(app.useRemoteDocumentStore(other, { intervalMs: 10 })?.store).toBe(
+      other,
+    );
+    expect(stop).toHaveBeenCalledOnce();
+    expect(changed).toHaveBeenCalledOnce();
+    expect(app.useRemoteDocumentStore(undefined)).toBeUndefined();
+    expect(app.remoteAutosave).toBeUndefined();
   });
 
   it("should keep working when custom presets can't be loaded", async () => {
@@ -414,7 +465,7 @@ describe("PaintCanvas", () => {
       remove: vi.fn(),
     };
     const app = new PaintCanvas({
-      presetStore: store,
+      stores: { brushes: store },
       createCanvas: createFakeCanvasFactory(),
     });
     await vi.waitFor(() => expect(store.list).toHaveBeenCalled());

@@ -1,111 +1,150 @@
 import { describe, it, expect } from "vitest";
-import { Ajv } from "ajv";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import {
+  COLOUR_PALETTE_COLLECTION_TYPE,
+  COLOUR_PALETTE_TYPE,
   DEFAULT_PALETTE,
+  LEGACY_PALETTE_NAME,
   MAX_PALETTE_COLOURS,
-  PALETTE_FILE_ERRORS,
-  PALETTE_FILE_FORMAT,
-  PALETTE_FILE_VERSION,
-  PaletteFileError,
-  exportPaletteFile,
-  isValidPaletteFile,
-  paletteFileName,
-  paletteFileSchema,
-  parsePaletteFile,
+  MAX_PALETTES_PER_FILE,
+  colourPaletteCollectionSchema,
+  colourPaletteFile,
+  colourPaletteSchema,
 } from "..";
+import { AssetFileError, UUID_PATTERN } from "../../assets";
+import { withoutType } from "../../validation/standalone";
 
-/** A palette file with the given colours, and other changes */
-const file = (colours: unknown[], changes: Record<string, unknown> = {}) => ({
-  format: PALETTE_FILE_FORMAT,
-  version: PALETTE_FILE_VERSION,
-  colours,
+const palette = {
+  id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
+  name: "Sunset",
+  author: { name: "Ada" },
+  colours: ["#ff0000", "#00FF00"],
+};
+
+/** A collection file with the given palettes, and other changes */
+const file = (items: unknown[], changes: Record<string, unknown> = {}) => ({
+  $schema: colourPaletteCollectionSchema.$id,
+  "@type": COLOUR_PALETTE_COLLECTION_TYPE,
+  items,
   ...changes,
 });
 
-describe("palette file schema", () => {
-  it("should compile in ajv strict mode and validate files", () => {
-    const validate = new Ajv({ strict: true }).compile(paletteFileSchema);
-    expect(validate(file(["#ff0000", "#00FF00"]))).toBe(true);
-    expect(validate(file([]))).toBe(true);
-    expect(validate(file(["red"]))).toBe(false);
-    expect(validate(file(["#ff0000"], { version: 2 }))).toBe(false);
-  });
-});
+describe("colour palette schemas", () => {
+  const ajv = new Ajv2020({ strict: true });
+  const validatePalette = ajv.compile(withoutType(colourPaletteSchema));
+  const validateFile = ajv.compile(withoutType(colourPaletteCollectionSchema));
 
-describe("isValidPaletteFile", () => {
-  it("should accept a valid file", () => {
-    const valid = file(["#ff0000", "#ABCDEF"]);
-    expect(isValidPaletteFile(valid)).toEqual({ valid: true, value: valid });
+  it("should be published with versioned URLs and types", () => {
+    expect(colourPaletteSchema.$id).toBe(
+      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-1.0.0.json",
+    );
+    expect(colourPaletteSchema["@type"]).toBe("PaintCanvas/ColourPalette");
+    expect(colourPaletteCollectionSchema.$id).toBe(
+      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-1.0.0.json",
+    );
+    expect(colourPaletteCollectionSchema["@type"]).toBe(
+      "PaintCanvas/ColourPaletteCollection",
+    );
+  });
+
+  it("should compile in ajv strict mode and validate palettes and files", () => {
+    expect(validatePalette(palette)).toBe(true);
+    expect(
+      validatePalette({
+        ...palette,
+        $schema: colourPaletteSchema.$id,
+        "@type": COLOUR_PALETTE_TYPE,
+      }),
+    ).toBe(true);
+    expect(validatePalette({ ...palette, colours: [...DEFAULT_PALETTE] })).toBe(
+      true,
+    );
+    expect(validateFile(file([palette]))).toBe(true);
+    expect(validateFile(file([]))).toBe(true);
   });
 
   it.each([
-    ["a colour that isn't #rrggbb", file(["#fff"]), "/colours/0 must match"],
-    ["a colour that isn't a string", file([255]), "/colours/0 must be string"],
-    ["no colours", { format: "x", version: 1 }, "required property 'colours'"],
-    ["another version", file([], { version: 2 }), "/version must be equal"],
-    [
-      "an empty format",
-      file([], { format: "" }),
-      "/format must NOT have fewer",
-    ],
-    ["other properties", file([], { name: "x" }), "additional properties"],
+    ["an ID that isn't a UUID", { id: "sunset" }],
+    ["an empty name", { name: " " }],
+    ["a colour that isn't #rrggbb", { colours: ["#fff"] }],
+    ["a colour that isn't text", { colours: [255] }],
     [
       "too many colours",
-      file(Array.from({ length: MAX_PALETTE_COLOURS + 1 }, () => "#000000")),
-      "/colours must NOT have more than",
+      { colours: Array(MAX_PALETTE_COLOURS + 1).fill("#000000") },
     ],
-  ])("should reject a file with %s", (_, input, error) => {
-    const result = isValidPaletteFile(input);
-    expect(result.valid).toBe(false);
-    expect(!result.valid && result.errors[0]).toContain(error);
-  });
-
-  it("should accept the default palette", () => {
-    expect(isValidPaletteFile(file([...DEFAULT_PALETTE])).valid).toBe(true);
-    expect(DEFAULT_PALETTE).toHaveLength(15);
-  });
-});
-
-describe("paletteFileName", () => {
-  it("should name the file by date, with a prefix", () => {
-    const date = new Date(2026, 10, 4);
-    expect(paletteFileName(date)).toBe("paintcanvas-palette-2026-11-04.json");
-    expect(paletteFileName(date, "myapp")).toBe(
-      "myapp-palette-2026-11-04.json",
-    );
-    expect(paletteFileName()).toMatch(
-      /^paintcanvas-palette-\d{4}-\d{2}-\d{2}\.json$/,
-    );
-  });
-});
-
-describe("exportPaletteFile and parsePaletteFile", () => {
-  it("should write colours that read back the same", () => {
-    const text = exportPaletteFile(["#ff0000", "#00ff00"]);
-    expect(JSON.parse(text)).toEqual(file(["#ff0000", "#00ff00"]));
-    expect(parsePaletteFile(text)).toEqual(["#ff0000", "#00ff00"]);
-  });
-
-  it("should write and read the implementer's own format", () => {
-    const text = exportPaletteFile(["#ff0000"], "myapp-palette");
-    expect(JSON.parse(text).format).toBe("myapp-palette");
-    expect(parsePaletteFile(text, ["myapp-palette"])).toEqual(["#ff0000"]);
-  });
-
-  it("should read colours as lowercase", () => {
-    expect(parsePaletteFile(JSON.stringify(file(["#ABCDEF"])))).toEqual([
-      "#abcdef",
-    ]);
+    ["other properties", { extra: true }],
+    ["another type", { "@type": "Other" }],
+  ])("should reject a palette with %s", (_label, changes) => {
+    expect(validatePalette({ ...palette, ...changes })).toBe(false);
   });
 
   it.each([
-    ["isn't JSON", "{"],
-    ["isn't a palette file", JSON.stringify(file(["red"]))],
-    ["has another format", JSON.stringify(file([], { format: "other" }))],
-  ])("should throw when the file %s", (_, text) => {
-    expect(() => parsePaletteFile(text)).toThrow(PaletteFileError);
-    expect(() => parsePaletteFile(text)).toThrow(
-      PALETTE_FILE_ERRORS.incompatible,
+    ["of another type", file([], { "@type": "Other" })],
+    [
+      "with too many palettes",
+      file(Array(MAX_PALETTES_PER_FILE + 1).fill(palette)),
+    ],
+    ["with an invalid palette", file([{ id: palette.id }])],
+    ["with other properties", file([], { extra: true })],
+  ])("should reject a file %s", (_label, input) => {
+    expect(validateFile(input)).toBe(false);
+  });
+});
+
+describe("colourPaletteFile", () => {
+  it("should write palettes to a file that reads back the same", () => {
+    const text = colourPaletteFile.write([palette]);
+    expect(JSON.parse(text)).toEqual(file([palette]));
+    expect(colourPaletteFile.parse(text)).toEqual([palette]);
+    expect(colourPaletteFile.fileName(new Date(2026, 10, 4))).toBe(
+      "paintcanvas-colour-palettes-2026-11-04.json",
     );
+  });
+
+  it("should read a file from before versioned schemas, of any format, as one palette", () => {
+    const [read, ...rest] = colourPaletteFile.parse(
+      JSON.stringify({
+        format: "myapp-palette",
+        version: 1,
+        colours: ["#ff0000"],
+      }),
+    );
+    expect(rest).toEqual([]);
+    expect(read).toEqual({
+      id: expect.stringMatching(new RegExp(UUID_PATTERN)),
+      name: LEGACY_PALETTE_NAME,
+      colours: ["#ff0000"],
+    });
+  });
+
+  it.each([
+    ["isn't JSON", "{", "read"],
+    [
+      "has an invalid colour",
+      JSON.stringify({ format: "x", version: 1, colours: ["red"] }),
+      "invalid",
+    ],
+    ["has no version", JSON.stringify({ format: "x", colours: [] }), "invalid"],
+    [
+      "is of a newer version",
+      JSON.stringify(
+        file([], {
+          $schema:
+            "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-2.0.0.json",
+        }),
+      ),
+      "unsupported",
+    ],
+  ])("should reject a file that %s", (_label, text, reason) => {
+    expect(() => colourPaletteFile.parse(text)).toThrow(AssetFileError);
+    try {
+      colourPaletteFile.parse(text);
+    } catch (error) {
+      expect((error as AssetFileError).reason).toBe(reason);
+    }
+  });
+
+  it("should have a default palette", () => {
+    expect(DEFAULT_PALETTE).toHaveLength(15);
   });
 });

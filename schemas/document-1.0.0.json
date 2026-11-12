@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lvl99.github.io/paintcanvas/schemas/document-1.0.0.json",
+  "@type": "PaintCanvas/Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "@type",
+    "id",
+    "name",
+    "author",
+    "dateCreated",
+    "dateOpened",
+    "width",
+    "height",
+    "layers",
+    "activeLayer",
+    "external"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "@type": {
+      "const": "PaintCanvas/Document"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S"
+    },
+    "author": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "did": {
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^did:[a-z]+:[a-zA-Z0-9._:%-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "handle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254
+          },
+          "homepage": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        }
+      }
+    },
+    "dateCreated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "dateOpened": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "visible",
+          "opacity",
+          "blendingMode",
+          "alphaLock",
+          "content"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "\\S"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "blendingMode": {
+            "enum": [
+              "source-over",
+              "screen",
+              "lighten",
+              "multiply",
+              "darken",
+              "overlay"
+            ]
+          },
+          "alphaLock": {
+            "type": "boolean"
+          },
+          "content": {
+            "type": "string",
+            "pattern": "^data:image/png;base64,[A-Za-z0-9+/]*={0,2}$",
+            "maxLength": 139810158
+          }
+        }
+      }
+    },
+    "activeLayer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "external": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "content"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "content": {
+            "type": "string",
+            "pattern": "^data:image/png;base64,[A-Za-z0-9+/]*={0,2}$",
+            "maxLength": 139810158
+          }
+        }
+      }
+    },
+    "thumbnail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height",
+        "content"
+      ],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "content": {
+          "type": "string",
+          "pattern": "^data:image/png;base64,[A-Za-z0-9+/]*={0,2}$",
+          "maxLength": 139810158
+        }
+      }
+    }
+  }
+}

@@ -19,9 +19,11 @@ export interface SettingsAutosaveOptions {
 }
 
 /**
- * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palette, colours, profile graphs, theme and language) in a
- * store: the saved settings are restored when it starts (invalid ones are ignored), then changes are saved soon after
- * they happen.
+ * Keeps a canvas's app settings (input settings, keyboard shortcuts, colour palettes, colours, profile graphs, theme and
+ * language) in a store: the saved settings are restored when it starts (invalid ones are ignored), then changes are
+ * saved soon after they happen. While the canvas keeps colour palettes or profile graphs in stores of their own (see
+ * `PaintCanvas.useAssetStores`), they are left out of the saved settings (ones restored from older settings are added,
+ * so those stores keep them).
  *
  * Dispatches an `error` event (with the error as `detail`) when loading or saving fails.
  *
@@ -66,7 +68,16 @@ export default class SettingsAutosave extends EventTarget {
   /** The canvas parts whose changes are saved */
   private get sources(): EventTarget[] {
     const { app } = this;
-    return [app, app.input, app.shortcuts, app.palette, app.profiles, app.ui];
+    return [
+      app,
+      app.input,
+      app.shortcuts,
+      app.palettes,
+      app.profiles,
+      app.customPresets,
+      app.settingsExtensions,
+      app.ui,
+    ];
   }
 
   /**
@@ -87,7 +98,7 @@ export default class SettingsAutosave extends EventTarget {
    */
   async save(): Promise<void> {
     this.timer = undefined;
-    const settings = collectSettings(this.app);
+    const settings = this.collect();
     const json = JSON.stringify(settings);
     if (json === this.saved) return;
     this.saved = json;
@@ -101,16 +112,35 @@ export default class SettingsAutosave extends EventTarget {
 
   /** Restore the saved settings, then listen for changes */
   private async start(): Promise<void> {
+    let older = false;
     try {
       const result = isValidSettings(await this.store.load());
-      if (result.valid && !this.stopped) applySettings(this.app, result.value);
+      if (result.valid && !this.stopped) {
+        await applySettings(this.app, result.value);
+        older = result.value.palette !== undefined;
+      }
     } catch (error) {
       this.fail(error);
     }
     if (this.stopped) return;
-    this.saved = JSON.stringify(collectSettings(this.app));
+    this.saved = JSON.stringify(this.collect());
     for (const source of this.sources)
       source.addEventListener("change", this.onChange);
+    // Settings from older versions are saved again without what moved elsewhere, so it's only moved once
+    if (older) {
+      this.saved = undefined;
+      await this.save();
+    }
+  }
+
+  /** The canvas's settings to save, without the assets kept in stores of their own */
+  private collect() {
+    const stores = this.app.assetStores;
+    return collectSettings(this.app, {
+      without: (["brushes", "palettes", "profiles"] as const).filter(
+        (kind) => stores[kind] !== undefined,
+      ),
+    });
   }
 
   /** Save soon, after changes stop for a moment */

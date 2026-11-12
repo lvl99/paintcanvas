@@ -1,10 +1,9 @@
-import { formatErrors } from "../presets";
-import { validatePaletteFile } from "../validation/validators.generated.js";
+import AssetFile from "../assets";
+import { validateColourPaletteCollection } from "../validation/validators.generated.js";
 import {
-  PALETTE_FILE_FORMAT,
-  PALETTE_FILE_FORMATS,
-  PALETTE_FILE_VERSION,
-  type PaletteFile,
+  COLOUR_PALETTE_COLLECTION_SCHEMA_VERSION,
+  COLOUR_PALETTE_COLLECTION_TYPE,
+  type ColourPalette,
 } from "./schema";
 
 export * from "./schema";
@@ -28,75 +27,39 @@ export const DEFAULT_PALETTE: readonly string[] = [
   "#ffffff",
 ];
 
-/** Messages shown when importing or exporting a palette fails */
-export const PALETTE_FILE_ERRORS = {
-  incompatible: "Colour palette JSON file not compatible",
-  read: "Failed to read colour palette JSON file",
-} as const;
-
-/** Importing a palette failed, with a message for the user */
-export class PaletteFileError extends Error {}
-
-/** Result of checking a palette file */
-export type PaletteValidationResult =
-  { valid: true; value: PaletteFile } | { valid: false; errors: string[] };
+/** Name given to the palette in a colour palette file from before versioned schemas */
+export const LEGACY_PALETTE_NAME = "Imported palette";
 
 /**
- * Check a colour palette file against `paletteFileSchema`.
+ * Reads and writes colour palette collection files. Files from before versioned schemas (`format` and `version: 1`,
+ * holding one list of colours) are read as one palette named `LEGACY_PALETTE_NAME`.
  *
  * @example
- * isValidPaletteFile({ format: "paintcanvas-palette", version: 1, colours: ["#ff0000"] }).valid; // true
+ * const palettes = colourPaletteFile.parse(await file.text());
  */
-export const isValidPaletteFile = (input: unknown): PaletteValidationResult =>
-  validatePaletteFile(input)
-    ? { valid: true, value: input }
-    : { valid: false, errors: formatErrors(validatePaletteFile.errors) };
-
-/**
- * The file name a palette is exported to on a day, starting with a prefix (see `PaintCanvasNames.filePrefix`).
- *
- * @example
- * paletteFileName(new Date(2026, 10, 4)); // "paintcanvas-palette-2026-11-04.json"
- */
-export const paletteFileName = (
-  date: Date = new Date(),
-  prefix = "paintcanvas",
-): string => {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${prefix}-palette-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.json`;
-};
-
-/**
- * Write colours to a colour palette file (JSON) of a format (see `PaintCanvasNames.paletteFileFormat`).
- *
- * @example
- * exportPaletteFile(["#ff0000"]); // '{ "format": "paintcanvas-palette", "version": 1, "colours": ["#ff0000"] }'
- */
-export const exportPaletteFile = (
-  colours: readonly string[],
-  format: string = PALETTE_FILE_FORMAT,
-): string =>
-  JSON.stringify({ format, version: PALETTE_FILE_VERSION, colours }, null, 2);
-
-/**
- * Read the colours (as lowercase `#rrggbb`) in a colour palette file of one of the given formats (PaintCanvas's by
- * default). Throws a `PaletteFileError` if it isn't valid JSON or a compatible file.
- *
- * @example
- * parsePaletteFile('{ "format": "paintcanvas-palette", "version": 1, "colours": ["#FF0000"] }'); // ["#ff0000"]
- */
-export const parsePaletteFile = (
-  text: string,
-  formats: readonly string[] = PALETTE_FILE_FORMATS,
-): string[] => {
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new PaletteFileError(PALETTE_FILE_ERRORS.incompatible);
-  }
-  const result = isValidPaletteFile(data);
-  if (!result.valid || !formats.includes(result.value.format))
-    throw new PaletteFileError(PALETTE_FILE_ERRORS.incompatible);
-  return result.value.colours.map((colour) => colour.toLowerCase());
-};
+export const colourPaletteFile = new AssetFile<ColourPalette>({
+  schema: "colour-palette-collection",
+  version: COLOUR_PALETTE_COLLECTION_SCHEMA_VERSION,
+  type: COLOUR_PALETTE_COLLECTION_TYPE,
+  validate: validateColourPaletteCollection,
+  fileName: "colour-palettes",
+  legacyVersion: (data) =>
+    typeof data.format === "string" && data.version === 1
+      ? "legacy-1"
+      : undefined,
+  migrations: [
+    {
+      from: "legacy-1",
+      to: "1.0.0",
+      migrate: (data) => ({
+        items: [
+          {
+            id: crypto.randomUUID(),
+            name: LEGACY_PALETTE_NAME,
+            colours: data.colours,
+          },
+        ],
+      }),
+    },
+  ],
+});
