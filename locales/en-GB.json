@@ -304,6 +304,7 @@
   "paintCanvas.settings.importFile": "Import settings file",
   "paintCanvas.settings.imported": "Settings imported",
   "paintCanvas.settings.fileIncompatible": "Settings JSON file not compatible",
+  "paintCanvas.settings.fileUnsupported": "Unsupported settings file version",
   "paintCanvas.settings.fileReadFailed": "Failed to read settings JSON file",
   "paintCanvas.settings.exportFailed": "Error exporting settings JSON file",
   "paintCanvas.settings.gpu": "Draw with the GPU",

@@ -304,6 +304,7 @@
   "paintCanvas.settings.importFile": "설정 파일 가져오기",
   "paintCanvas.settings.imported": "설정을 가져왔습니다",
   "paintCanvas.settings.fileIncompatible": "호환되지 않는 설정 JSON 파일입니다",
+  "paintCanvas.settings.fileUnsupported": "지원되지 않는 설정 파일 버전입니다",
   "paintCanvas.settings.fileReadFailed": "설정 JSON 파일을 읽지 못했습니다",
   "paintCanvas.settings.exportFailed": "설정 JSON 파일을 내보내지 못했습니다",
   "paintCanvas.settings.gpu": "GPU로 그리기",

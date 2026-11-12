@@ -3,12 +3,12 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { withoutType } from "../../validation/standalone";
 import { profileGraphSchema } from "../../profiles/schema";
 import { colourPaletteSchema } from "../../palette/schema";
+import { brushPresetSchema } from "../../presets/schema";
+import { AssetFileError } from "../../assets";
 import {
-  SETTINGS_FILE_ERRORS,
-  SETTINGS_FILE_FORMAT,
-  SETTINGS_FILE_VERSION,
-  SettingsFileError,
+  APP_SETTINGS_TYPE,
   OLDER_PALETTE_NAME,
+  appSettingsSchema,
   applySettings,
   keepOlderPalette,
   collectSettings,
@@ -17,7 +17,6 @@ import {
   keyComboSchema,
   parseSettingsFile,
   settingsFileName,
-  settingsFileSchema,
   settingsSchema,
 } from "..";
 import PaintCanvas from "../../classes/PaintCanvas";
@@ -34,12 +33,29 @@ const createApp = () =>
   });
 
 /** A settings file holding some settings */
-const file = (settings: unknown, changes: Record<string, unknown> = {}) => ({
-  format: SETTINGS_FILE_FORMAT,
-  version: SETTINGS_FILE_VERSION,
-  settings,
+const file = (settings: object, changes: Record<string, unknown> = {}) => ({
+  $schema: appSettingsSchema.$id,
+  "@type": APP_SETTINGS_TYPE,
+  ...settings,
   ...changes,
 });
+
+/** A settings file from before versioned schemas */
+const legacyFile = (settings: unknown, format = "paintcanvas-settings") => ({
+  format,
+  version: 1,
+  settings,
+});
+
+/** The reason reading a settings file fails */
+const failure = (text: string): string | undefined => {
+  try {
+    parseSettingsFile(text);
+  } catch (error) {
+    return (error as AssetFileError).reason;
+  }
+  return undefined;
+};
 
 describe("settings schemas", () => {
   it("should compile in ajv strict mode and validate settings and files", () => {
@@ -48,12 +64,23 @@ describe("settings schemas", () => {
       schemas: [
         profileGraphSchema,
         colourPaletteSchema,
-        keyComboSchema,
+        brushPresetSchema,
         settingsSchema,
+        appSettingsSchema,
       ].map(withoutType),
     });
+    expect(appSettingsSchema.$id).toBe(
+      "https://lvl99.github.io/paintcanvas/schemas/app-settings-1.0.0.json",
+    );
+    expect(appSettingsSchema["@type"]).toBe("PaintCanvas/AppSettings");
     const validateSettings = ajv.getSchema(settingsSchema.$id)!;
-    const validateFile = ajv.compile(settingsFileSchema);
+    const validateFile = ajv.getSchema(appSettingsSchema.$id)!;
+    expect(validateFile({ ...file({}), "@type": "Other" })).toBe(false);
+    expect(validateFile({ shortcuts: {} })).toBe(false);
+    // Wrapper apps' own parts are allowed
+    expect(validateFile(file({ livecanvas: { sound: true } }))).toBe(true);
+    expect(validateSettings({ palette: ["#ff0000"] })).toBe(true);
+    expect(validateFile(file({ brushes: [{ id: "not a UUID" }] }))).toBe(false);
     const settings = collectSettings(createApp());
     expect(validateSettings(settings)).toBe(true);
     expect(validateFile(file(settings))).toBe(true);
@@ -74,6 +101,7 @@ describe("settings schemas", () => {
       validateSettings({ profiles: [{ id: "a", name: "", points: [] }] }),
     ).toBe(false);
     expect(validateFile(file({ shortcuts: { cut: { key: "" } } }))).toBe(false);
+    expect(keyComboSchema.required).toEqual(["key"]);
   });
 });
 
@@ -88,7 +116,6 @@ describe("isValidSettings", () => {
 
   it.each([
     ["not an object", "settings", "/ must be object"],
-    ["unknown parts", { theme: "dark" }, "additional properties"],
     [
       "an input setting that isn't on or off",
       { input: { focusPen: "yes" } },
@@ -166,8 +193,13 @@ describe("collectSettings and applySettings", () => {
       palettes: [],
       colours: { foreground: "#000000", background: "#ffffff" },
       profiles: [],
+      brushes: [],
       ui: { theme: "system", rendering: "cpu" },
     });
+  });
+
+  it("should accept parts it doesn't know, which wrapper apps check", () => {
+    expect(isValidSettings({ theme: "dark" }).valid).toBe(true);
   });
 
   it("should leave out assets when asked", () => {
@@ -182,14 +214,14 @@ describe("collectSettings and applySettings", () => {
     );
   });
 
-  it("should add profile graphs to the user's own, replacing those with the same IDs", () => {
+  it("should add profile graphs to the user's own, replacing those with the same IDs", async () => {
     const app = createApp();
     const kept = app.profiles.save({ name: "Kept", points: linearPoints() })!;
     const replaced = app.profiles.save({
       name: "Old",
       points: linearPoints(),
     })!;
-    applySettings(app, { profiles: [{ ...replaced, name: "New" }] });
+    await applySettings(app, { profiles: [{ ...replaced, name: "New" }] });
     expect(app.profiles.graphs.map(({ name }) => name)).toEqual([
       kept.name,
       "New",
@@ -207,7 +239,7 @@ describe("collectSettings and applySettings", () => {
     expect(settings.shortcuts?.deselect).toEqual({ key: "d", cmd: true });
   });
 
-  it("should use settings on another canvas", () => {
+  it("should use settings on another canvas", async () => {
     const source = createApp();
     source.input.update({ focusPen: true });
     source.shortcuts.set("tool-brush", { key: "p" });
@@ -217,22 +249,22 @@ describe("collectSettings and applySettings", () => {
     source.profiles.save({ name: "Soft", points: PROFILE_PRESETS[1]!.points });
     source.palettes.create("Sunset", ["#ff7700"], "Ada");
     const target = createApp();
-    applySettings(target, collectSettings(source));
+    await applySettings(target, collectSettings(source));
     expect(collectSettings(target)).toEqual(collectSettings(source));
   });
 
-  it("should leave out parts that aren't given", () => {
+  it("should leave out parts that aren't given", async () => {
     const app = createApp();
     const before = collectSettings(app);
-    applySettings(app, {});
+    await applySettings(app, {});
     expect(collectSettings(app)).toEqual(before);
-    applySettings(app, { palette: [] });
+    await applySettings(app, { palette: [] });
     expect(collectSettings(app)).toEqual(before);
   });
 
-  it("should move colours older versions saved in PaintCanvas's palette to one of the user's, once", () => {
+  it("should move colours older versions saved in PaintCanvas's palette to one of the user's, once", async () => {
     const app = createApp();
-    applySettings(app, { palette: ["#123456", "#ABCDEF", "red"] });
+    await applySettings(app, { palette: ["#123456", "#ABCDEF", "red"] });
     expect(app.palettes.items).toEqual([
       {
         id: expect.any(String),
@@ -241,7 +273,7 @@ describe("collectSettings and applySettings", () => {
         colours: ["#123456", "#abcdef"],
       },
     ]);
-    applySettings(app, { palette: ["#123456", "#abcdef"] });
+    await applySettings(app, { palette: ["#123456", "#abcdef"] });
     keepOlderPalette(app, [...DEFAULT_PALETTE]);
     keepOlderPalette(app, ["red"]);
     expect(app.palettes.items).toHaveLength(1);
@@ -263,30 +295,108 @@ describe("settingsFileName", () => {
 });
 
 describe("exportSettingsFile and parseSettingsFile", () => {
-  it("should write settings that read back the same", () => {
-    const settings = collectSettings(createApp());
-    const text = exportSettingsFile(settings);
+  it("should write settings that read back the same, leaving out colours older versions saved in PaintCanvas's palette", () => {
+    const app = createApp();
+    app.palettes.create("Sunset", ["#ff7700"]);
+    const settings = { ...collectSettings(app), livecanvas: { sound: true } };
+    const text = exportSettingsFile({ ...settings, palette: ["#123456"] });
     expect(JSON.parse(text)).toEqual(file(settings));
     expect(parseSettingsFile(text)).toEqual(settings);
   });
 
-  it("should write and read the implementer's own format", () => {
-    const text = exportSettingsFile({ palette: [] }, "myapp-settings");
-    expect(JSON.parse(text).format).toBe("myapp-settings");
-    expect(parseSettingsFile(text, ["myapp-settings"])).toEqual({
-      palette: [],
-    });
+  it("should read settings files from before versioned schemas, of any format", () => {
+    expect(
+      parseSettingsFile(
+        JSON.stringify(legacyFile({ palette: ["#123456"] }, "myapp-settings")),
+      ),
+    ).toEqual({ palette: ["#123456"] });
   });
 
   it.each([
-    ["isn't JSON", "{"],
-    ["has invalid settings", JSON.stringify(file({ palette: ["red"] }))],
-    ["has another version", JSON.stringify(file({}, { version: 2 }))],
-    ["has another format", JSON.stringify(file({}, { format: "other" }))],
-  ])("should throw when the file %s", (_, text) => {
-    expect(() => parseSettingsFile(text)).toThrow(SettingsFileError);
-    expect(() => parseSettingsFile(text)).toThrow(
-      SETTINGS_FILE_ERRORS.incompatible,
+    ["isn't JSON", "{", "read"],
+    ["isn't an object", "[]", "invalid"],
+    [
+      "isn't a settings file",
+      JSON.stringify({ $schema: brushPresetSchema.$id }),
+      "invalid",
+    ],
+    ["has nothing to say what it is", "{}", "invalid"],
+    [
+      "has invalid settings",
+      JSON.stringify(file({ palettes: ["red"] })),
+      "invalid",
+    ],
+    [
+      "is an older file with invalid settings",
+      JSON.stringify(legacyFile({ palette: ["red"] })),
+      "invalid",
+    ],
+    [
+      "is a newer version",
+      JSON.stringify(
+        file(
+          {},
+          {
+            $schema:
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.0.0.json",
+          },
+        ),
+      ),
+      "unsupported",
+    ],
+    [
+      "is a newer minor version",
+      JSON.stringify(
+        file(
+          {},
+          {
+            $schema:
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-1.1.0.json",
+          },
+        ),
+      ),
+      "unsupported",
+    ],
+  ])("should throw when the file %s", (_, text, reason) => {
+    expect(failure(text)).toBe(reason);
+  });
+});
+
+describe("settings extensions", () => {
+  it("should collect and apply a wrapper app's settings, and keep settings for one not added yet", async () => {
+    const app = createApp();
+    await applySettings(app, { livecanvas: { sound: true }, other: 1 });
+    expect(collectSettings(app)).toMatchObject({
+      livecanvas: { sound: true },
+      other: 1,
+    });
+    let sound = false;
+    app.settingsExtensions.add({
+      key: "livecanvas",
+      validate: (value): value is { sound: boolean } =>
+        typeof (value as { sound?: unknown })?.sound === "boolean",
+      collect: () => ({ sound }),
+      apply: (value) => (sound = value.sound),
+    });
+    expect(sound).toBe(true);
+    sound = false;
+    expect(collectSettings(app).livecanvas).toEqual({ sound: false });
+    await applySettings(app, { livecanvas: { sound: "loud" } });
+    expect(sound).toBe(false);
+    await applySettings(app, { livecanvas: { sound: true } });
+    expect(sound).toBe(true);
+  });
+
+  it("should add the brush presets in settings, leaving out invalid ones", async () => {
+    const app = createApp();
+    const preset = { id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a", name: "Mine" };
+    await applySettings(app, {
+      brushes: [preset, { id: "round1" } as never],
+    });
+    expect(app.customPresets.presets).toEqual([preset]);
+    expect(collectSettings(app).brushes).toEqual([preset]);
+    expect(collectSettings(app, { without: ["brushes"] })).not.toHaveProperty(
+      "brushes",
     );
   });
 });

@@ -68,7 +68,16 @@ export default class SettingsAutosave extends EventTarget {
   /** The canvas parts whose changes are saved */
   private get sources(): EventTarget[] {
     const { app } = this;
-    return [app, app.input, app.shortcuts, app.palettes, app.profiles, app.ui];
+    return [
+      app,
+      app.input,
+      app.shortcuts,
+      app.palettes,
+      app.profiles,
+      app.customPresets,
+      app.settingsExtensions,
+      app.ui,
+    ];
   }
 
   /**
@@ -107,7 +116,7 @@ export default class SettingsAutosave extends EventTarget {
     try {
       const result = isValidSettings(await this.store.load());
       if (result.valid && !this.stopped) {
-        applySettings(this.app, result.value);
+        await applySettings(this.app, result.value);
         older = result.value.palette !== undefined;
       }
     } catch (error) {
@@ -128,7 +137,7 @@ export default class SettingsAutosave extends EventTarget {
   private collect() {
     const stores = this.app.assetStores;
     return collectSettings(this.app, {
-      without: (["palettes", "profiles"] as const).filter(
+      without: (["brushes", "palettes", "profiles"] as const).filter(
         (kind) => stores[kind] !== undefined,
       ),
     });

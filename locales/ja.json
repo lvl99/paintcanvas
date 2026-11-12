@@ -304,6 +304,7 @@
   "paintCanvas.settings.importFile": "設定ファイルを読み込む",
   "paintCanvas.settings.imported": "設定を読み込みました",
   "paintCanvas.settings.fileIncompatible": "この設定のJSONファイルには対応していません",
+  "paintCanvas.settings.fileUnsupported": "サポートされていない設定ファイルのバージョンです",
   "paintCanvas.settings.fileReadFailed": "設定のJSONファイルを読み込めませんでした",
   "paintCanvas.settings.exportFailed": "設定のJSONファイルを書き出せませんでした",
   "paintCanvas.settings.gpu": "GPU で描画する",

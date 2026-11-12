@@ -22,7 +22,7 @@ describe("generateValidatorsCode", () => {
     expect(code).toContain("export const validateHistoryMessage");
     expect(code).toContain("export const validateDocument");
     expect(code).toContain("export const validateSettings");
-    expect(code).toContain("export const validateSettingsFile");
+    expect(code).toContain("export const validateAppSettings");
     expect(code).not.toMatch(/require\(|new Function|eval\(/);
   });
 

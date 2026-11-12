@@ -155,7 +155,9 @@ With a `settings-store` name, the layout keeps the user's app settings and asset
 
 The theme and language are applied by the elements that change them, given the canvas's `ui`: `<pc-theme-picker>` (`picker.settings = canvas.ui`) sets the page's theme, and `<pc-input-settings>` (`inputSettings.ui = canvas.ui`) switches the language. Until the user picks a language, the device's is used.
 
-Without the layout, use `SettingsAutosave` (`@lvl99dotcom/paintcanvas/lib/classes/SettingsAutosave`) with `IndexedDbSettingsStore` (`@lvl99dotcom/paintcanvas/lib/storage`), or your own store with `load` and `save`. Settings are exported and imported as JSON files matching `settingsFileSchema` from `@lvl99dotcom/paintcanvas/lib/settings`:
+Without the layout, use `SettingsAutosave` (`@lvl99dotcom/paintcanvas/lib/classes/SettingsAutosave`) with `IndexedDbSettingsStore` (`@lvl99dotcom/paintcanvas/lib/storage`), or your own store with `load` and `save`.
+
+Settings are exported and imported as app settings files, matching the [app settings schema](./schemas.md) (`app-settings-1.0.0.json`, `@type` `PaintCanvas/AppSettings`). A file also holds the user's colour palettes, profile graphs and brush presets; importing one adds them to the user's own. Settings files from before versioned schemas are read too.
 
 ```ts
 import {
@@ -165,9 +167,31 @@ import {
   parseSettingsFile,
 } from "@lvl99dotcom/paintcanvas/lib/settings";
 
-const text = exportSettingsFile(collectSettings(canvas)); // { "format": "paintcanvas-settings", "version": 1, "settings": {...} }
-applySettings(canvas, parseSettingsFile(text)); // throws a SettingsFileError for files that aren't compatible
+const text = exportSettingsFile(collectSettings(canvas)); // { "$schema": ".../app-settings-1.0.0.json", "@type": "PaintCanvas/AppSettings", ... }
+await applySettings(canvas, parseSettingsFile(text)); // throws an AssetFileError for files it can't read
 ```
+
+### Adding your app's own settings
+
+A wrapper app can keep settings of its own with PaintCanvas's, under a key of its own: they're kept wherever the app settings are, and exported, imported and checked with them.
+
+```ts
+canvas.settingsExtensions.add({
+  key: "livecanvas",
+  // Settings read from a store or a file are untrusted: check them
+  validate: (value): value is { sound: boolean } =>
+    typeof (value as { sound?: unknown })?.sound === "boolean",
+  collect: () => ({ sound: mySettings.sound }),
+  apply: (value) => mySettings.update(value),
+  // Dispatches `change` when they change, so they're saved
+  target: mySettings,
+});
+```
+
+- The key can't be one PaintCanvas uses (`RESERVED_SETTINGS_KEYS`) or another extension's.
+- Settings read before the extension is added are kept, and used when it's added, so it can be added after the settings are restored.
+- Invalid settings for an extension are ignored.
+- The app settings schema allows parts it doesn't name, so an app can publish a schema of its own that extends it (e.g. with `allOf` and a `$ref` to `app-settings-1.0.0.json`).
 
 ## Keeping the drawing
 

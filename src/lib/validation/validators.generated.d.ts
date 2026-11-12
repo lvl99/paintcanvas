@@ -4,7 +4,7 @@ import type { BrushConfig } from "../brushes/types";
 import type { ProfileGraph } from "../profiles";
 import type { DocumentFile } from "../document/schema";
 import type { ColourPalette } from "../palette/schema";
-import type { AppSettings, SettingsFile } from "../settings/schema";
+import type { AppSettings, AppSettingsFile } from "../settings/schema";
 import type {
   HistoryMessage,
   PatchMessage,
@@ -40,4 +40,4 @@ export declare const validateStrokeMessage: Validator<StrokeMessage>;
 export declare const validateHistoryMessage: Validator<HistoryMessage>;
 export declare const validateDocument: Validator<DocumentFile>;
 export declare const validateSettings: Validator<AppSettings>;
-export declare const validateSettingsFile: Validator<SettingsFile>;
+export declare const validateAppSettings: Validator<AppSettingsFile>;

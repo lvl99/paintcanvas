@@ -22,6 +22,7 @@ describe("build schemas", () => {
       "profile-graph-1.0.0.json",
       "profile-graph-collection-1.0.0.json",
       "document-1.0.0.json",
+      "app-settings-1.0.0.json",
     ]);
     for (const schema of PUBLISHED_SCHEMAS) {
       const json = JSON.parse(

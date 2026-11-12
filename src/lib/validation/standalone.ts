@@ -19,11 +19,7 @@ import {
   profileGraphCollectionSchema,
   profileGraphSchema,
 } from "../profiles/schema.ts";
-import {
-  keyComboSchema,
-  settingsFileSchema,
-  settingsSchema,
-} from "../settings/schema.ts";
+import { appSettingsSchema, settingsSchema } from "../settings/schema.ts";
 
 /**
  * A schema without its `@type` (which names what kind of thing it describes, e.g. `PaintCanvas/BrushConfig`), as ajv
@@ -69,9 +65,8 @@ export const generateValidatorsCode = (): string => {
       strokeMessageSchema,
       historyMessageSchema,
       documentSchema,
-      keyComboSchema,
       settingsSchema,
-      settingsFileSchema,
+      appSettingsSchema,
     ].map(withoutType),
     code: { source: true, esm: true },
   });
@@ -89,7 +84,7 @@ export const generateValidatorsCode = (): string => {
       validateHistoryMessage: historyMessageSchema.$id,
       validateDocument: documentSchema.$id,
       validateSettings: settingsSchema.$id,
-      validateSettingsFile: settingsFileSchema.$id,
+      validateAppSettings: appSettingsSchema.$id,
     })
   );
 };

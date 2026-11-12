@@ -33,7 +33,6 @@ describe("PaintCanvas", () => {
     expect(app.names).toEqual({
       app: "PaintCanvas",
       filePrefix: "paintcanvas",
-      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });
@@ -42,7 +41,6 @@ describe("PaintCanvas", () => {
     expect(createApp({ names: { app: "My App" } }).names).toEqual({
       app: "My App",
       filePrefix: "paintcanvas",
-      settingsFileFormat: "paintcanvas-settings",
       unknownAuthor: "Unknown",
     });
   });

@@ -15,6 +15,7 @@ import {
   profileGraphSchema,
 } from "../src/lib/profiles/schema.ts";
 import { documentSchema } from "../src/lib/document/schema.ts";
+import { appSettingsSchema } from "../src/lib/settings/schema.ts";
 import { SCHEMA_BASE_URL } from "../src/lib/schemas/index.ts";
 
 /** Where the schema files are kept */
@@ -31,6 +32,7 @@ export const PUBLISHED_SCHEMAS: readonly { $id: string }[] = [
   profileGraphSchema,
   profileGraphCollectionSchema,
   documentSchema,
+  appSettingsSchema,
 ];
 
 /**

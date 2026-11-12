@@ -304,6 +304,7 @@
   "paintCanvas.settings.importFile": "匯入設定檔",
   "paintCanvas.settings.imported": "已匯入設定",
   "paintCanvas.settings.fileIncompatible": "不相容的設定 JSON 檔案",
+  "paintCanvas.settings.fileUnsupported": "不支援的設定檔案版本",
   "paintCanvas.settings.fileReadFailed": "無法讀取設定 JSON 檔案",
   "paintCanvas.settings.exportFailed": "匯出設定 JSON 檔案時發生錯誤",
   "paintCanvas.settings.gpu": "使用 GPU 繪製",

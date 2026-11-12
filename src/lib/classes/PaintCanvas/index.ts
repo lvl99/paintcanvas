@@ -56,7 +56,7 @@ import UiSettings, { DEFAULT_UI_SETTINGS, type Rendering } from "../UiSettings";
 import Palette from "../Palette";
 import ProfileGraphs from "../ProfileGraphs";
 import ShortcutSettings from "../ShortcutSettings";
-import { SETTINGS_FILE_FORMAT } from "../../settings/schema";
+import SettingsExtensions from "../SettingsExtensions";
 import ExternalSheets from "../ExternalSheets";
 import PatchSender from "../../messages/PatchSender";
 import {
@@ -147,8 +147,6 @@ export interface PaintCanvasNames {
   app: string;
   /** Start of the names of saved files, e.g. screenshots and exported presets */
   filePrefix: string;
-  /** The `format` written in exported settings files */
-  settingsFileFormat: string;
   /** Author name of presets made by a user without a handle, e.g. from `presetAuthor` */
   unknownAuthor: string;
 }
@@ -157,7 +155,6 @@ export interface PaintCanvasNames {
 export const DEFAULT_NAMES: Readonly<PaintCanvasNames> = {
   app: BUILT_IN_AUTHOR,
   filePrefix: "paintcanvas",
-  settingsFileFormat: SETTINGS_FILE_FORMAT,
   unknownAuthor: UNKNOWN_AUTHOR,
 };
 
@@ -330,6 +327,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** Keeps the drawing in a remote store */
   private remoteDocumentAutosave?: RemoteDocumentAutosave;
+
+  /** Settings wrapper apps add to the app settings (see `SettingsExtension`) */
+  readonly settingsExtensions = new SettingsExtensions();
 
   /** The user's own colour palettes (the one PaintCanvas comes with is `palette`) */
   readonly palettes = new ColourPalettes();

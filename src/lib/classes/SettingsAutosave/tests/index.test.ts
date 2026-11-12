@@ -206,4 +206,28 @@ describe("SettingsAutosave", () => {
     expect(store.value).toEqual(collectSettings(app));
     autosave.stop();
   });
+
+  it("should restore and save the settings wrapper apps add", async () => {
+    vi.useFakeTimers();
+    const app = createApp();
+    const target = new EventTarget();
+    let sound = false;
+    app.settingsExtensions.add({
+      key: "livecanvas",
+      validate: (value): value is { sound: boolean } =>
+        typeof (value as { sound?: unknown })?.sound === "boolean",
+      collect: () => ({ sound }),
+      apply: (value) => (sound = value.sound),
+      target,
+    });
+    const store = createStore({ livecanvas: { sound: true } });
+    const autosave = new SettingsAutosave(app, store);
+    await autosave.ready;
+    expect(sound).toBe(true);
+    sound = false;
+    target.dispatchEvent(new Event("change"));
+    await vi.runAllTimersAsync();
+    expect(store.value).toMatchObject({ livecanvas: { sound: false } });
+    autosave.stop();
+  });
 });
