@@ -2,6 +2,35 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.8.0 (2026-11-12)
+
+Versioned, published schemas for every file, a store of its own for each kind of the user's data, named colour palettes, documents with details and thumbnails, saving to remote stores, and settings that wrapper apps can add to.
+
+### Fixed
+
+- Custom brush presets survive reloading the page: `<paint-canvas settings-store>` now keeps them (it gave the canvas no store for them, so they were kept in memory only).
+
+### Added
+
+- JSON schemas (draft 2020-12) published at `https://lvl99.github.io/paintcanvas/schemas/`, each with a versioned `$id` and an `@type`: brush presets, colour palettes and profile graphs (each with a collection file), documents and app settings. `pnpm build:schemas` writes new versions into `schemas/`, and published versions never change.
+- `AssetFile` (`lib/assets`) reads, writes and migrates asset collection files (`brushPresetFile`, `colourPaletteFile`, `profileGraphFile`). Files of older versions are migrated, and newer ones are refused with "Unsupported … file version". Files from before versioned schemas still import.
+- Asset stores: `AssetStoreLike` (`list`, `put`, `remove`), `IndexedDbAssetStore` and `indexedDbStores(name)`. The engine takes a `stores` option and has `useAssetStores()`. `AssetSync` keeps profile graphs and colour palettes in their stores.
+- Named colour palettes (`canvas.palettes`, `ColourPalettes`), shown above PaintCanvas's in `<pc-panel-colours>`, with New palette, Rename…, Export and Delete…. Import and Export use the user's palettes.
+- Documents with details (`canvas.documentInfo`, `renameDocument`, `newDocument`), authors and a thumbnail of at most 200px (`createDocument`, `openDocument`, `documentToFile`, `documentFromFile`). The browser autosave keeps the details too.
+- Remote document stores (`DocumentStoreLike`, `useRemoteDocumentStore`, `RemoteDocumentAutosave`): the whole document is saved every 5 minutes while it changes, or when asked. `<pc-stats>` shows a progress bar while saving. `MemoryDocumentStore` (`testing/documentStore`) is for tests, and the demo uses it with `?remote`.
+- Settings extensions (`canvas.settingsExtensions`, `SettingsExtension`): wrapper apps keep, export, import and check settings of their own with PaintCanvas's.
+- App settings files hold the user's colour palettes, profile graphs and brush presets.
+- `canvas.author`, and `createApp(options)` in `testing/app`.
+
+### Changed
+
+- **Breaking:** brush preset, colour palette, document and settings files use the new versioned formats (`$schema` and `@type`). Older files still import, but older versions can't read the new ones. `exportDocument` and `importDocument` use the new document file.
+- **Breaking:** the PaintCanvas palette (`canvas.palette`) is read-only in the UI and isn't saved with the settings. Colours older versions saved in it move to a "My colours" palette (`keepOlderPalette`).
+- **Breaking:** removed `PresetStoreLike`, the `presetStore` and `ownerId` options, `DEFAULT_OWNER_ID`, `PaintCanvasNames.presetFileFormat`, `paletteFileFormat` and `settingsFileFormat`, and the old file functions and constants (`exportPresetFile`, `parsePresetFile`, `exportPaletteFile`, `parsePaletteFile`, `PRESET_FILE_ERRORS`, `SETTINGS_FILE_ERRORS`, `SettingsFileError`, `settingsFileSchema` and the like).
+- **Breaking:** `applySettings` is async. An author's `website` is now `homepage`. Profile graph IDs must be UUIDs or a built-in graph's ID.
+- **Breaking:** the IndexedDB database is at version 3, with brushes, palettes and profiles stores. Assets kept in stores of their own are left out of the saved settings, and profile graphs in older saved settings move to their store.
+- In the brush panel, "Create" is "New brush", on its own row above Import and Export.
+
 ## 0.7.0 (2026-11-10)
 
 A setting to draw with the GPU, switches for every checkbox, clearer layer rows, a version line, and a button row that becomes a menu in narrow windows.
