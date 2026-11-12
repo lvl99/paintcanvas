@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">Messages and events | PaintCanvas</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://lvl99.github.io/paintcanvas/messages"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Messages and events | PaintCanvas"><meta data-rh="true" name="description" content="PaintCanvas doesn&#x27;t decide where drawings go. It sends messages; you carry them."><meta data-rh="true" property="og:description" content="PaintCanvas doesn&#x27;t decide where drawings go. It sends messages; you carry them."><link data-rh="true" rel="canonical" href="https://lvl99.github.io/paintcanvas/messages"><link data-rh="true" rel="alternate" href="https://lvl99.github.io/paintcanvas/messages" hreflang="en"><link data-rh="true" rel="alternate" href="https://lvl99.github.io/paintcanvas/messages" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Messages and events","item":"https://lvl99.github.io/paintcanvas/messages"}]}</script><link rel="stylesheet" href="/paintcanvas/assets/css/styles.ca101478.css">
-<script src="/paintcanvas/assets/js/runtime~main.1e34f372.js" defer="defer"></script>
-<script src="/paintcanvas/assets/js/main.537c3fee.js" defer="defer"></script>
+<script src="/paintcanvas/assets/js/runtime~main.47967681.js" defer="defer"></script>
+<script src="/paintcanvas/assets/js/main.841a0183.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -40,7 +40,7 @@
 
 
 <table><thead><tr><th>Message</th><th>Holds</th></tr></thead><tbody><tr><td><code>patch</code></td><td>A changed area of pixels (PNG or RGBA, deflated, base64)</td></tr><tr><td><code>stroke</code></td><td>A finished brush or eraser stroke: its points and brush</td></tr><tr><td><code>undo</code></td><td>A step undone</td></tr><tr><td><code>redo</code></td><td>A step redone</td></tr></tbody></table>
-<p>Every message has a <code>protocol</code> version and a <code>type</code>. <code>receive</code> checks messages first and ignores invalid ones; <code>validateCanvasMessage</code> (<code>@lvl99dotcom/paintcanvas/lib/messages</code>) checks them yourself.</p>
+<p>Every message has a <code>protocol</code> version (<code>PROTOCOL_VERSION</code>, now 2: a stroke&#x27;s <code>preset</code> holds only its brush settings, not the preset&#x27;s ID, name or author) and a <code>type</code>. <code>receive</code> checks messages first and ignores invalid ones; <code>validateCanvasMessage</code> (<code>@lvl99dotcom/paintcanvas/lib/messages</code>) checks them yourself.</p>
 <p>Other useful methods:</p>
 <ul>
 <li class=""><code>canvas.snapshot()</code>: a patch of the user&#x27;s whole drawing, e.g. for someone who joins late.</li>
