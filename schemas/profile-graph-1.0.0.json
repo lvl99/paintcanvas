@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lvl99.github.io/paintcanvas/schemas/profile-graph-1.0.0.json",
+  "@type": "PaintCanvas/ProfileGraph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "points"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "@type": {
+      "const": "PaintCanvas/ProfileGraph"
+    },
+    "id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        {
+          "enum": [
+            "linear",
+            "overweight",
+            "underweight"
+          ]
+        }
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "author": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "did": {
+              "type": "string",
+              "maxLength": 2048,
+              "pattern": "^did:[a-z]+:[a-zA-Z0-9._:%-]+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "handle": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "email": {
+              "type": "string",
+              "maxLength": 254
+            },
+            "homepage": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        }
+      ]
+    },
+    "points": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "x",
+          "y",
+          "i"
+        ],
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "y": {
+            "type": "number",
+            "minimum": -10,
+            "maximum": 0
+          },
+          "i": {
+            "enum": [
+              "linear",
+              "bezier-cubic"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
