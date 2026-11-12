@@ -2,6 +2,14 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.8.1 (2026-11-12)
+
+Much smaller validators.
+
+### Fixed
+
+- The generated validators are about a tenth of the size (339 kB built, 33 kB gzipped, down from 3.9 MB and 257 kB). Schemas used by several validators, and sub-schemas used more than once (e.g. each brush parameter's settings), were compiled into each place they're used; now each is compiled once (`shareRepeatedSchemas`). Validation and the published schemas are unchanged.
+
 ## 0.8.0 (2026-11-12)
 
 Versioned, published schemas for every file, a store of its own for each kind of the user's data, named colour palettes, documents with details and thumbnails, saving to remote stores, and settings that wrapper apps can add to.
