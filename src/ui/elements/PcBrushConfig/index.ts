@@ -111,20 +111,28 @@ const SHAPE_ERROR_KEYS: Record<string, string> = {
 /** Largest stamp spacing in pixels */
 const MAX_SPACING = 200;
 
+/** What the window's `pc-save` gives: the settings and their name, to apply to the current tool */
+export interface BrushConfigSaveDetail {
+  config: BrushConfig;
+  name: string;
+}
+
 /**
  * The brush (or eraser) configuration window: a testing area, the shape (pressing it picks a built-in shape from the
  * device's own list, which says "Custom" for an uploaded or pasted one; or upload or paste one), smoothing, width, height,
  * opacity, rotation, offsets, sample rate, spacing and snapping to the pixel grid. Width, height, opacity, rotation and the offsets can vary with
  * pressure, tilt and randomness; when any is on, the setting has a min and max, set with a `<pc-slider-range>`.
  *
- * Changes stay in the window until "Save" (fires `pc-save` with the settings, to apply to the current tool) or "Add to
- * presets" (saves them as one of the user's presets, asking before replacing one with the same name, and selects it).
+ * Changes stay in the window until "Save" (fires `pc-save` with the settings and their name, to apply to the current
+ * tool, see `BrushConfigSaveDetail`) or "Add to presets" (saves them as one of the user's presets, asking before
+ * replacing one with the same name, and selects it).
  * "Delete preset…" shows when editing one of the user's presets. It's a shaded `<pc-dialog-window>`, closed with its ⨉
  * button or Escape (not a press outside it, which would lose the changes). Fires `pc-close` when closed, and `pc-toast`
  * with a message after adding or deleting a preset, or when a shape can't be used.
  *
  * @example
- * html`<pc-brush-config .app=${app} kind="brush" .config=${app.brush.preset} @pc-save=${apply}></pc-brush-config>`
+ * html`<pc-brush-config .app=${app} kind="brush" .config=${app.brush.preset} .presetName=${app.brush.name}
+ *   @pc-save=${apply}></pc-brush-config>`
  */
 export class PcBrushConfig extends PcElement {
   static override properties = {
@@ -132,8 +140,10 @@ export class PcBrushConfig extends PcElement {
     app: { attribute: false },
     kind: { type: String },
     config: { attribute: false },
+    presetName: { attribute: false },
     editingId: { type: String },
     draft: { state: true },
+    draftName: { state: true },
     busy: { state: true },
     editingProfile: { state: true },
   };
@@ -155,11 +165,17 @@ export class PcBrushConfig extends PcElement {
   /** The settings to start from */
   declare config?: BrushConfig;
 
+  /** The settings' name to start from */
+  declare presetName?: string;
+
   /** The ID of the user's own preset being edited, if any (shows "Delete preset…") */
   declare editingId?: string;
 
   /** The settings as changed in the window */
   declare draft?: BrushConfig;
+
+  /** The settings' name as changed in the window */
+  declare draftName: string;
 
   /** Whether a preset is being saved or deleted */
   declare busy: boolean;
@@ -188,12 +204,14 @@ export class PcBrushConfig extends PcElement {
     super();
     this.kind = "brush";
     this.busy = false;
+    this.draftName = "";
   }
 
   protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
     super.willUpdate(changed);
     if (changed.has("config") && this.config)
       this.draft = structuredClone(this.config);
+    if (changed.has("presetName")) this.draftName = this.presetName ?? "";
   }
 
   /** Fire an event that crosses shadow DOM boundaries */
@@ -240,10 +258,14 @@ export class PcBrushConfig extends PcElement {
   }
 
   /**
-   * Apply the settings to the current tool.
+   * Apply the settings and their name to the current tool.
    */
   save(): void {
-    if (this.draft) this.emit("pc-save", this.draft);
+    if (this.draft)
+      this.emit("pc-save", {
+        config: this.draft,
+        name: this.draftName,
+      } satisfies BrushConfigSaveDetail);
   }
 
   /** Use a shape, showing why if it can't be used */
@@ -279,7 +301,7 @@ export class PcBrushConfig extends PcElement {
       await this.prompt({
         heading: this.t("paintCanvas.brushConfig.addToPresets"),
         label: this.t("paintCanvas.brushConfig.presetName"),
-        value: draft.name ?? "",
+        value: this.draftName,
         confirm: this.t("paintCanvas.common.save"),
         cancel: this.t("paintCanvas.common.cancel"),
       })
@@ -592,10 +614,10 @@ export class PcBrushConfig extends PcElement {
           ${this.t("paintCanvas.brushConfig.name")}
           <input
             class="name"
-            .value=${draft.name ?? ""}
+            .value=${this.draftName}
             ?disabled=${this.busy}
             @input=${(e: Event) =>
-              this.change({ name: (e.target as HTMLInputElement).value })}
+              (this.draftName = (e.target as HTMLInputElement).value)}
           />
         </label>
         <div slot="body" class="settings">
@@ -696,6 +718,7 @@ export class PcBrushConfig extends PcElement {
     const variation = draft[key] as BrushParamConfig;
     return html`<pc-profile-editor
       .profiles=${this.app?.profiles ?? this.profiles}
+      .author=${this.app?.author}
       .points=${variation.profile}
       profile-id=${variation.profileId ?? (variation.profile ? nothing : LINEAR_PROFILE_ID)}
       label=${this.t(PARAM_LABELS[param])}

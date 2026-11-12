@@ -7,6 +7,7 @@ import PaintCanvas from "../../PaintCanvas";
 import { createFakeCanvasFactory } from "../../../../testing/fakeCanvas";
 import type { SettingsStoreLike } from "../../../storage";
 import { collectSettings, type AppSettings } from "../../../settings";
+import { testPalette, testProfile } from "../../../../testing/assets";
 
 const createApp = () =>
   new PaintCanvas({
@@ -36,11 +37,10 @@ describe("SettingsAutosave", () => {
   it("should restore saved settings, then save changes after a pause", async () => {
     vi.useFakeTimers();
     const app = createApp();
-    const sunset = {
+    const sunset = testPalette(["#123456"], {
       id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
       name: "Sunset",
-      colours: ["#123456"],
-    };
+    });
     const store = createStore({
       palettes: [sunset],
       colours: { foreground: "#ff0000", background: "#00ff00" },
@@ -167,14 +167,13 @@ describe("SettingsAutosave", () => {
   });
 
   it("should leave profile graphs out of the saved settings while a profile store keeps them, adding restored ones", async () => {
-    const graph = {
-      id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
-      name: "Soft",
-      points: [
+    const graph = testProfile(
+      [
         { x: 0, y: -10, i: "linear" as const },
         { x: 10, y: 0, i: "linear" as const },
       ],
-    };
+      { id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a", name: "Soft" },
+    );
     const app = createApp();
     const profiles = {
       list: vi.fn(async () => []),
@@ -199,11 +198,33 @@ describe("SettingsAutosave", () => {
     const autosave = new SettingsAutosave(app, store);
     await autosave.ready;
     expect(app.palettes.items).toMatchObject([
-      { name: "My colours", colours: ["#123456", "#abcdef"] },
+      { name: "My colours", content: { colours: ["#123456", "#abcdef"] } },
     ]);
     expect(store.save).toHaveBeenCalledOnce();
     expect(store.value).not.toHaveProperty("palette");
     expect(store.value).toEqual(collectSettings(app));
+    autosave.stop();
+  });
+
+  it("should upgrade assets of version 1 in saved settings, saving the settings again with them upgraded", async () => {
+    const app = new PaintCanvas({
+      createCanvas: createFakeCanvasFactory(),
+      presetAuthor: () => "Ada",
+    });
+    const id = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
+    const store = createStore({
+      palettes: [{ id, name: "Sunset", colours: ["#123456"] }],
+    });
+    const autosave = new SettingsAutosave(app, store);
+    await autosave.ready;
+    const upgraded = testPalette(["#123456"], {
+      id,
+      name: "Sunset",
+      author: "Ada",
+    });
+    expect(app.palettes.items).toEqual([upgraded]);
+    expect(store.save).toHaveBeenCalledOnce();
+    expect((store.value as AppSettings).palettes).toEqual([upgraded]);
     autosave.stop();
   });
 

@@ -294,7 +294,12 @@ export class PcPanelColours extends PcPanel {
   shown(): ShownPalette[] {
     const app = this.app as PaintCanvas;
     return [
-      ...app.palettes.items.map((palette) => ({ ...palette, own: true })),
+      ...app.palettes.items.map(({ id, name, content }) => ({
+        id,
+        name,
+        colours: content.colours,
+        own: true,
+      })),
       {
         id: DEFAULT_PALETTE_ID,
         name: app.names.app,
@@ -309,7 +314,7 @@ export class PcPanelColours extends PcPanel {
     const app = this.app as PaintCanvas;
     return palette === DEFAULT_PALETTE_ID
       ? app.palette.colours
-      : (app.palettes.get(palette)?.colours ?? []);
+      : (app.palettes.get(palette)?.content.colours ?? []);
   }
 
   /** The saved colour at a position */
@@ -605,7 +610,9 @@ export class PcPanelColours extends PcPanel {
     const app = this.app;
     if (!app) return;
     try {
-      const palettes = colourPaletteFile.parse(await file.text());
+      const palettes = colourPaletteFile.parse(await file.text(), {
+        author: app.author,
+      });
       const count = app.palettes.merge(palettes);
       emit(this, "pc-toast", {
         message: this.t("paintCanvas.palette.imported", { count }),

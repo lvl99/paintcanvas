@@ -1,8 +1,10 @@
-import AssetFile from "../assets";
+import AssetFile, { assetsToVersion2 } from "../assets";
 import { validateColourPaletteCollection } from "../validation/validators.generated.js";
 import {
   COLOUR_PALETTE_COLLECTION_SCHEMA_VERSION,
   COLOUR_PALETTE_COLLECTION_TYPE,
+  COLOUR_PALETTE_TYPE,
+  UNTITLED_PALETTE_NAME,
   type ColourPalette,
 } from "./schema";
 
@@ -32,7 +34,8 @@ export const LEGACY_PALETTE_NAME = "Imported palette";
 
 /**
  * Reads and writes colour palette collection files. Files from before versioned schemas (`format` and `version: 1`,
- * holding one list of colours) are read as one palette named `LEGACY_PALETTE_NAME`.
+ * holding one list of colours) are read as one palette named `LEGACY_PALETTE_NAME`, and files of version 1 are
+ * migrated.
  *
  * @example
  * const palettes = colourPaletteFile.parse(await file.text());
@@ -61,5 +64,6 @@ export const colourPaletteFile = new AssetFile<ColourPalette>({
         ],
       }),
     },
+    assetsToVersion2(COLOUR_PALETTE_TYPE, UNTITLED_PALETTE_NAME),
   ],
 });

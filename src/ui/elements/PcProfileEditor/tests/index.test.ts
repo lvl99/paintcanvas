@@ -19,7 +19,8 @@ import { events, mount, query, queryAll } from "../../../../testing/elements";
 afterEach(() => document.body.replaceChildren());
 
 /** Overweight's points */
-const curved = () => PROFILE_PRESETS[1]!.points.map((point) => ({ ...point }));
+const curved = () =>
+  PROFILE_PRESETS[1]!.content.points.map((point) => ({ ...point }));
 
 /** An editor for the width, with the user's graphs, answering prompts and confirmations as given */
 const setup = async (properties: Partial<PcProfileEditor> = {}) => {
@@ -106,7 +107,7 @@ describe("pc-profile-editor", () => {
     select().value = "underweight";
     select().dispatchEvent(new Event("change"));
     await element.updateComplete;
-    expect(graph().points).toEqual(PROFILE_PRESETS[2]!.points);
+    expect(graph().points).toEqual(PROFILE_PRESETS[2]!.content.points);
     element.load("unknown");
     query(element, "pc-button.reset").click();
     await element.updateComplete;
@@ -116,6 +117,7 @@ describe("pc-profile-editor", () => {
 
   it("should use an unchanged graph as it is, and save an edited one with a name first", async () => {
     const { element, profiles, saves, edit } = await setup({
+      author: "Ada",
       profileId: "overweight",
       points: curved(),
     });
@@ -134,9 +136,11 @@ describe("pc-profile-editor", () => {
       cancel: "Cancel",
     });
     const soft = profiles.findByName("Soft")!;
+    expect(soft.author).toBe("Ada");
     expect(saves[1]).toEqual({ points: linearPoints(), profileId: soft.id });
 
-    // The same name again: asks before replacing it
+    // The same name again: asks before replacing it, and it keeps its author
+    element.author = "Bo";
     await edit(curved());
     await element.save();
     expect(element.confirm).toHaveBeenCalledWith({
@@ -146,7 +150,9 @@ describe("pc-profile-editor", () => {
       cancel: "Cancel",
       cancelling: true,
     });
-    expect(profiles.graphs).toEqual([{ ...soft, points: curved() }]);
+    expect(profiles.graphs).toEqual([
+      { ...soft, content: { points: curved() } },
+    ]);
 
     // Not saved when the name or replacing is declined
     await edit(linearPoints());

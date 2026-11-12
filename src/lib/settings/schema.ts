@@ -21,12 +21,12 @@ import {
 import type { ProfileGraph } from "../profiles/index.ts";
 import { MAX_SAVED_PROFILES, profileGraphSchema } from "../profiles/schema.ts";
 import { MAX_PRESETS_PER_FILE, brushPresetSchema } from "../presets/schema.ts";
-import type { BrushConfig } from "../brushes/types/index.ts";
+import type { BrushPreset } from "../brushes/types/index.ts";
 import { fileSchemaUrlSchema } from "../assets/schema.ts";
 import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
 /** Version of the app settings schema */
-export const APP_SETTINGS_SCHEMA_VERSION = "1.0.0";
+export const APP_SETTINGS_SCHEMA_VERSION = "2.0.0";
 
 /** `@type` of an app settings file */
 export const APP_SETTINGS_TYPE = "PaintCanvas/AppSettings";
@@ -55,7 +55,7 @@ export interface AppSettings {
   /** The user's own profile graphs */
   profiles?: ProfileGraph[];
   /** The user's own and imported brush presets */
-  brushes?: BrushConfig[];
+  brushes?: BrushPreset[];
   /** The theme, language and where canvases draw */
   ui?: Partial<UiSettingsData>;
   /** Parts added by wrapper apps, by their keys */

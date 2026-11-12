@@ -1,6 +1,6 @@
 // Types for the generated validators (see validators.generated.js).
-import type { AssetCollectionFile } from "../assets/schema";
-import type { BrushConfig } from "../brushes/types";
+import type { Asset, AssetCollectionFile } from "../assets/schema";
+import type { BrushPreset } from "../brushes/types";
 import type { ProfileGraph } from "../profiles";
 import type { DocumentFile } from "../document/schema";
 import type { ColourPalette } from "../palette/schema";
@@ -23,9 +23,12 @@ export interface Validator<T> {
   errors?: ValidationError[] | null;
 }
 
+export declare const validateAssetHeader: Validator<
+  Partial<Pick<Asset<unknown>, "author" | "group" | "version">>
+>;
 export declare const validateBrushPreset: Validator<Record<string, unknown>>;
 export declare const validateBrushPresetCollection: Validator<
-  AssetCollectionFile<BrushConfig>
+  AssetCollectionFile<BrushPreset>
 >;
 export declare const validateColourPalette: Validator<ColourPalette>;
 export declare const validateColourPaletteCollection: Validator<

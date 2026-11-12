@@ -35,6 +35,7 @@ const setup = async (props: Partial<PcBrushConfig> = {}) => {
     app,
     kind: "brush",
     config: { ...app.brush.preset, width: 20, height: 20 },
+    presetName: app.brush.name,
     ...props,
   });
   element.confirm = vi.fn(() => true);
@@ -107,9 +108,13 @@ describe("pc-brush-config", () => {
     expect(query(element, ".name-field").slot).toBe("header-start");
     expect(query(element, ".settings").slot).toBe("body");
     expect(query(element, ".actions").slot).toBe("footer-end");
+    expect(query<HTMLInputElement>(element, "input.name").value).toBe(
+      "Round 20px",
+    );
     await enter(element, "input.name", "Renamed", "input");
-    expect(draft(element).name).toBe("Renamed");
-    expect(config.name).toBe("Round 20px");
+    expect(element.draftName).toBe("Renamed");
+    expect(element.presetName).toBe("Round 20px");
+    expect(config).not.toBe(element.draft);
     // The window stays for the layout to remove
     dialogWindow.requestClose("close");
     dialogWindow.requestClose("escape");
@@ -133,7 +138,13 @@ describe("pc-brush-config", () => {
     await slide(element, "sample-rate", 100);
     await click(element, "button.save");
     expect(events).toEqual([
-      ["pc-save", expect.objectContaining({ spacing: 9, sampleRate: 100 })],
+      [
+        "pc-save",
+        {
+          config: expect.objectContaining({ spacing: 9, sampleRate: 100 }),
+          name: "Round 20px",
+        },
+      ],
     ]);
   });
 
@@ -261,7 +272,7 @@ describe("pc-brush-config", () => {
       "linear",
       app.profiles,
     ]);
-    const overweight = PROFILE_PRESETS[1]!.points;
+    const overweight = PROFILE_PRESETS[1]!.content.points;
     editor().dispatchEvent(
       new CustomEvent("pc-save", {
         detail: { points: overweight, profileId: "overweight" },
@@ -311,7 +322,7 @@ describe("pc-brush-config", () => {
 
   it("should keep profile graphs of its own without a canvas", async () => {
     const element = await mount<PcBrushConfig>("pc-brush-config", {
-      config: { id: "a", heightConfig: { useRandomise: true } },
+      config: { heightConfig: { useRandomise: true } },
     });
     await click(element, "button.profile.height");
     expect(
@@ -353,13 +364,13 @@ describe("pc-brush-config", () => {
 
   it("should choose smoothing, showing old presets' None as Linear", async () => {
     const { element } = await setup({
-      config: { id: "a", smoothingType: SmoothingType.None },
+      config: { smoothingType: SmoothingType.None },
     });
     const radios = queryAll<HTMLInputElement>(element, "input[name=smoothing]");
     expect(radios.map((radio) => radio.checked)).toEqual([true, false, false]);
     radios[2]!.dispatchEvent(new Event("change"));
     expect(draft(element).smoothingType).toBe(SmoothingType.BezierCubic);
-    element.config = { id: "b", smoothingType: SmoothingType.BezierQuad };
+    element.config = { smoothingType: SmoothingType.BezierQuad };
     await element.updateComplete;
     expect(
       queryAll<HTMLInputElement>(element, "input[name=smoothing]").map(
@@ -454,7 +465,7 @@ describe("pc-brush-config", () => {
   });
 
   it("should pick a built-in shape at width 1 when the settings have no width", async () => {
-    const { element } = await setup({ config: { id: "a" } });
+    const { element } = await setup({ config: {} });
     const select = query<HTMLSelectElement>(element, "select.shape-select");
     // No image: drawn round
     expect(select.value).toBe("round");
@@ -465,7 +476,7 @@ describe("pc-brush-config", () => {
   });
 
   it("should size an uploaded shape from its own width when the settings have none", async () => {
-    const { element } = await setup({ config: { id: "a" } });
+    const { element } = await setup({ config: {} });
     await click(element, "button.paste");
     expect(draft(element)).toMatchObject({ height: 20 });
   });
@@ -477,7 +488,7 @@ describe("pc-brush-config", () => {
     const [saved] = app.customPresets.presets;
     expect(saved).toMatchObject({
       name: "My brush",
-      spacing: 7,
+      content: { spacing: 7 },
       author: { handle: TEST_HANDLE },
     });
     expect(app.brush.presetId).toBe(saved!.id);
@@ -533,7 +544,7 @@ describe("pc-brush-config", () => {
     const { app, element, events } = await setup();
     expect(queryAll(element, "button.delete")).toHaveLength(0);
     await element.deletePreset();
-    const preset = app.newPreset({ id: "x" }, "Old brush");
+    const preset = app.newPreset({}, "Old brush");
     await app.customPresets.save(preset);
     element.editingId = preset.id;
     await element.updateComplete;
@@ -566,7 +577,7 @@ describe("pc-brush-config", () => {
 
   it("should do nothing without an app", async () => {
     const element = await mount<PcBrushConfig>("pc-brush-config", {
-      config: { id: "a" },
+      config: {},
     });
     await element.addToPresets();
     element.editingId = "a";
@@ -576,7 +587,7 @@ describe("pc-brush-config", () => {
 
   it("should ask in dialogs and use the clipboard by default", async () => {
     const element = await mount<PcBrushConfig>("pc-brush-config", {
-      config: { id: "a" },
+      config: {},
     });
     const question = { heading: "Sure?", confirm: "Yes", cancel: "No" };
     /** The dialog asking, in the window */
@@ -613,11 +624,12 @@ describe("pc-brush-config", () => {
 
   it("should handle settings without a size or name", async () => {
     const { element } = await setup({
-      config: { id: "a", constrainProportions: true },
+      config: { constrainProportions: true },
+      presetName: undefined,
     });
     await slide(element, "width", 8);
     expect([draft(element).width, draft(element).height]).toEqual([8, 8]);
-    element.draft = { id: "b", constrainProportions: true };
+    element.draft = { constrainProportions: true };
     await element.updateComplete;
     await click(element, "input.width.randomise");
     expect(draft(element).height).toBe(1);
@@ -625,6 +637,13 @@ describe("pc-brush-config", () => {
     expect(element.prompt).toHaveBeenLastCalledWith(
       expect.objectContaining({ label: "Name of the preset", value: "" }),
     );
+    // A name given and taken away again
+    element.presetName = "Named";
+    await element.updateComplete;
+    expect(element.draftName).toBe("Named");
+    element.presetName = undefined;
+    await element.updateComplete;
+    expect(element.draftName).toBe("");
   });
 
   it.each(["brush", "eraser"] as const)(
@@ -639,7 +658,13 @@ describe("pc-brush-config", () => {
       expect(draft(element).snapToPixelGrid).toBe(true);
       await click(element, "button.save");
       expect(events).toEqual([
-        ["pc-save", expect.objectContaining({ snapToPixelGrid: true })],
+        [
+          "pc-save",
+          {
+            config: expect.objectContaining({ snapToPixelGrid: true }),
+            name: expect.any(String),
+          },
+        ],
       ]);
       snapSwitch.click();
       expect(draft(element).snapToPixelGrid).toBe(false);

@@ -2,10 +2,10 @@
 // Imported with extensions, as the validator build script runs this file in Node
 import { ImageEncoding, type BoundingBox } from "../image/index.ts";
 import type { BrushConfig, BrushStrokePoint } from "../brushes/types/index.ts";
-import { brushPresetSchema, UUID_PATTERN } from "../presets/schema.ts";
+import { brushConfigSchema, UUID_PATTERN } from "../presets/schema.ts";
 
-/** Version of the drawing message protocol, sent in every message */
-export const PROTOCOL_VERSION = 1;
+/** Version of the drawing message protocol, sent in every message (2: a stroke's preset is only its brush settings) */
+export const PROTOCOL_VERSION = 2;
 
 /** Kinds of drawing message */
 export const CanvasMessageType = {
@@ -94,15 +94,10 @@ const coordinate = {
 } as const;
 const number = { type: "number" } as const;
 
-/** JSON schema for the brush settings in a stroke message: a brush preset whose ID can be any name (built-in presets
- * have names like `round1`, not UUIDs) */
+/** JSON schema for the brush settings in a stroke message: a brush preset's content */
 export const strokePresetSchema = {
-  ...brushPresetSchema,
+  ...brushConfigSchema,
   $id: "paintcanvas/stroke-preset",
-  properties: {
-    ...brushPresetSchema.properties,
-    id: { type: "string", minLength: 1, maxLength: 100 },
-  },
 } as const;
 
 /** JSON schema for a patch message */

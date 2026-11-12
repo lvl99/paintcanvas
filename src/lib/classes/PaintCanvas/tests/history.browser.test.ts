@@ -38,7 +38,6 @@ describe("undo and redo in a real browser", () => {
         layer,
         mode: "paint",
         preset: {
-          id: "p",
           spacing: 1,
           sampleRate: 10,
           smoothingType: SmoothingType.Linear,

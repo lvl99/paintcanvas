@@ -7,14 +7,18 @@ import {
   linearPoints,
 } from "../../../profiles";
 import {
-  MAX_PROFILE_TEXT_LENGTH,
   MAX_SAVED_PROFILES,
+  PROFILE_GRAPH_TYPE,
+  UNTITLED_PROFILE_NAME,
 } from "../../../profiles/schema";
+import { MAX_ASSET_TEXT_LENGTH, UNKNOWN_AUTHOR } from "../../../assets/schema";
+import { testProfile } from "../../../../testing/assets";
 
 const { Linear, BezierCubic } = Interpolation;
 
 /** Overweight's points */
-const curved = () => PROFILE_PRESETS[1]!.points.map((point) => ({ ...point }));
+const curved = () =>
+  PROFILE_PRESETS[1]!.content.points.map((point) => ({ ...point }));
 
 describe("sanitisePoints", () => {
   it("should keep points on the grid with a known interpolation, from left to right", () => {
@@ -55,31 +59,76 @@ describe("sanitisePoints", () => {
 
 describe("sanitiseProfiles", () => {
   it("should keep graphs with an ID, a name and valid points, each ID once and none of the presets'", () => {
+    const soft = testProfile(curved(), { id: "a", name: " Soft ", group: "G" });
     expect(sanitiseProfiles({})).toBeUndefined();
     expect(
       sanitiseProfiles([
-        { id: "a", name: " Soft ", points: curved() },
-        { id: "a", name: "Again", points: curved() },
-        { id: "b", name: "", points: curved() },
-        { id: "", name: "No ID", points: curved() },
-        {
+        soft,
+        testProfile(curved(), { id: "a", name: "Again" }),
+        testProfile(curved(), { id: "b", name: "" }),
+        testProfile(curved(), { id: "", name: "No ID" }),
+        testProfile(curved(), {
           id: "c",
-          name: "x".repeat(MAX_PROFILE_TEXT_LENGTH + 1),
-          points: curved(),
-        },
-        { id: "d", name: "Few points", points: [] },
-        { id: "overweight", name: "Mine", points: curved() },
+          name: "x".repeat(MAX_ASSET_TEXT_LENGTH + 1),
+        }),
+        testProfile([], { id: "d", name: "Few points" }),
+        testProfile(curved(), { id: "overweight", name: "Mine" }),
+        { ...soft, id: "e", content: undefined },
         null,
       ]),
-    ).toEqual([{ id: "a", name: "Soft", points: curved() }]);
+    ).toEqual([{ ...soft, name: "Soft" }]);
+  });
+
+  it("should give graphs with an invalid author the one given, and leave out an invalid group or version", () => {
+    const graph = testProfile(curved(), {
+      id: "a",
+      author: { handle: "no.name" } as never,
+      group: "",
+      version: "",
+    });
+    expect(sanitiseProfiles([graph], "Ada")).toEqual([
+      {
+        "@type": PROFILE_GRAPH_TYPE,
+        id: "a",
+        name: graph.name,
+        author: "Ada",
+        content: { points: curved() },
+      },
+    ]);
+    expect(sanitiseProfiles([graph])?.[0]?.author).toBe(UNKNOWN_AUTHOR);
+  });
+
+  it("should upgrade graphs of version 1, naming ones without a name", () => {
+    expect(
+      sanitiseProfiles(
+        [
+          { id: "a", name: " Soft ", points: curved() },
+          { id: "b", points: curved(), author: "Bo" },
+        ],
+        "Ada",
+      ),
+    ).toEqual([
+      {
+        "@type": PROFILE_GRAPH_TYPE,
+        id: "a",
+        name: "Soft",
+        author: "Ada",
+        content: { points: curved() },
+      },
+      {
+        "@type": PROFILE_GRAPH_TYPE,
+        id: "b",
+        name: UNTITLED_PROFILE_NAME,
+        author: "Bo",
+        content: { points: curved() },
+      },
+    ]);
   });
 
   it("should keep at most the most graphs", () => {
-    const many = Array.from({ length: MAX_SAVED_PROFILES + 1 }, (_, i) => ({
-      id: `g${i}`,
-      name: `Graph ${i}`,
-      points: linearPoints(),
-    }));
+    const many = Array.from({ length: MAX_SAVED_PROFILES + 1 }, (_, i) =>
+      testProfile(linearPoints(), { id: `g${i}`, name: `Graph ${i}` }),
+    );
     expect(sanitiseProfiles(many)).toHaveLength(MAX_SAVED_PROFILES);
   });
 });
@@ -99,8 +148,13 @@ describe("ProfileGraphs", () => {
     const profiles = new ProfileGraphs();
     const change = vi.fn();
     profiles.addEventListener("change", change);
-    const soft = profiles.save({ name: "Soft", points: curved() })!;
+    const soft = profiles.save({
+      name: "Soft",
+      author: "Ada",
+      points: curved(),
+    })!;
     expect(soft.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(soft.author).toBe("Ada");
     expect(profiles.graphs).toEqual([soft]);
     expect(profiles.all.at(-1)).toEqual(soft);
     expect(profiles.get(soft.id)).toEqual(soft);
@@ -112,9 +166,11 @@ describe("ProfileGraphs", () => {
       points: linearPoints(),
     })!;
     expect(replaced).toEqual({
+      "@type": PROFILE_GRAPH_TYPE,
       id: soft.id,
       name: "Softer",
-      points: linearPoints(),
+      author: UNKNOWN_AUTHOR,
+      content: { points: linearPoints() },
     });
     expect(profiles.graphs).toEqual([replaced]);
     // An unknown ID saves a new graph
@@ -152,9 +208,14 @@ describe("ProfileGraphs", () => {
 
   it("should rename and delete the user's own graphs, but not presets", () => {
     const profiles = new ProfileGraphs();
-    const soft = profiles.save({ name: "Soft", points: curved() })!;
+    const soft = profiles.save({
+      name: "Soft",
+      author: "Ada",
+      points: curved(),
+    })!;
     expect(profiles.rename(soft.id, "Gentle")).toBe(true);
     expect(profiles.get(soft.id)?.name).toBe("Gentle");
+    expect(profiles.get(soft.id)?.author).toBe("Ada");
     expect(profiles.rename(soft.id, "")).toBe(false);
     expect(profiles.rename("overweight", "Heavy")).toBe(false);
     expect(profiles.remove("overweight")).toBe(false);

@@ -2,7 +2,8 @@
 // user's app settings (see `SettingsAutosave`) and their assets: brush presets, colour palettes and profile graphs.
 import type { LayerConfig } from "../classes/Layer";
 import type { AppSettings } from "../settings/schema";
-import type { BrushConfig } from "../brushes/types";
+import type { Asset } from "../assets/schema";
+import type { BrushPreset } from "../brushes/types";
 import type { ColourPalette } from "../palette/schema";
 import type { ProfileGraph } from "../profiles";
 import type { DocumentInfo, DrawingDocument } from "../document/schema";
@@ -291,13 +292,8 @@ export class IndexedDbSettingsStore implements SettingsStoreLike {
   }
 }
 
-/** An asset: anything with an ID */
-export interface Asset {
-  id: string;
-}
-
 /** Where assets of one kind (e.g. brush presets) are kept (see `IndexedDbAssetStore`) */
-export interface AssetStoreLike<T extends Asset> {
+export interface AssetStoreLike<T extends Asset<unknown>> {
   /** The saved assets (untrusted: check them before using them), in the order they were first saved */
   list(): Promise<unknown[]>;
   /** Save an asset, replacing one with the same ID */
@@ -326,10 +322,12 @@ interface AssetRecord {
  * (like `IndexedDbSettingsStore`'s), each in its own record so saving one doesn't rewrite the others.
  *
  * @example
- * const store = new IndexedDbAssetStore<BrushConfig>("brushes");
+ * const store = new IndexedDbAssetStore<BrushPreset>("brushes");
  * await store.put(myPreset);
  */
-export class IndexedDbAssetStore<T extends Asset> implements AssetStoreLike<T> {
+export class IndexedDbAssetStore<
+  T extends Asset<unknown>,
+> implements AssetStoreLike<T> {
   readonly kind: AssetKind;
 
   readonly name: string;
@@ -417,7 +415,7 @@ export interface DocumentStoreLike {
 
 /** Where the user's assets are kept, by kind. Assets of a kind without a store are kept in memory only. */
 export interface AssetStores {
-  brushes?: AssetStoreLike<BrushConfig>;
+  brushes?: AssetStoreLike<BrushPreset>;
   palettes?: AssetStoreLike<ColourPalette>;
   profiles?: AssetStoreLike<ProfileGraph>;
 }

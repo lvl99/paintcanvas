@@ -141,7 +141,7 @@ describe("pc-brush-test", () => {
     const begin = vi.spyOn(StrokeEngine.prototype, "begin");
     canvas.dispatchEvent(pointer("pointerdown", 0, 0));
     canvas.dispatchEvent(pointer("pointerup", 5, 0));
-    element.config = { id: "round" };
+    element.config = {};
     canvas.dispatchEvent(pointer("pointerdown", 0, 0));
     expect(begin).toHaveBeenLastCalledWith(
       expect.objectContaining({ size: { width: 1, height: 1 } }),

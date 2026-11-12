@@ -11,7 +11,7 @@ import "../PcBrushSize";
 import ChangeController from "../../ChangeController";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import type BrushSettings from "../../../lib/classes/BrushSettings";
-import type { BrushConfig } from "../../../lib/brushes/types";
+import type { BrushPreset } from "../../../lib/brushes/types";
 import {
   MY_PRESETS,
   UNKNOWN_AUTHOR,
@@ -60,16 +60,17 @@ export const MIN_PREVIEW_SIZE = 3;
  * are easy to tell apart (the largest fills the tile). Presets without a family fill the tile from 50 pixels.
  *
  * @example
- * previewSizes([{ id: "a", group: "Round", width: 10, height: 10 }, { id: "b", group: "Round", width: 50, height: 50 }]);
+ * previewSizes([{ ...round10, id: "a", content: { width: 10, height: 10 } }, { ...round50, id: "b", content: { width: 50, height: 50 } }]);
  * // Map { "a" => { width: 6, height: 6 }, "b" => { width: 30, height: 30 } }
  */
 export const previewSizes = (
-  presets: BrushConfig[],
+  presets: BrushPreset[],
 ): Map<string, { width: number; height: number }> => {
   const largest = new Map<string, number>();
   for (const preset of presets) {
     const group = preset.group ?? preset.id;
-    const size = Math.max(preset.width ?? 1, preset.height ?? 1);
+    const { width = 1, height = 1 } = preset.content;
+    const size = Math.max(width, height);
     largest.set(
       group,
       Math.max(
@@ -86,7 +87,10 @@ export const previewSizes = (
         Math.max(MIN_PREVIEW_SIZE, Math.round(value * scale));
       return [
         preset.id,
-        { width: size(preset.width), height: size(preset.height) },
+        {
+          width: size(preset.content.width),
+          height: size(preset.content.height),
+        },
       ];
     }),
   );
@@ -175,7 +179,7 @@ export class PcPanelBrushes extends PcPanel {
   /**
    * Select a preset, or with Alt/Option held, delete a custom preset after confirming.
    */
-  private onPresetClick(event: MouseEvent, preset: BrushConfig): void {
+  private onPresetClick(event: MouseEvent, preset: BrushPreset): void {
     const app = this.app as PaintCanvas;
     if (event.altKey && !app.isBuiltInPreset(preset.id)) {
       void this.deletePreset(preset);
@@ -187,10 +191,10 @@ export class PcPanelBrushes extends PcPanel {
   /**
    * Delete a custom preset after confirming.
    */
-  async deletePreset(preset: BrushConfig): Promise<void> {
+  async deletePreset(preset: BrushPreset): Promise<void> {
     const app = this.app;
     if (!app) return;
-    const name = preset.name ?? preset.id;
+    const name = preset.name;
     if (!(await this.confirm(deletePresetQuestion(this.translations, name))))
       return;
     try {
@@ -214,7 +218,9 @@ export class PcPanelBrushes extends PcPanel {
     const app = this.app;
     if (!app) return;
     try {
-      const presets = brushPresetFile.parse(await file.text());
+      const presets = brushPresetFile.parse(await file.text(), {
+        author: app.author,
+      });
       await app.customPresets.save(...presets);
       this.emit("pc-toast", {
         message: this.t("paintCanvas.presets.imported", {
@@ -290,34 +296,31 @@ export class PcPanelBrushes extends PcPanel {
   /** Render a preset's tile */
   private renderTile(
     settings: BrushSettings,
-    preset: BrushConfig,
+    preset: BrushPreset,
     sizes: Map<string, { width: number; height: number }>,
   ) {
     const size = sizes.get(preset.id) as { width: number; height: number };
     const custom = !this.app?.isBuiltInPreset(preset.id);
+    const { image, rotation } = preset.content;
     return html`<li>
       <button
         type="button"
         class=${custom ? "custom" : nothing}
         data-preset=${preset.id}
-        title=${preset.name ?? preset.id}
-        aria-label=${preset.name ?? preset.id}
+        title=${preset.name}
+        aria-label=${preset.name}
         aria-pressed=${settings.presetId === preset.id}
         @click=${(e: MouseEvent) => this.onPresetClick(e, preset)}
       >
         <span
-          class=${preset.image ? "shape image" : "shape"}
+          class=${image ? "shape image" : "shape"}
           style=${styleMap({
             width: `${size.width}px`,
             height: `${size.height}px`,
             // Only the shape image's alpha shows, as the brush uses it
             maskImage:
-              typeof preset.image === "string"
-                ? `url("${preset.image}")`
-                : undefined,
-            transform: preset.rotation
-              ? `rotate(${preset.rotation}deg)`
-              : undefined,
+              typeof image === "string" ? `url("${image}")` : undefined,
+            transform: rotation ? `rotate(${rotation}deg)` : undefined,
           })}
         ></span>
       </button>
@@ -368,7 +371,7 @@ export class PcPanelBrushes extends PcPanel {
                 : undefined,
           })}
         ></span>
-        <span class="name">${preset.name ?? preset.id}</span>
+        <span class="name">${settings.name}</span>
         <pc-brush-size
           class="size"
           .settings=${settings}

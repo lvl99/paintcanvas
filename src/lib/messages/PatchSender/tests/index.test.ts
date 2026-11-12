@@ -96,7 +96,7 @@ describe("PatchSender", () => {
     );
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
-      protocol: 1,
+      protocol: 2,
       type: "patch",
       coords: [2, 1, 3, 2],
       encoding: ImageEncoding.RgbaDeflate,

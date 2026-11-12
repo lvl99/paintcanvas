@@ -22,7 +22,6 @@ const setup = (overrides: Partial<StrokeOptions> = {}) => {
     layer,
     mode: "paint",
     preset: {
-      id: "p",
       spacing: 5,
       sampleRate: 10,
       smoothingType: SmoothingType.Linear,
@@ -292,7 +291,7 @@ describe("StrokeEngine", () => {
 
   it("should finish smoothed strokes that lag behind the pointer", () => {
     const { engine, options, canvases } = setup({
-      preset: { id: "p", spacing: 1, smoothingType: SmoothingType.BezierCubic },
+      preset: { spacing: 1, smoothingType: SmoothingType.BezierCubic },
     });
     engine.begin(options, { x: 0, y: 0 }, 0);
     engine.move({ x: 10, y: 0 }, 20);
@@ -338,13 +337,13 @@ describe("StrokeEngine", () => {
   });
 
   it("should use full opacity when the preset has no alpha, and clamp it", () => {
-    const full = setup({ preset: { id: "p" } });
+    const full = setup({ preset: {} });
     full.engine.begin(full.options, { x: 10, y: 10 }, 0);
     expect(full.canvases().working.calls).toContainEqual([
       "set:globalAlpha",
       1,
     ]);
-    const over = setup({ preset: { id: "p", alpha: 5 } });
+    const over = setup({ preset: { alpha: 5 } });
     over.engine.begin(over.options, { x: 10, y: 10 }, 0);
     expect(
       over
@@ -389,7 +388,7 @@ describe("StrokeEngine", () => {
 
   it("should stamp on whole pixels when the preset snaps to the pixel grid", () => {
     const { engine, options, canvases } = setup({
-      preset: { id: "p", spacing: 5, snapToPixelGrid: true },
+      preset: { spacing: 5, snapToPixelGrid: true },
       size: { width: 1.4, height: 1.4 },
     });
     engine.begin(options, { x: 10.7, y: 20.2 }, 0);

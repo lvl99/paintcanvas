@@ -1,22 +1,57 @@
-import type { BrushConfig, BrushesConfig } from "../../types";
+import { BUILT_IN_AUTHOR } from "../../../assets/schema";
+import { BRUSH_PRESET_TYPE } from "../../../presets/schema";
+import type { BrushConfig, BrushesConfig, BrushPreset } from "../../types";
 
 /** Settings that depend on a preset's size */
 export type PerSize = (size: number) => Partial<BrushConfig>;
 
+/** The header of a preset that comes with PaintCanvas (its `@type` and author are set for it) */
+export type BuiltInPresetHeader = Pick<
+  BrushPreset,
+  "id" | "name" | "group" | "version"
+>;
+
 /**
- * Make a family of presets, one per size, from the family's default config. IDs are the prefix and the size (e.g.
+ * A preset that comes with PaintCanvas, by `BUILT_IN_AUTHOR`.
+ *
+ * @example
+ * builtInPreset({ id: "pencil", name: "Pencil 4px", group: "Sketching", version: "1.0.0" }, { width: 4, height: 4 });
+ * // { "@type": "PaintCanvas/BrushPreset", id: "pencil", ..., author: "PaintCanvas", content: { width: 4, height: 4 } }
+ */
+export const builtInPreset = (
+  header: BuiltInPresetHeader,
+  content: BrushConfig,
+): BrushPreset => ({
+  "@type": BRUSH_PRESET_TYPE,
+  ...header,
+  author: BUILT_IN_AUTHOR,
+  content,
+});
+
+/** A family of presets made by `sizedPresets` */
+export interface SizedFamily {
+  /** Starts each preset's ID, which ends with its size (e.g. "round" makes "round10") */
+  idPrefix: string;
+  /** The family's name: its group, and the start of each preset's name (e.g. "Round" makes "Round 10px") */
+  name: string;
+  /** The presets' version */
+  version: string;
+}
+
+/**
+ * Make a family of presets, one per size, from the family's default settings. IDs are the prefix and the size (e.g.
  * "round10"), names the family's name and the size (e.g. "Round 10px"), and the family's name is their group.
  *
  * @param perSize - settings that depend on the size (e.g. spacing)
  * @example
- * sizedPresets("round", "Round", [1, 5], { image: ROUND_IMAGE }, (size) => ({ spacing: size }));
- * // { round1: { id: "round1", name: "Round 1px", group: "Round", width: 1, height: 1, spacing: 1, ... }, round5: ... }
+ * sizedPresets({ idPrefix: "round", name: "Round", version: "1.1.0" }, [1, 5], { image: ROUND_IMAGE },
+ *   (size) => ({ spacing: size }));
+ * // { round1: { id: "round1", name: "Round 1px", group: "Round", content: { width: 1, height: 1, spacing: 1, ... } }, ... }
  */
 export const sizedPresets = (
-  idPrefix: string,
-  name: string,
+  { idPrefix, name, version }: SizedFamily,
   sizes: number[],
-  defaults: Partial<BrushConfig>,
+  defaults: BrushConfig,
   perSize: PerSize = () => ({}),
 ): BrushesConfig =>
   Object.fromEntries(
@@ -24,15 +59,10 @@ export const sizedPresets = (
       const id = `${idPrefix}${size}`;
       return [
         id,
-        {
-          ...defaults,
-          id,
-          name: `${name} ${size}px`,
-          group: name,
-          width: size,
-          height: size,
-          ...perSize(size),
-        },
+        builtInPreset(
+          { id, name: `${name} ${size}px`, group: name, version },
+          { ...defaults, width: size, height: size, ...perSize(size) },
+        ),
       ];
     }),
   );

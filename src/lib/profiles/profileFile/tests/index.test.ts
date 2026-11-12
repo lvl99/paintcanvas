@@ -1,15 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { profileGraphFile } from "..";
-import { AssetFileError } from "../../../assets";
-import { Interpolation } from "../..";
+import { AssetFileError, UNKNOWN_AUTHOR } from "../../../assets";
+import { Interpolation, PROFILE_GRAPH_TYPE } from "../..";
+import { UNTITLED_PROFILE_NAME } from "../../schema";
+
+const points = [
+  { x: 0, y: -10, i: Interpolation.Linear },
+  { x: 10, y: 0, i: Interpolation.Linear },
+];
 
 const graph = {
+  "@type": PROFILE_GRAPH_TYPE,
   id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
   name: "Soft",
-  points: [
-    { x: 0, y: -10, i: Interpolation.Linear },
-    { x: 10, y: 0, i: Interpolation.Linear },
-  ],
+  author: "Ada",
+  content: { points },
 };
 
 describe("profileGraphFile", () => {
@@ -17,7 +22,7 @@ describe("profileGraphFile", () => {
     const json = profileGraphFile.write([graph]);
     expect(JSON.parse(json)).toEqual({
       $schema:
-        "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-1.0.0.json",
+        "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.0.0.json",
       "@type": "PaintCanvas/ProfileGraphCollection",
       items: [graph],
     });
@@ -38,5 +43,22 @@ describe("profileGraphFile", () => {
     expect(() => profileGraphFile.read({ items: [graph] })).toThrow(
       new AssetFileError("invalid"),
     );
+  });
+
+  it("should read files of version 1, giving graphs without a name or author defaults", () => {
+    const file = {
+      $schema:
+        "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-1.0.0.json",
+      "@type": "PaintCanvas/ProfileGraphCollection",
+      items: [
+        { id: graph.id, name: "Soft", author: "Bo", points },
+        { id: graph.id, points },
+      ],
+    };
+    expect(profileGraphFile.read(file, { author: "Ada" })).toEqual([
+      { ...graph, author: "Bo" },
+      { ...graph, name: UNTITLED_PROFILE_NAME },
+    ]);
+    expect(profileGraphFile.read(file)[1]?.author).toBe(UNKNOWN_AUTHOR);
   });
 });

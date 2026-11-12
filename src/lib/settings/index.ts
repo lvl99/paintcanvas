@@ -1,11 +1,22 @@
-import { formatErrors, isValidBrushPreset } from "../presets";
+import {
+  BRUSH_PRESET_TYPE,
+  UNTITLED_PRESET_NAME,
+  formatErrors,
+} from "../presets";
+import { COLOUR_PALETTE_TYPE, UNTITLED_PALETTE_NAME } from "../palette/schema";
+import { PROFILE_GRAPH_TYPE, UNTITLED_PROFILE_NAME } from "../profiles/schema";
+import { sanitiseBrushPresets } from "../classes/CustomPresets";
 import {
   validateAppSettings,
   validateSettings,
 } from "../validation/validators.generated.js";
-import { AssetFileError } from "../assets";
+import {
+  AssetFileError,
+  UNKNOWN_AUTHOR,
+  upgradeAsset,
+  type AssetAuthor,
+} from "../assets";
 import { compareVersions, majorVersion, parseSchemaUrl } from "../schemas";
-import type { BrushConfig } from "../brushes/types";
 import type PaintCanvas from "../classes/PaintCanvas";
 import type { InputSettingsData } from "../classes/InputSettings";
 import { sanitisePalette } from "../classes/Palette";
@@ -23,16 +34,73 @@ export * from "./schema";
 export type SettingsValidationResult =
   { valid: true; value: AppSettings } | { valid: false; errors: string[] };
 
+/** Whether a value is a plain object */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** The assets app settings hold: their key, `@type`, and the name given to older ones without one */
+const SETTINGS_ASSETS = [
+  ["palettes", COLOUR_PALETTE_TYPE, UNTITLED_PALETTE_NAME],
+  ["profiles", PROFILE_GRAPH_TYPE, UNTITLED_PROFILE_NAME],
+  ["brushes", BRUSH_PRESET_TYPE, UNTITLED_PRESET_NAME],
+] as const;
+
 /**
- * Check app settings (e.g. kept in the browser) against `settingsSchema`.
+ * Whether app settings hold assets of version 1 (see `upgradeSettings`).
  *
+ * @example
+ * hasOlderAssets({ palettes: [{ id: "…", name: "Sunset", colours: [] }] }); // true
+ */
+export const hasOlderAssets = (input: unknown): boolean =>
+  isRecord(input) &&
+  SETTINGS_ASSETS.some(
+    ([key]) =>
+      Array.isArray(input[key]) &&
+      input[key].some((item) => isRecord(item) && !("content" in item)),
+  );
+
+/**
+ * App settings with their colour palettes, profile graphs and brush presets of version 1 upgraded to version 2 (see
+ * `upgradeAsset`). Anything else is left as it is.
+ *
+ * @param author - the author of older assets with none
+ * @example
+ * upgradeSettings({ palettes: [{ id: "…", name: "Sunset", colours: [] }] }, app.author);
+ * // { palettes: [{ "@type": "PaintCanvas/ColourPalette", id: "…", name: "Sunset", author, content: { colours: [] } }] }
+ */
+export const upgradeSettings = (
+  input: unknown,
+  author: AssetAuthor = UNKNOWN_AUTHOR,
+): unknown => {
+  if (!isRecord(input)) return input;
+  const upgraded = { ...input };
+  for (const [key, type, name] of SETTINGS_ASSETS) {
+    const items = input[key];
+    if (Array.isArray(items))
+      upgraded[key] = items.map((item) =>
+        upgradeAsset(item, type, { name, author }),
+      );
+  }
+  return upgraded;
+};
+
+/**
+ * Check app settings (e.g. kept in the browser) against `settingsSchema`, upgrading assets of version 1 first (see
+ * `upgradeSettings`).
+ *
+ * @param author - the author of older assets with none
  * @example
  * isValidSettings({ palette: ["#ff0000"] }).valid; // true
  */
-export const isValidSettings = (input: unknown): SettingsValidationResult =>
-  validateSettings(input)
-    ? { valid: true, value: input }
+export const isValidSettings = (
+  input: unknown,
+  author?: AssetAuthor,
+): SettingsValidationResult => {
+  const settings = upgradeSettings(input, author);
+  return validateSettings(settings)
+    ? { valid: true, value: settings }
     : { valid: false, errors: formatErrors(validateSettings.errors) };
+};
 
 /** Assets that app settings can hold */
 export type SettingsAsset = "brushes" | "palettes" | "profiles";
@@ -93,7 +161,7 @@ export const keepOlderPalette = (
   if (
     valid.length === 0 ||
     same(app.palette.colours) ||
-    app.palettes.items.some((palette) => same(palette.colours))
+    app.palettes.items.some((palette) => same(palette.content.colours))
   )
     return;
   app.palettes.create(OLDER_PALETTE_NAME, valid, app.author);
@@ -116,19 +184,17 @@ export const applySettings = async (
   if (settings.input) app.input.update(settings.input);
   if (settings.shortcuts) app.shortcuts.load(settings.shortcuts);
   if (settings.palette) keepOlderPalette(app, settings.palette);
-  if (settings.palettes) app.palettes.merge(settings.palettes);
+  if (settings.palettes) app.palettes.merge(settings.palettes, app.author);
   if (settings.colours) {
     app.setColour(settings.colours.foreground, "foreground");
     app.setColour(settings.colours.background, "background");
   }
-  if (settings.profiles) app.profiles.merge(settings.profiles);
+  if (settings.profiles) app.profiles.merge(settings.profiles, app.author);
   if (settings.ui) app.ui.update(settings.ui);
   app.settingsExtensions.apply(settings);
   if (Array.isArray(settings.brushes))
     await app.customPresets.save(
-      ...settings.brushes.filter(
-        (preset): preset is BrushConfig => isValidBrushPreset(preset).valid,
-      ),
+      ...sanitiseBrushPresets(settings.brushes, app.author),
     );
 };
 
@@ -150,7 +216,7 @@ export const settingsFileName = (
  * Write app settings to an app settings file (JSON). Colours older versions saved in PaintCanvas's palette are left out.
  *
  * @example
- * exportSettingsFile(collectSettings(canvas)); // '{ "$schema": ".../app-settings-1.0.0.json", "@type": "PaintCanvas/AppSettings", ... }'
+ * exportSettingsFile(collectSettings(canvas)); // '{ "$schema": ".../app-settings-2.0.0.json", "@type": "PaintCanvas/AppSettings", ... }'
  */
 export const exportSettingsFile = (settings: AppSettings): string => {
   const parts: AppSettings = { ...settings };
@@ -163,19 +229,20 @@ export const exportSettingsFile = (settings: AppSettings): string => {
   return JSON.stringify(file, null, 2);
 };
 
-/** Whether a value is a plain object */
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 /**
  * Read the app settings in an app settings file. Settings files from before versioned schemas (`format`, `version: 1`
- * and `settings`, of any format name) are read too. Throws an `AssetFileError`: `read` if it isn't JSON, `invalid` if it
- * isn't a settings file or doesn't match its schema, `unsupported` if it's a version the app can't read.
+ * and `settings`, of any format name) and of version 1 are read too, with their assets upgraded (see
+ * `upgradeSettings`). Throws an `AssetFileError`: `read` if it isn't JSON, `invalid` if it isn't a settings file or
+ * doesn't match its schema, `unsupported` if it's a version the app can't read.
  *
+ * @param author - the author of older assets with none
  * @example
- * await applySettings(canvas, parseSettingsFile(text));
+ * await applySettings(canvas, parseSettingsFile(text, canvas.author));
  */
-export const parseSettingsFile = (text: string): AppSettings => {
+export const parseSettingsFile = (
+  text: string,
+  author?: AssetAuthor,
+): AppSettings => {
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -185,13 +252,19 @@ export const parseSettingsFile = (text: string): AppSettings => {
   if (!isRecord(data)) throw new AssetFileError("invalid");
   // Older files keep their settings in `settings`; those are checked as kept in the browser
   if (typeof data.format === "string" && data.version === 1) {
-    const result = isValidSettings(data.settings);
+    const result = isValidSettings(data.settings, author);
     if (!result.valid) throw new AssetFileError("invalid");
     return result.value;
   }
   const named = parseSchemaUrl(data.$schema);
   if (named?.name !== "app-settings") throw new AssetFileError("invalid");
-  if (
+  // Version 1 only differs in its assets, which are upgraded
+  if (majorVersion(named.version) === 1)
+    data = {
+      ...(upgradeSettings(data, author) as Record<string, unknown>),
+      $schema: appSettingsSchema.$id,
+    };
+  else if (
     majorVersion(named.version) !== majorVersion(APP_SETTINGS_SCHEMA_VERSION) ||
     compareVersions(named.version, APP_SETTINGS_SCHEMA_VERSION) > 0
   )

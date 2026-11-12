@@ -10,6 +10,7 @@ import { createApp } from "../../../../testing/app";
 import { DEFAULT_PALETTE, colourPaletteFile } from "../../../../lib/palette";
 import type PaintCanvas from "../../../../lib/classes/PaintCanvas";
 import { DEFAULT_PALETTE_ID } from "../../../../lib/classes/ColourPalettes";
+import { testPalette } from "../../../../testing/assets";
 
 /** A colour palette file holding palettes of the given colours */
 const paletteFile = (...palettes: string[][]): File =>
@@ -17,11 +18,9 @@ const paletteFile = (...palettes: string[][]): File =>
     [
       palettes.length > 0
         ? colourPaletteFile.write(
-            palettes.map((colours, i) => ({
-              id: crypto.randomUUID(),
-              name: `Palette ${i + 1}`,
-              colours,
-            })),
+            palettes.map((colours, i) =>
+              testPalette(colours, { name: `Palette ${i + 1}` }),
+            ),
           )
         : JSON.stringify({
             $schema: colourPaletteFile.schemaUrl,
@@ -41,12 +40,12 @@ afterEach(() => {
 const MINE = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
 
 /** The colours of the user's palette in `setup` */
-const mine = (app: PaintCanvas) => app.palettes.get(MINE)?.colours;
+const mine = (app: PaintCanvas) => app.palettes.get(MINE)?.content.colours;
 
 /** The palette for a new canvas with a user's palette of a few colours ("Mine"), open as the canvas's panel */
 const setup = async (colours = ["#ff0000", "#00ff00", "#0000ff"]) => {
   const app = createApp();
-  app.palettes.set([{ id: MINE, name: "Mine", colours }]);
+  app.palettes.set([testPalette(colours, { id: MINE, name: "Mine" })]);
   app.togglePanel(Panel.Palette);
   const element = await mount<PcPanelColours>("pc-panel-colours", { app });
   const toasts = events<{ message: string; kind: string }>(element, "pc-toast");
@@ -564,7 +563,7 @@ describe("pc-panel-colours", () => {
       paletteFile(["#ff0000", "#123456"], ["#abcdef", "#123456"]),
     );
     expect(
-      app.palettes.items.map(({ name, colours }) => [name, colours]),
+      app.palettes.items.map(({ name, content }) => [name, content.colours]),
     ).toEqual([
       ["Mine", ["#ff0000", "#00ff00", "#0000ff"]],
       ["Palette 1", ["#ff0000", "#123456"]],
@@ -592,9 +591,11 @@ describe("pc-panel-colours", () => {
         "p.json",
       ),
     );
-    expect(app.palettes.items.map(({ colours }) => colours)).toEqual([
+    expect(app.palettes.items.map(({ content }) => content.colours)).toEqual([
       ["#123456"],
     ]);
+    // It's the user's own
+    expect(app.palettes.items[0]?.author).toEqual(app.author);
     expect(toasts.map((toast) => toast.message)).toEqual([
       "Imported 1 color palette",
     ]);
@@ -609,7 +610,7 @@ describe("pc-panel-colours", () => {
         [
           JSON.stringify({
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-2.0.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-3.0.0.json",
           }),
         ],
         "newer.json",
@@ -708,7 +709,7 @@ describe("pc-panel-colours", () => {
     // Only the user's palettes have a menu
     expect(queryAll(element, "pc-context-menu")).toHaveLength(1);
     (group.querySelector(".add") as HTMLButtonElement).click();
-    expect(app.palettes.get(sunset.id)?.colours).toEqual([
+    expect(app.palettes.get(sunset.id)?.content.colours).toEqual([
       "#ff7700",
       "#000000",
     ]);
@@ -741,7 +742,7 @@ describe("pc-panel-colours", () => {
       query<PcDialog>(element, "pc-dialog"),
     );
     dialog.choose("delete");
-    expect(app.palettes.get(sunset.id)?.colours).toEqual(["#ff7700"]);
+    expect(app.palettes.get(sunset.id)?.content.colours).toEqual(["#ff7700"]);
     await element.updateComplete;
     expect(swatch(0).tabIndex).toBe(0);
   });
@@ -756,7 +757,7 @@ describe("pc-panel-colours", () => {
     expect(app.palettes.items[0]).toMatchObject({
       name: "Sunset",
       author: { name: "Ada" },
-      colours: [],
+      content: { colours: [] },
     });
     expect(element.prompt).toHaveBeenCalledWith(
       expect.objectContaining({

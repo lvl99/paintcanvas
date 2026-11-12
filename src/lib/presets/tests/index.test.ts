@@ -21,13 +21,43 @@ const file = (items: unknown[]) => ({
   items,
 });
 
-/** The valid preset with changes (undefined removes a property) */
-const withChanges = (changes: Record<string, unknown>) =>
+/** Properties of a preset's header (the rest are its content) */
+const HEADER = new Set([
+  "$schema",
+  "@type",
+  "id",
+  "name",
+  "author",
+  "group",
+  "version",
+  "content",
+]);
+
+/** Properties with changes (undefined removes a property) */
+const changed = (
+  values: Record<string, unknown>,
+  changes: Record<string, unknown>,
+) =>
   Object.fromEntries(
-    Object.entries({ ...structuredClone(validPreset), ...changes }).filter(
+    Object.entries({ ...values, ...changes }).filter(
       ([, value]) => value !== undefined,
     ),
   );
+
+/** The valid preset with changes to its header or content (undefined removes a property) */
+const withChanges = (changes: Record<string, unknown>) => {
+  const preset = structuredClone(validPreset) as Record<string, unknown>;
+  const header = Object.fromEntries(
+    Object.entries(changes).filter(([key]) => HEADER.has(key)),
+  );
+  const content = Object.fromEntries(
+    Object.entries(changes).filter(([key]) => !HEADER.has(key)),
+  );
+  return changed(
+    { ...preset, content: changed(validPreset.content, content) },
+    header,
+  );
+};
 
 describe("brush preset schemas", () => {
   const ajv = new Ajv2020({
@@ -39,25 +69,21 @@ describe("brush preset schemas", () => {
 
   it("should be published with a versioned URL and a type", () => {
     expect(brushPresetSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-2.0.0.json",
     );
-    expect(brushPresetSchema["@type"]).toBe("PaintCanvas/BrushConfig");
+    expect(brushPresetSchema["@type"]).toBe("PaintCanvas/BrushPreset");
     expect(brushPresetCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.0.0.json",
     );
     expect(brushPresetCollectionSchema["@type"]).toBe(
-      "PaintCanvas/BrushConfigCollection",
+      "PaintCanvas/BrushPresetCollection",
     );
   });
 
   it("should compile in ajv strict mode and validate presets and files", () => {
     expect(validatePreset(validPreset)).toBe(true);
     expect(
-      validatePreset({
-        ...validPreset,
-        $schema: brushPresetSchema.$id,
-        "@type": BRUSH_PRESET_TYPE,
-      }),
+      validatePreset({ ...validPreset, $schema: brushPresetSchema.$id }),
     ).toBe(true);
     expect(validateFile(file([validPreset]))).toBe(true);
     expect(validateFile(file([]))).toBe(true);
@@ -82,12 +108,20 @@ describe("brush preset schemas", () => {
 });
 
 describe("isValidBrushPreset", () => {
-  it("should accept a full preset, and one with only an ID", () => {
+  it("should accept a full preset, and one with only its header and no settings", () => {
     expect(isValidBrushPreset(validPreset)).toEqual({
       valid: true,
       value: validPreset,
     });
-    expect(isValidBrushPreset({ id: validPreset.id }).valid).toBe(true);
+    expect(
+      isValidBrushPreset({
+        "@type": BRUSH_PRESET_TYPE,
+        id: validPreset.id,
+        name: "Plain",
+        author: "Ada",
+        content: {},
+      }).valid,
+    ).toBe(true);
     expect(
       isValidBrushPreset(withChanges({ author: "Someone", hue: 120 })).valid,
     ).toBe(true);
@@ -96,6 +130,32 @@ describe("isValidBrushPreset", () => {
   it.each([
     ["without an ID", { id: undefined }, "must have required property 'id'"],
     [
+      "without a type",
+      { "@type": undefined },
+      "must have required property '@type'",
+    ],
+    [
+      "without a name",
+      { name: undefined },
+      "must have required property 'name'",
+    ],
+    [
+      "without an author",
+      { author: undefined },
+      "must have required property 'author'",
+    ],
+    [
+      "without content",
+      { content: undefined },
+      "must have required property 'content'",
+    ],
+    ["with a name of only spaces", { name: "  " }, "/name must match pattern"],
+    [
+      "with a version that is too long",
+      { version: "1".repeat(21) },
+      "/version must NOT have more than 20 characters",
+    ],
+    [
       "with an unknown setting",
       { colour: "red" },
       "must NOT have additional properties",
@@ -103,36 +163,36 @@ describe("isValidBrushPreset", () => {
     [
       "with a JPEG shape",
       { image: "data:image/jpeg;base64,AAAA" },
-      "/image must match pattern",
+      "/content/image must match pattern",
     ],
     [
       "with a shape that is too large",
       {
         image: `data:image/png;base64,${"A".repeat(MAX_SHAPE_DATA_URL_LENGTH)}`,
       },
-      "/image must NOT have more than",
+      "/content/image must NOT have more than",
     ],
-    ["with a size over 256", { width: 300 }, "/width must be <= 256"],
-    ["with an opacity over 1", { alpha: 2 }, "/alpha must be <= 1"],
+    ["with a size over 256", { width: 300 }, "/content/width must be <= 256"],
+    ["with an opacity over 1", { alpha: 2 }, "/content/alpha must be <= 1"],
     [
       "with an unknown smoothing",
       { smoothingType: 4 },
-      "/smoothingType must be equal to one of the allowed values",
+      "/content/smoothingType must be equal to one of the allowed values",
     ],
     [
       "with a sample rate under 5",
       { sampleRate: 1 },
-      "/sampleRate must be >= 5",
+      "/content/sampleRate must be >= 5",
     ],
     [
       "with an invalid variation",
       { widthConfig: { minPressure: 2 } },
-      "/widthConfig/minPressure must be <= 1",
+      "/content/widthConfig/minPressure must be <= 1",
     ],
     [
       "with a pixel grid snap that isn't a boolean",
       { snapToPixelGrid: "yes" },
-      "/snapToPixelGrid must be boolean",
+      "/content/snapToPixelGrid must be boolean",
     ],
     [
       "with an empty name",

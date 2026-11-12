@@ -52,6 +52,7 @@ import "../PcCanvas";
 import "../PcCanvasMap";
 import "../PcPanelBrushes";
 import "../PcPanelLayers";
+import type { BrushConfigSaveDetail } from "../PcBrushConfig";
 import "../PcBrushConfig";
 import "../PcStats";
 import "../PcPanelColours";
@@ -175,6 +176,8 @@ export class PaintCanvasElement extends PcElement {
   declare configuring?: {
     kind: "brush" | "eraser";
     config: BrushConfig;
+    /** The settings' name */
+    name: string;
     editingId?: string;
   };
 
@@ -542,6 +545,7 @@ export class PaintCanvasElement extends PcElement {
         width: settings.width,
         height: settings.height,
       },
+      name: settings.name,
       ...(own ? { editingId: selected.id } : {}),
     };
   }
@@ -556,10 +560,10 @@ export class PaintCanvasElement extends PcElement {
       kind,
       config: {
         ...settings.preset,
-        name: this.t("paintCanvas.brushConfig.newPresetName"),
         width: settings.width,
         height: settings.height,
       },
+      name: this.t("paintCanvas.brushConfig.newPresetName"),
     };
   }
 
@@ -708,9 +712,13 @@ export class PaintCanvasElement extends PcElement {
       .app=${app}
       kind=${configuring.kind}
       .config=${configuring.config}
+      .presetName=${configuring.name}
       editingId=${configuring.editingId ?? nothing}
-      @pc-save=${(event: CustomEvent<BrushConfig>) => {
-        this.toolSettings(configuring.kind).apply(event.detail);
+      @pc-save=${(event: CustomEvent<BrushConfigSaveDetail>) => {
+        this.toolSettings(configuring.kind).apply(
+          event.detail.config,
+          event.detail.name,
+        );
         this.configuring = undefined;
       }}
       @pc-close=${() => (this.configuring = undefined)}

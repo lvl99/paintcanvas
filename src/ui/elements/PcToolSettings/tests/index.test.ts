@@ -91,7 +91,7 @@ describe("withSource", () => {
   it("should turn a source on or off, keeping ranges", () => {
     expect(
       withSource(
-        { id: "a", widthConfig: { minPressure: 0.2 } },
+        { widthConfig: { minPressure: 0.2 } },
         ["widthConfig", "heightConfig"],
         "usePressure",
         true,
@@ -278,7 +278,7 @@ describe("pc-tool-settings", () => {
     await element.updateComplete;
     expect(opacity.value).toBe(40);
     // The preset itself is unchanged
-    expect(app.brush.selectedPreset?.alpha).toBeUndefined();
+    expect(app.brush.selectedPreset?.content.alpha).toBeUndefined();
   });
 
   it("should show the size a constrained brush got when a typed size is past a limit", async () => {
@@ -384,7 +384,7 @@ describe("pc-tool-settings", () => {
     app.brush.select("round20");
     await element.updateComplete;
     const button = query<HTMLButtonElement>(element, "button.preset");
-    expect(button.textContent?.trim()).toBe(app.brush.preset.name);
+    expect(button.textContent?.trim()).toBe(app.brush.name);
     app.closePanel();
     await element.updateComplete;
     expect(button.getAttribute("aria-expanded")).toBe("false");
@@ -719,14 +719,12 @@ describe("pc-tool-settings zoom", () => {
     await element.translations.setLocale("en-US");
   });
 
-  it("should show a preset's ID when it has no name, and leave proportions free by default", async () => {
+  it("should show the settings' name, and leave proportions free by default", async () => {
     const app = createApp();
-    // Applying settings keeps the selected preset's ID
-    app.brush.apply({ id: "plain" });
+    // Applying settings keeps the name, unless given one
+    app.brush.apply({}, "Plain");
     const element = await mount<PcToolSettings>("pc-tool-settings", { app });
-    expect(query(element, "button.preset").textContent?.trim()).toBe(
-      app.brush.preset.id,
-    );
+    expect(query(element, "button.preset").textContent?.trim()).toBe("Plain");
     expect(query<HTMLInputElement>(element, "input.constrain").checked).toBe(
       false,
     );

@@ -1,4 +1,3 @@
-import { BUILT_IN_AUTHOR } from "../../authors";
 import type { BrushConfig, BrushesConfig } from "../../types";
 import { SmoothingType } from "../../types";
 import { sizedPresets, spacedBy } from "../sized";
@@ -7,10 +6,11 @@ import PENCIL_HB_IMAGE from "./pencil-hb.png?inline";
 import FELT_PEN_IMAGE from "./felt-pen.png?inline";
 import BRUSH_PEN_IMAGE from "./brush-pen.png?inline";
 
+/** Version of these presets */
+const VERSION = "1.0.0";
+
 /** Settings shared by the pencil and pen presets */
-const DEFAULT_CONFIG: Partial<BrushConfig> = {
-  version: "1.0.0",
-  author: BUILT_IN_AUTHOR,
+const DEFAULT_CONFIG: BrushConfig = {
   constrainProportions: true,
   sampleRate: 5,
   smoothingType: SmoothingType.BezierCubic,
@@ -20,7 +20,7 @@ const DEFAULT_CONFIG: Partial<BrushConfig> = {
  * Pencil settings: graphite grain turned at random for each stamp, so it doesn't repeat, and lines that get wider and
  * darker with pen pressure.
  */
-const pencil = (image: string, alpha: number): Partial<BrushConfig> => ({
+const pencil = (image: string, alpha: number): BrushConfig => ({
   ...DEFAULT_CONFIG,
   image,
   alpha,
@@ -35,8 +35,7 @@ const PEN_SIZES = [5, 10, 15, 20, 30, 40, 50];
 
 /** Soft, dark pencils */
 export const pencil2b: BrushesConfig = sizedPresets(
-  "pencil2b",
-  "2B Pencil",
+  { idPrefix: "pencil2b", name: "2B Pencil", version: VERSION },
   PENCIL_SIZES,
   pencil(PENCIL_2B_IMAGE, 0.9),
   spacedBy(0.25),
@@ -44,8 +43,7 @@ export const pencil2b: BrushesConfig = sizedPresets(
 
 /** Hard, light pencils */
 export const pencilHb: BrushesConfig = sizedPresets(
-  "pencilHb",
-  "HB Pencil",
+  { idPrefix: "pencilHb", name: "HB Pencil", version: VERSION },
   PENCIL_SIZES,
   pencil(PENCIL_HB_IMAGE, 0.6),
   spacedBy(0.25),
@@ -53,8 +51,7 @@ export const pencilHb: BrushesConfig = sizedPresets(
 
 /** Felt pens: even, nearly solid lines */
 export const feltPen: BrushesConfig = sizedPresets(
-  "feltPen",
-  "Felt pen",
+  { idPrefix: "feltPen", name: "Felt pen", version: VERSION },
   PEN_SIZES,
   {
     ...DEFAULT_CONFIG,
@@ -67,8 +64,7 @@ export const feltPen: BrushesConfig = sizedPresets(
 
 /** Brush pens: an angled oval tip, so lines are thicker in one direction, tapering with pen pressure */
 export const brushPen: BrushesConfig = sizedPresets(
-  "brushPen",
-  "Brush pen",
+  { idPrefix: "brushPen", name: "Brush pen", version: VERSION },
   PEN_SIZES,
   {
     ...DEFAULT_CONFIG,

@@ -1,7 +1,43 @@
-import type { BrushConfig } from "../../brushes/types";
+import type { BrushPreset } from "../../brushes/types";
 import { isOwnAuthor } from "../../brushes/authors";
-import { isValidBrushPreset } from "../../presets";
+import {
+  BRUSH_PRESET_TYPE,
+  UNTITLED_PRESET_NAME,
+  isValidBrushPreset,
+} from "../../presets";
+import {
+  UNKNOWN_AUTHOR,
+  upgradeAsset,
+  type AssetAuthor,
+} from "../../assets/schema";
 import type { AssetStoreLike } from "../../storage";
+
+/** Whether a value is a plain object */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Keep only valid brush presets from an untrusted value (e.g. stored or imported), upgrading ones of version 1 (see
+ * `upgradeAsset`).
+ *
+ * @param author - the author of presets of version 1 with none
+ * @example
+ * sanitiseBrushPresets(await store.list(), app.author);
+ */
+export const sanitiseBrushPresets = (
+  input: readonly unknown[],
+  author: AssetAuthor = UNKNOWN_AUTHOR,
+): BrushPreset[] =>
+  input
+    .map((preset) =>
+      upgradeAsset(preset, BRUSH_PRESET_TYPE, {
+        name: UNTITLED_PRESET_NAME,
+        author,
+      }),
+    )
+    .filter(
+      (preset): preset is BrushPreset => isValidBrushPreset(preset).valid,
+    );
 
 /**
  * The user's own and imported brush presets, shared by the brush and eraser. They are kept in a store when one is
@@ -12,17 +48,29 @@ import type { AssetStoreLike } from "../../storage";
  * @example
  * const custom = new CustomPresets(new IndexedDbAssetStore("brushes"));
  * await custom.load();
- * await custom.save({ id: crypto.randomUUID(), name: "My brush", author: { name: "Ada", handle } });
+ * await custom.save({ "@type": BRUSH_PRESET_TYPE, id: crypto.randomUUID(), name: "My brush",
+ *   author: { name: "Ada", handle }, content: { width: 10 } });
  */
 export default class CustomPresets extends EventTarget {
   /** Presets, in the order they were added */
-  presets: BrushConfig[] = [];
+  presets: BrushPreset[] = [];
 
-  private store?: AssetStoreLike<BrushConfig>;
+  private store?: AssetStoreLike<BrushPreset>;
 
-  constructor(store?: AssetStoreLike<BrushConfig>) {
+  /** Gives the author of presets of version 1 with none (the user, asked each time they're loaded) */
+  private readonly author: () => AssetAuthor;
+
+  /**
+   * @param store - where the presets are kept
+   * @param author - gives the author of presets of version 1 with none (default `UNKNOWN_AUTHOR`)
+   */
+  constructor(
+    store?: AssetStoreLike<BrushPreset>,
+    author: () => AssetAuthor = () => UNKNOWN_AUTHOR,
+  ) {
     super();
     this.store = store;
+    this.author = author;
   }
 
   /**
@@ -33,7 +81,7 @@ export default class CustomPresets extends EventTarget {
    * await custom.useStore(new IndexedDbAssetStore("brushes", "my-app"));
    */
   async useStore(
-    store: AssetStoreLike<BrushConfig> | undefined,
+    store: AssetStoreLike<BrushPreset> | undefined,
   ): Promise<void> {
     this.store = store;
     this.presets = [];
@@ -42,7 +90,8 @@ export default class CustomPresets extends EventTarget {
   }
 
   /**
-   * Load the user's presets from the store, leaving out invalid ones.
+   * Load the user's presets from the store, upgrading ones of version 1 (and saving them again) and leaving out invalid
+   * ones.
    */
   async load(): Promise<void> {
     const store = this.store;
@@ -50,16 +99,17 @@ export default class CustomPresets extends EventTarget {
     const saved = await store.list();
     // The store changed while loading
     if (store !== this.store) return;
-    this.presets = saved.filter(
-      (preset): preset is BrushConfig => isValidBrushPreset(preset).valid,
-    );
+    this.presets = sanitiseBrushPresets(saved, this.author());
     this.notify();
+    // Presets of version 1 are saved again, upgraded, so they're only upgraded once
+    if (saved.some((preset) => isRecord(preset) && !("content" in preset)))
+      for (const preset of this.presets) await store.put(preset);
   }
 
   /**
    * A preset by ID.
    */
-  get(id: string): BrushConfig | undefined {
+  get(id: string): BrushPreset | undefined {
     return this.presets.find((preset) => preset.id === id);
   }
 
@@ -73,19 +123,19 @@ export default class CustomPresets extends EventTarget {
     name: string,
     handle: string,
     unknownName?: string,
-  ): BrushConfig | undefined {
+  ): BrushPreset | undefined {
     const wanted = name.trim().toLowerCase();
     return this.presets.find(
       (preset) =>
         isOwnAuthor(preset.author, handle, unknownName) &&
-        preset.name?.trim().toLowerCase() === wanted,
+        preset.name.trim().toLowerCase() === wanted,
     );
   }
 
   /**
    * Add presets, replacing any with the same ID, and keep them.
    */
-  async save(...presets: BrushConfig[]): Promise<void> {
+  async save(...presets: BrushPreset[]): Promise<void> {
     for (const preset of presets) await this.store?.put(preset);
     const kept = this.presets.map(
       (existing) =>

@@ -12,6 +12,7 @@ import {
   toastText,
 } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
+import { testPreset } from "../../../../testing/assets";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -47,9 +48,7 @@ describe("pc-panel-brushes", () => {
     expect(app.brush.width).toBe(20);
     expect(app.panel).toBeNull();
     // The current preset's shape, name and size, on one row
-    expect(query(element, ".current .name").textContent).toBe(
-      app.brush.preset.name,
-    );
+    expect(query(element, ".current .name").textContent).toBe("Round 20px");
     const size = query<PcBrushSize>(element, ".size");
     await size.updateComplete;
     const slider = query<PcNumberSlider>(size, "pc-number-slider");
@@ -76,12 +75,10 @@ describe("pc-panel-brushes", () => {
     await element.updateComplete;
     expect(shape.classList.contains("image")).toBe(true);
     expect(shape.style.maskImage).toBe('url("data:image/png;base64,AAAA")');
-    // A preset without a name shows its ID
-    app.brush.apply({ ...app.brush.preset, name: undefined });
+    // Settings renamed in the configuration window show their new name
+    app.brush.apply(app.brush.preset, "Renamed");
     await element.updateComplete;
-    expect(query(element, ".current .name").textContent).toBe(
-      app.brush.preset.id,
-    );
+    expect(query(element, ".current .name").textContent).toBe("Renamed");
   });
 
   it("should show the size control for its settings", async () => {
@@ -95,23 +92,21 @@ describe("pc-panel-brushes", () => {
     expect(size.label).toBe("Eraser size");
   });
 
-  it("should name presets by their ID when they have no name", async () => {
+  it("should name each preset's tile", async () => {
     const app = createApp();
-    Object.assign(app.brush.presets, { unnamed: { id: "unnamed" } });
     const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
-    const tile = query(element, '[data-preset="unnamed"]');
-    expect(tile.getAttribute("aria-label")).toBe("unnamed");
-    expect(tile.getAttribute("title")).toBe("unnamed");
+    const tile = query(element, '[data-preset="round5"]');
+    expect(tile.getAttribute("aria-label")).toBe("Round 5px");
+    expect(tile.getAttribute("title")).toBe("Round 5px");
   });
 
   /** One of the user's presets, and another author's */
   const customPresets = async (app: ReturnType<typeof createApp>) => {
-    const mine = app.newPreset({ id: "x", width: 25 }, "Mine");
-    const theirs = {
-      id: crypto.randomUUID(),
-      name: "Theirs",
-      author: { name: "Ann", handle: "ann.test" },
-    };
+    const mine = app.newPreset({ width: 25 }, "Mine");
+    const theirs = testPreset(
+      {},
+      { name: "Theirs", author: { name: "Ann", handle: "ann.test" } },
+    );
     await app.customPresets.save(mine, theirs);
     return { mine, theirs };
   };
@@ -192,7 +187,7 @@ describe("pc-panel-brushes", () => {
     vi.spyOn(app.customPresets, "remove").mockRejectedValueOnce(
       new Error("no"),
     );
-    await element.deletePreset({ id: "gone" });
+    await element.deletePreset(testPreset({}, { id: "gone", name: "gone" }));
     expect(toasts).toEqual([
       'success: Deleted "Mine"',
       'error: Couldn\'t delete "gone"',
@@ -259,8 +254,11 @@ describe("pc-panel-brushes", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     };
     await choose([file([preset])]);
+    // Presets of version 1 are upgraded, with the user as their author
     await vi.waitFor(() =>
-      expect(app.customPresets.get(preset.id)).toEqual(preset),
+      expect(app.customPresets.get(preset.id)).toEqual(
+        testPreset({}, { ...preset, author: app.author }),
+      ),
     );
     await choose([]);
     await element.importFile(
@@ -273,7 +271,7 @@ describe("pc-panel-brushes", () => {
         [
           JSON.stringify({
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.0.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-3.0.0.json",
           }),
         ],
         "newer.json",
@@ -329,7 +327,7 @@ describe("pc-panel-brushes", () => {
 
   it("should do nothing with presets without an app", async () => {
     const element = await mount<PcPanelBrushes>("pc-panel-brushes");
-    await element.deletePreset({ id: "a" });
+    await element.deletePreset(testPreset());
     await element.importFile(new File(["{}"], "a.json"));
     await element.exportFile();
     expect(element.settings).toBeUndefined();
@@ -339,11 +337,11 @@ describe("pc-panel-brushes", () => {
 describe("previewSizes", () => {
   it("should size presets relative to their family, and others against 50 pixels", () => {
     const sizes = previewSizes([
-      { id: "a", group: "Round", width: 10, height: 10 },
-      { id: "b", group: "Round", width: 50, height: 50 },
-      { id: "c", width: 25, height: 10 },
-      { id: "d", width: 100 },
-      { id: "e" },
+      testPreset({ width: 10, height: 10 }, { id: "a", group: "Round" }),
+      testPreset({ width: 50, height: 50 }, { id: "b", group: "Round" }),
+      testPreset({ width: 25, height: 10 }, { id: "c" }),
+      testPreset({ width: 100 }, { id: "d" }),
+      testPreset({}, { id: "e" }),
     ]);
     expect(Object.fromEntries(sizes)).toEqual({
       a: { width: 6, height: 6 },

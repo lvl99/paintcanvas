@@ -6,6 +6,7 @@ import {
   Interpolation,
   LINEAR_PROFILE_ID,
   MAX_PROFILE_POINTS,
+  PROFILE_GRAPH_TYPE,
   PROFILE_PRESETS,
   applyProfile,
   isLinear,
@@ -14,8 +15,8 @@ import {
   samePoints,
   type ProfilePoint,
 } from "..";
+import { BUILT_IN_AUTHOR, MAX_ASSET_TEXT_LENGTH } from "../../assets/schema";
 import {
-  MAX_PROFILE_TEXT_LENGTH,
   MAX_SAVED_PROFILES,
   PROFILE_GRAPH_COLLECTION_TYPE,
   profileGraphCollectionSchema,
@@ -26,12 +27,8 @@ import {
 const { Linear, BezierCubic } = Interpolation;
 
 /** A preset's points */
-const preset = (id: string) =>
-  (
-    PROFILE_PRESETS.find((graph) => graph.id === id) as {
-      points: ProfilePoint[];
-    }
-  ).points;
+const preset = (id: string): ProfilePoint[] =>
+  PROFILE_PRESETS.find((graph) => graph.id === id)!.content.points;
 
 describe("profile graph presets", () => {
   it("should have Linear, Overweight and Underweight, with kebab-case IDs", () => {
@@ -40,6 +37,10 @@ describe("profile graph presets", () => {
       ["overweight", "Overweight"],
       ["underweight", "Underweight"],
     ]);
+    for (const graph of PROFILE_PRESETS) {
+      expect(graph["@type"]).toBe(PROFILE_GRAPH_TYPE);
+      expect(graph.author).toBe(BUILT_IN_AUTHOR);
+    }
     expect(preset("overweight")).toEqual([
       { x: 0, y: -10, i: Linear },
       { x: 3, y: -3, i: BezierCubic },
@@ -141,11 +142,11 @@ describe("profile graph schemas", () => {
 
   it("should be published with versioned URLs and types", () => {
     expect(profileGraphSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-2.0.0.json",
     );
     expect(profileGraphSchema["@type"]).toBe("PaintCanvas/ProfileGraph");
     expect(profileGraphCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.0.0.json",
     );
     expect(profileGraphCollectionSchema["@type"]).toBe(
       "PaintCanvas/ProfileGraphCollection",
@@ -174,7 +175,7 @@ describe("profile graph schemas", () => {
 
   it("should compile in ajv strict mode and accept the presets", () => {
     for (const graph of PROFILE_PRESETS) {
-      expect(validatePoints(graph.points)).toBe(true);
+      expect(validatePoints(graph.content.points)).toBe(true);
       expect(validateGraph(graph)).toBe(true);
     }
   });
@@ -205,9 +206,11 @@ describe("profile graph schemas", () => {
     expect(
       validateGraph({
         ...graph,
-        name: "x".repeat(MAX_PROFILE_TEXT_LENGTH + 1),
+        name: "x".repeat(MAX_ASSET_TEXT_LENGTH + 1),
       }),
     ).toBe(false);
     expect(validateGraph({ id: "a", name: "A" })).toBe(false);
+    expect(validateGraph({ ...graph, content: {} })).toBe(false);
+    expect(validateGraph({ ...graph, author: undefined })).toBe(false);
   });
 });

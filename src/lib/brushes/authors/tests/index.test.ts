@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { testPreset } from "../../../../testing/assets";
 import {
   BUILT_IN_AUTHOR,
   MY_PRESETS,
@@ -48,37 +49,59 @@ describe("isOwnAuthor", () => {
 describe("authorGroup", () => {
   it("should list built-in presets under the app's name, the user's under My presets, and others by name", () => {
     expect(
-      authorGroup({ id: "round1", author: BUILT_IN_AUTHOR }, true, me),
+      authorGroup(
+        testPreset({}, { id: "round1", author: BUILT_IN_AUTHOR }),
+        true,
+        me,
+      ),
     ).toBe(BUILT_IN_AUTHOR);
     expect(
-      authorGroup({ id: "a", author: { name: "Ada", handle: me } }, false, me),
+      authorGroup(
+        testPreset({}, { id: "a", author: { name: "Ada", handle: me } }),
+        false,
+        me,
+      ),
     ).toBe(MY_PRESETS);
     expect(
       authorGroup(
-        { id: "b", author: { name: "Ann", handle: "ann.test" } },
+        testPreset(
+          {},
+          { id: "b", author: { name: "Ann", handle: "ann.test" } },
+        ),
         false,
         me,
       ),
     ).toBe("Ann");
     expect(
-      authorGroup({ id: "d", author: { name: UNKNOWN_AUTHOR } }, false, ""),
+      authorGroup(
+        testPreset({}, { id: "d", author: { name: UNKNOWN_AUTHOR } }),
+        false,
+        "",
+      ),
     ).toBe(MY_PRESETS);
     // Someone naming themselves after the app isn't listed with the app's presets
-    expect(authorGroup({ id: "c", author: BUILT_IN_AUTHOR }, false, me)).toBe(
-      BUILT_IN_AUTHOR,
-    );
+    expect(
+      authorGroup(
+        testPreset({}, { id: "c", author: BUILT_IN_AUTHOR }),
+        false,
+        me,
+      ),
+    ).toBe(BUILT_IN_AUTHOR);
   });
 });
 
 describe("groupPresetsByAuthor", () => {
   it("should list My presets, then the app's presets, then other authors alphabetically, keeping order within groups", () => {
     const presets = [
-      { id: "zed", author: "Zed" },
-      { id: "mine2", author: { name: "Ada", handle: me } },
-      { id: "round1", author: BUILT_IN_AUTHOR },
-      { id: "ann", author: { name: "Ann", handle: "ann.test" } },
-      { id: "mine1", author: { name: "Ada", handle: me } },
-      { id: "round5", author: BUILT_IN_AUTHOR },
+      testPreset({}, { id: "zed", author: "Zed" }),
+      testPreset({}, { id: "mine2", author: { name: "Ada", handle: me } }),
+      testPreset({}, { id: "round1", author: BUILT_IN_AUTHOR }),
+      testPreset(
+        {},
+        { id: "ann", author: { name: "Ann", handle: "ann.test" } },
+      ),
+      testPreset({}, { id: "mine1", author: { name: "Ada", handle: me } }),
+      testPreset({}, { id: "round5", author: BUILT_IN_AUTHOR }),
     ];
     const groups = groupPresetsByAuthor(
       presets,
@@ -98,8 +121,8 @@ describe("groupPresetsByAuthor", () => {
   it("should head the presets that come with the app with the app's name when given", () => {
     const groups = groupPresetsByAuthor(
       [
-        { id: "zed", author: "Zed" },
-        { id: "round1", author: BUILT_IN_AUTHOR },
+        testPreset({}, { id: "zed", author: "Zed" }),
+        testPreset({}, { id: "round1", author: BUILT_IN_AUTHOR }),
       ],
       (id) => id.startsWith("round"),
       me,

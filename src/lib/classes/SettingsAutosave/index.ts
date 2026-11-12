@@ -3,6 +3,7 @@ import type { SettingsStoreLike } from "../../storage";
 import {
   applySettings,
   collectSettings,
+  hasOlderAssets,
   isValidSettings,
 } from "../../settings";
 
@@ -114,10 +115,11 @@ export default class SettingsAutosave extends EventTarget {
   private async start(): Promise<void> {
     let older = false;
     try {
-      const result = isValidSettings(await this.store.load());
+      const loaded = await this.store.load();
+      const result = isValidSettings(loaded, this.app.author);
       if (result.valid && !this.stopped) {
         await applySettings(this.app, result.value);
-        older = result.value.palette !== undefined;
+        older = result.value.palette !== undefined || hasOlderAssets(loaded);
       }
     } catch (error) {
       this.fail(error);
@@ -126,7 +128,8 @@ export default class SettingsAutosave extends EventTarget {
     this.saved = JSON.stringify(this.collect());
     for (const source of this.sources)
       source.addEventListener("change", this.onChange);
-    // Settings from older versions are saved again without what moved elsewhere, so it's only moved once
+    // Settings from older versions are saved again without what moved elsewhere and with their assets upgraded, so
+    // it's only done once
     if (older) {
       this.saved = undefined;
       await this.save();

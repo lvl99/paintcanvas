@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import CustomPresets from "..";
-import type { BrushConfig } from "../../../brushes/types";
+import CustomPresets, { sanitiseBrushPresets } from "..";
+import type { BrushPreset } from "../../../brushes/types";
 import type { AssetStoreLike } from "../../../storage";
+import { UNTITLED_PRESET_NAME } from "../../../presets";
+import { UNKNOWN_AUTHOR } from "../../../assets";
+import { testPreset } from "../../../../testing/assets";
 
 const me = "me.example";
 
@@ -11,22 +14,46 @@ const fakeStore = (saved: unknown[] = []) =>
     list: vi.fn(async () => saved),
     put: vi.fn(async () => undefined),
     remove: vi.fn(async () => undefined),
-  }) satisfies AssetStoreLike<BrushConfig>;
+  }) satisfies AssetStoreLike<BrushPreset>;
 
-const mine = {
-  id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
-  name: "Soft",
-  author: { name: "Me", handle: me },
-};
-const theirs = {
-  id: "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
-  name: "Soft",
-  author: { name: "Ann", handle: "ann.test" },
-};
+const mine = testPreset(
+  { width: 10 },
+  {
+    id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
+    name: "Soft",
+    author: { name: "Me", handle: me },
+  },
+);
+const theirs = testPreset(
+  { width: 20 },
+  {
+    id: "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    name: "Soft",
+    author: { name: "Ann", handle: "ann.test" },
+  },
+);
+
+/** A preset of version 1: its header and settings side by side */
+const version1 = { id: mine.id, width: 10 };
+
+describe("sanitiseBrushPresets", () => {
+  it("should keep valid presets, upgrading ones of version 1", () => {
+    expect(
+      sanitiseBrushPresets([mine, version1, { id: "not a UUID" }, null], "Bo"),
+    ).toEqual([
+      mine,
+      testPreset(
+        { width: 10 },
+        { id: mine.id, name: UNTITLED_PRESET_NAME, author: "Bo" },
+      ),
+    ]);
+    expect(sanitiseBrushPresets([version1])[0]?.author).toBe(UNKNOWN_AUTHOR);
+  });
+});
 
 describe("CustomPresets", () => {
   it("should load the user's valid presets from the store and notify", async () => {
-    const store = fakeStore([mine, { id: "not a UUID" }, null]);
+    const store = fakeStore([mine, { ...mine, id: "not a UUID" }, null]);
     const custom = new CustomPresets(store);
     const listener = vi.fn();
     custom.addEventListener("change", listener);
@@ -35,6 +62,19 @@ describe("CustomPresets", () => {
     expect(custom.presets).toEqual([mine]);
     expect(custom.get(mine.id)).toBe(mine);
     expect(listener).toHaveBeenCalledOnce();
+    expect(store.put).not.toHaveBeenCalled();
+  });
+
+  it("should upgrade presets of version 1 when loading them, saving them again with the user as their author", async () => {
+    const store = fakeStore([theirs, version1]);
+    const custom = new CustomPresets(store, () => "Me");
+    await custom.load();
+    const upgraded = testPreset(
+      { width: 10 },
+      { id: mine.id, name: UNTITLED_PRESET_NAME, author: "Me" },
+    );
+    expect(custom.presets).toEqual([theirs, upgraded]);
+    expect(store.put.mock.calls).toEqual([[theirs], [upgraded]]);
   });
 
   it("should save presets, replacing those with the same ID, and remove them", async () => {
@@ -90,7 +130,10 @@ describe("CustomPresets", () => {
 
   it("should find presets by the unknown author without a handle as the own presets of a user without a handle", async () => {
     const custom = new CustomPresets();
-    const unknown = { id: "3", name: "Soft", author: { name: "Unknown" } };
+    const unknown = testPreset(
+      {},
+      { id: "3", name: "Soft", author: { name: "Unknown" } },
+    );
     await custom.save(mine, unknown);
     expect(custom.findOwn("soft", "")).toBe(unknown);
     expect(custom.findOwn("soft", "", "Anonymous")).toBeUndefined();

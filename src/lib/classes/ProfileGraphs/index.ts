@@ -7,9 +7,17 @@ import {
   type ProfilePoint,
 } from "../../profiles";
 import {
-  MAX_PROFILE_TEXT_LENGTH,
   MAX_SAVED_PROFILES,
+  PROFILE_GRAPH_TYPE,
+  UNTITLED_PROFILE_NAME,
 } from "../../profiles/schema";
+import {
+  MAX_ASSET_TEXT_LENGTH,
+  UNKNOWN_AUTHOR,
+  upgradeAsset,
+  type AssetAuthor,
+} from "../../assets/schema";
+import { sanitiseAssetHeader } from "../../assets";
 
 /** The interpolations a point can have */
 const INTERPOLATIONS: readonly string[] = Object.values(Interpolation);
@@ -18,7 +26,7 @@ const INTERPOLATIONS: readonly string[] = Object.values(Interpolation);
 const isText = (value: unknown): value is string =>
   typeof value === "string" &&
   value.trim().length > 0 &&
-  value.length <= MAX_PROFILE_TEXT_LENGTH;
+  value.length <= MAX_ASSET_TEXT_LENGTH;
 
 /**
  * Keep only valid points from an untrusted value, in order from left to right: each on the grid, with a known
@@ -49,37 +57,56 @@ export const sanitisePoints = (input: unknown): ProfilePoint[] | undefined => {
 
 /**
  * Keep only valid profile graphs from an untrusted value (e.g. stored or imported): each with an ID and name and valid
- * points (see `sanitisePoints`), each ID once and none of the presets', up to `MAX_SAVED_PROFILES`. Undefined if the
- * value isn't an array.
+ * points (see `sanitisePoints`), each ID once and none of the presets', up to `MAX_SAVED_PROFILES`. Graphs of version 1
+ * are upgraded (see `upgradeAsset`). An invalid author is replaced with `author`, and an invalid group or version is
+ * left out. Undefined if the value isn't an array.
  *
+ * @param author - the author of graphs with none or an invalid one
  * @example
- * sanitiseProfiles([{ id: "a", name: "Soft", points: [...] }, { id: "a", name: "Again", points: [...] }]); // the first
+ * sanitiseProfiles([graph, { ...graph, name: "Again" }]); // the first
  */
 export const sanitiseProfiles = (
   input: unknown,
+  author: AssetAuthor = UNKNOWN_AUTHOR,
 ): ProfileGraph[] | undefined => {
   if (!Array.isArray(input)) return undefined;
   const graphs = new Map<string, ProfileGraph>();
-  for (const graph of input) {
+  for (const item of input) {
     if (graphs.size >= MAX_SAVED_PROFILES) break;
-    const points = sanitisePoints(graph?.points);
+    const graph = upgradeAsset(item, PROFILE_GRAPH_TYPE, {
+      name: UNTITLED_PROFILE_NAME,
+      author,
+    }) as Partial<ProfileGraph> | null | undefined;
+    const points = sanitisePoints(graph?.content?.points);
     if (
       !points ||
-      !isText(graph.id) ||
+      !isText(graph?.id) ||
       !isText(graph.name) ||
       graphs.has(graph.id) ||
       PROFILE_PRESETS.some((preset) => preset.id === graph.id)
     )
       continue;
-    graphs.set(graph.id, { id: graph.id, name: graph.name.trim(), points });
+    const required: ProfileGraph = {
+      "@type": PROFILE_GRAPH_TYPE,
+      id: graph.id,
+      name: graph.name.trim(),
+      author,
+      content: { points },
+    };
+    graphs.set(graph.id, {
+      ...required,
+      ...sanitiseAssetHeader(graph, author),
+    });
   }
   return [...graphs.values()];
 };
 
-/** What a profile graph is saved from: its name and points, and its ID when replacing one */
+/** What a profile graph is saved from: its name and points, its ID when replacing one, and who made it */
 export interface ProfileGraphDraft {
   id?: string;
   name: string;
+  /** Who made it (default `UNKNOWN_AUTHOR`) */
+  author?: AssetAuthor;
   points: readonly ProfilePoint[];
 }
 
@@ -92,7 +119,7 @@ export interface ProfileGraphDraft {
  *
  * @example
  * const profiles = new ProfileGraphs();
- * const soft = profiles.save({ name: "Soft", points: PROFILE_PRESETS[1].points });
+ * const soft = profiles.save({ name: "Soft", points: PROFILE_PRESETS[1].content.points });
  * profiles.get(soft.id)?.name; // "Soft"
  */
 export default class ProfileGraphs extends EventTarget {
@@ -144,14 +171,24 @@ export default class ProfileGraphs extends EventTarget {
    * the saved graph, or undefined if it can't be saved (no name, invalid points, a preset's ID, or no room).
    *
    * @example
-   * profiles.save({ name: "Soft", points }); // { id: "1b9d…", name: "Soft", points }
+   * profiles.save({ name: "Soft", author: "Ada", points }); // { id: "1b9d…", name: "Soft", content: { points }, ... }
    */
   save(draft: ProfileGraphDraft): ProfileGraph | undefined {
     const index = this.values.findIndex((graph) => graph.id === draft.id);
+    const author = draft.author ?? UNKNOWN_AUTHOR;
     // A list always gives a list back: empty if the graph isn't valid
-    const [graph] = sanitiseProfiles([
-      { ...draft, id: index >= 0 ? draft.id : crypto.randomUUID() },
-    ]) as ProfileGraph[];
+    const [graph] = sanitiseProfiles(
+      [
+        {
+          "@type": PROFILE_GRAPH_TYPE,
+          id: index >= 0 ? draft.id : crypto.randomUUID(),
+          name: draft.name,
+          author,
+          content: { points: draft.points },
+        },
+      ],
+      author,
+    ) as ProfileGraph[];
     if (!graph || (index < 0 && this.values.length >= MAX_SAVED_PROFILES))
       return undefined;
     this.values =
@@ -170,7 +207,15 @@ export default class ProfileGraphs extends EventTarget {
    */
   rename(id: string, name: string): boolean {
     const graph = this.values.find((saved) => saved.id === id);
-    return graph !== undefined && this.save({ ...graph, name }) !== undefined;
+    return (
+      graph !== undefined &&
+      this.save({
+        id,
+        name,
+        author: graph.author,
+        points: graph.content.points,
+      }) !== undefined
+    );
   }
 
   /**
@@ -192,9 +237,11 @@ export default class ProfileGraphs extends EventTarget {
    *
    * @example
    * profiles.set(settings.profiles);
+   *
+   * @param author - the author of graphs with none (e.g. older ones)
    */
-  set(graphs: unknown): void {
-    const next = sanitiseProfiles(graphs);
+  set(graphs: unknown, author?: AssetAuthor): void {
+    const next = sanitiseProfiles(graphs, author);
     if (!next) return;
     this.values = next;
     this.dispatchEvent(new Event("change"));
@@ -206,9 +253,11 @@ export default class ProfileGraphs extends EventTarget {
    *
    * @example
    * profiles.merge(await store.list());
+   *
+   * @param author - the author of graphs with none (e.g. older ones)
    */
-  merge(graphs: unknown): void {
-    const added = sanitiseProfiles(graphs);
+  merge(graphs: unknown, author?: AssetAuthor): void {
+    const added = sanitiseProfiles(graphs, author);
     if (!added?.length) return;
     const byId = new Map(this.values.map((graph) => [graph.id, graph]));
     for (const graph of added) byId.set(graph.id, graph);

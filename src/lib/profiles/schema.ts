@@ -5,30 +5,28 @@ import {
   Interpolation,
   GRID_UNITS,
   MAX_PROFILE_POINTS,
+  PROFILE_GRAPH_TYPE,
   PROFILE_PRESETS,
 } from "./index.ts";
 import {
   UUID_PATTERN,
-  authorSchema,
+  assetSchema,
   collectionSchema,
-  fileSchemaUrlSchema,
 } from "../assets/schema.ts";
-import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
-/** Longest profile graph ID or name (characters) */
-export const MAX_PROFILE_TEXT_LENGTH = 100;
+/** Name given to a profile graph of an older version that has none */
+export const UNTITLED_PROFILE_NAME = "Untitled graph";
 
 /** Most profile graphs a user can keep (and in one file) */
 export const MAX_SAVED_PROFILES = 100;
 
 /** Version of the profile graph schema */
-export const PROFILE_GRAPH_SCHEMA_VERSION = "1.0.0";
+export const PROFILE_GRAPH_SCHEMA_VERSION = "2.0.0";
 
-/** `@type` of a profile graph */
-export const PROFILE_GRAPH_TYPE = "PaintCanvas/ProfileGraph";
+export { PROFILE_GRAPH_TYPE };
 
 /** Version of the profile graph collection schema */
-export const PROFILE_GRAPH_COLLECTION_SCHEMA_VERSION = "1.0.0";
+export const PROFILE_GRAPH_COLLECTION_SCHEMA_VERSION = "2.0.0";
 
 /** `@type` of a profile graph collection file */
 export const PROFILE_GRAPH_COLLECTION_TYPE =
@@ -59,24 +57,22 @@ export const profilePointsSchema = {
   },
 } as const;
 
-/** Schema of a named profile graph */
-export const profileGraphSchema = {
-  $schema: SCHEMA_DIALECT,
-  $id: schemaUrl("profile-graph", PROFILE_GRAPH_SCHEMA_VERSION),
-  "@type": PROFILE_GRAPH_TYPE,
+/** Schema of a profile graph's content */
+export const profileGraphConfigSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["id", "name", "points"],
-  properties: {
-    // Named when the graph is a file of its own
-    $schema: fileSchemaUrlSchema,
-    "@type": { const: PROFILE_GRAPH_TYPE },
-    id: profileIdSchema,
-    name: { type: "string", minLength: 1, maxLength: MAX_PROFILE_TEXT_LENGTH },
-    author: authorSchema,
-    points: profilePointsSchema,
-  },
+  required: ["points"],
+  properties: { points: profilePointsSchema },
 } as const;
+
+/** Schema of a named profile graph */
+export const profileGraphSchema = assetSchema({
+  name: "profile-graph",
+  version: PROFILE_GRAPH_SCHEMA_VERSION,
+  type: PROFILE_GRAPH_TYPE,
+  id: profileIdSchema,
+  content: profileGraphConfigSchema,
+});
 
 /** Schema of a profile graph collection file */
 export const profileGraphCollectionSchema = collectionSchema({

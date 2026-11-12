@@ -1,18 +1,30 @@
 import { describe, it, expect, vi } from "vitest";
 import AssetSync, { ASSET_SYNC_ERROR_EVENT, type SyncedAssets } from "..";
+import type { Asset, AssetAuthor } from "../../../assets/schema";
 
-interface Note {
-  id: string;
-  text: string;
-}
+/** A test asset whose content is text */
+type Note = Asset<string>;
+
+/** A note with an ID and text */
+const note = (id: string, content: string): Note => ({
+  "@type": "Test/Note",
+  id,
+  name: id,
+  author: "Ada",
+  content,
+});
 
 /** Notes kept in memory */
 class Notes extends EventTarget implements SyncedAssets<Note> {
   items: Note[] = [];
 
-  merge(items: unknown[]): void {
+  /** The author last given to `merge` */
+  author?: AssetAuthor;
+
+  merge(items: unknown[], author?: AssetAuthor): void {
+    this.author = author;
     const valid = items.filter(
-      (item): item is Note => typeof (item as Note)?.text === "string",
+      (item): item is Note => typeof (item as Note)?.content === "string",
     );
     const ids = new Set(valid.map((note) => note.id));
     this.items = [...this.items.filter((note) => !ids.has(note.id)), ...valid];
@@ -32,8 +44,8 @@ const fakeStore = (saved: unknown[] = []) => ({
   remove: vi.fn(async (id: string) => void id),
 });
 
-const a = { id: "a", text: "A" };
-const b = { id: "b", text: "B" };
+const a = note("a", "A");
+const b = note("b", "B");
 
 describe("AssetSync", () => {
   it("should add the saved assets, then save ones only in memory and delete invalid saved ones", async () => {
@@ -47,6 +59,15 @@ describe("AssetSync", () => {
     expect(notes.items).toEqual([b, a]);
     expect(store.put.mock.calls).toEqual([[b]]);
     expect(store.remove.mock.calls).toEqual([["bad"]]);
+    expect(notes.author).toBeUndefined();
+  });
+
+  it("should give the author of older saved assets to the assets added", async () => {
+    const notes = new Notes();
+    const sync = new AssetSync(notes, fakeStore([a]), () => "Bo");
+    expect(sync.author?.()).toBe("Bo");
+    await sync.ready;
+    expect(notes.author).toBe("Bo");
   });
 
   it("should save changed assets and delete removed ones, one change after another", async () => {
@@ -55,10 +76,10 @@ describe("AssetSync", () => {
     const sync = new AssetSync(notes, store);
     await sync.ready;
     expect(store.put).not.toHaveBeenCalled();
-    notes.change([{ ...a, text: "Ay" }, b]);
-    notes.change([{ ...a, text: "Ay" }]);
+    notes.change([{ ...a, content: "Ay" }, b]);
+    notes.change([{ ...a, content: "Ay" }]);
     await vi.waitFor(() => expect(store.remove).toHaveBeenCalledWith("b"));
-    expect(store.put.mock.calls).toEqual([[{ ...a, text: "Ay" }]]);
+    expect(store.put.mock.calls).toEqual([[{ ...a, content: "Ay" }]]);
     sync.stop();
     notes.change([]);
     await new Promise((resolve) => setTimeout(resolve, 0));

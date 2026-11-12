@@ -29,7 +29,6 @@ const setup = (overrides: Partial<StrokeOptions> = {}) => {
     layer,
     mode: "paint",
     preset: {
-      id: "p",
       spacing: 1,
       sampleRate: 10,
       smoothingType: SmoothingType.Linear,
@@ -65,7 +64,7 @@ describe("strokes in a real browser", () => {
 
   it("should apply the stroke opacity once, without overlapping stamps building up", () => {
     const { engine, layer, options } = setup({
-      preset: { id: "p", spacing: 1, alpha: 0.5 },
+      preset: { spacing: 1, alpha: 0.5 },
     });
     // Dense overlapping stamps, crossing back over itself
     stroke(engine, options, [
@@ -82,7 +81,7 @@ describe("strokes in a real browser", () => {
 
   it("should build up opacity across separate strokes", () => {
     const { engine, layer, options } = setup({
-      preset: { id: "p", spacing: 1, alpha: 0.5 },
+      preset: { spacing: 1, alpha: 0.5 },
     });
     stroke(engine, options, [[50, 50]]);
     stroke(engine, options, [[50, 50]]);
@@ -206,7 +205,7 @@ describe("strokes limited to a mask in a real browser", () => {
 describe("strokes snapped to the pixel grid in a real browser", () => {
   it("should paint only the pixel under the pointer with a 1 pixel square", () => {
     const { engine, layer, options } = setup({
-      preset: { id: "p", spacing: 1, snapToPixelGrid: true },
+      preset: { spacing: 1, snapToPixelGrid: true },
       size: { width: 1, height: 1 },
       tip: squareTip(),
     });
@@ -218,14 +217,14 @@ describe("strokes snapped to the pixel grid in a real browser", () => {
 
   it("should paint a whole pixel for a stamp smaller than a pixel, which is faint without snapping", () => {
     const snapped = setup({
-      preset: { id: "p", spacing: 1, snapToPixelGrid: true },
+      preset: { spacing: 1, snapToPixelGrid: true },
       size: { width: 0.6, height: 0.6 },
       tip: squareTip(),
     });
     stroke(snapped.engine, snapped.options, [[10.2, 20.2]]);
     expect(pixel(snapped.layer, 10, 20)).toEqual([255, 0, 0, 255]);
     const loose = setup({
-      preset: { id: "p", spacing: 1 },
+      preset: { spacing: 1 },
       size: { width: 0.6, height: 0.6 },
       tip: squareTip(),
     });
@@ -235,7 +234,7 @@ describe("strokes snapped to the pixel grid in a real browser", () => {
 
   it("should erase whole pixels with a square that snaps to the pixel grid", () => {
     const { engine, layer, options } = setup({
-      preset: { id: "p", spacing: 1, snapToPixelGrid: true },
+      preset: { spacing: 1, snapToPixelGrid: true },
       size: { width: 2, height: 2 },
       tip: squareTip(),
     });

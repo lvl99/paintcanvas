@@ -62,7 +62,7 @@ describe("PaintCanvas messages", () => {
     await vi.waitFor(() => expect(first).toHaveLength(1));
     const patch = first[0] as PatchMessage;
     expect(patch).toMatchObject({
-      protocol: 1,
+      protocol: 2,
       type: "patch",
       coords: [2, 3, 3, 4],
       encoding: "rgba-deflate",
@@ -145,7 +145,7 @@ describe("PaintCanvas messages", () => {
 
   it("should ignore invalid messages", async () => {
     const receiver = new PaintCanvas({ width: 10, height: 10 });
-    expect(await receiver.receive("ann", { protocol: 1, type: "patch" })).toBe(
+    expect(await receiver.receive("ann", { protocol: 2, type: "patch" })).toBe(
       false,
     );
     expect(await receiver.applyPatch(receiver.layers.active.id, {})).toBe(
@@ -158,7 +158,7 @@ describe("PaintCanvas messages", () => {
     const receiver = new PaintCanvas({ width: 10, height: 10 });
     const listener = vi.fn();
     receiver.addEventListener("history", listener);
-    const message = { protocol: 1, type: "undo", step: STEP };
+    const message = { protocol: 2, type: "undo", step: STEP };
     expect(await receiver.receive("ann", message)).toBe(true);
     expect((listener.mock.calls[0]![0] as CustomEvent).detail).toEqual({
       source: "ann",
@@ -175,7 +175,7 @@ describe("PaintCanvas messages", () => {
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     const stroke = sent[0] as StrokeMessage;
     expect(stroke).toMatchObject({
-      protocol: 1,
+      protocol: 2,
       type: "stroke",
       layer: sender.layers.active.id,
       mode: "paint",
@@ -193,8 +193,8 @@ describe("PaintCanvas messages", () => {
     sender.redo();
     await vi.waitFor(() => expect(sent).toHaveLength(3));
     expect(sent.slice(1)).toEqual([
-      { protocol: 1, type: "undo", step: stroke.step },
-      { protocol: 1, type: "redo", step: stroke.step },
+      { protocol: 2, type: "undo", step: stroke.step },
+      { protocol: 2, type: "redo", step: stroke.step },
     ]);
     // Patches weren't asked for
     await sender.sendNow();

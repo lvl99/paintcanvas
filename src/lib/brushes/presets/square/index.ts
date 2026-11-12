@@ -1,4 +1,3 @@
-import { BUILT_IN_AUTHOR } from "../../authors";
 import {
   SmoothingType,
   type BrushConfig,
@@ -7,17 +6,17 @@ import {
 import { sizedPresets } from "../sized";
 import SQUARE_IMAGE from "./square.png?inline";
 
+/** Version of these presets */
+const VERSION = "1.1.0";
+
 /** Settings shared by the round, square and soft round presets */
-const DEFAULT_CONFIG: Partial<BrushConfig> = {
-  version: "1.1.0",
-  author: BUILT_IN_AUTHOR,
+const DEFAULT_CONFIG: BrushConfig = {
   constrainProportions: true,
 };
 
 /** Hard square brushes, snapped to the pixel grid */
 export const square: BrushesConfig = sizedPresets(
-  "square",
-  "Square",
+  { idPrefix: "square", name: "Square", version: VERSION },
   [1, 5, 10, 20, 30, 40, 50, 100, 150],
   {
     ...DEFAULT_CONFIG,
