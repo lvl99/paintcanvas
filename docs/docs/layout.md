@@ -157,7 +157,7 @@ The theme and language are applied by the elements that change them, given the c
 
 Without the layout, use `SettingsAutosave` (`@lvl99dotcom/paintcanvas/lib/classes/SettingsAutosave`) with `IndexedDbSettingsStore` (`@lvl99dotcom/paintcanvas/lib/storage`), or your own store with `load` and `save`.
 
-Settings are exported and imported as app settings files, matching the [app settings schema](./schemas.md) (`app-settings-1.0.0.json`, `@type` `PaintCanvas/AppSettings`). A file also holds the user's colour palettes, profile graphs and brush presets; importing one adds them to the user's own. Settings files from before versioned schemas are read too.
+Settings are exported and imported as app settings files, matching the [app settings schema](./schemas.md) (`app-settings-2.0.0.json`, `@type` `PaintCanvas/AppSettings`). A file also holds the user's colour palettes, profile graphs and brush presets; importing one adds them to the user's own. Settings files from before versioned schemas and of version 1 are read too, with their assets upgraded (see [Version 2.0.0](./schemas.md#version-200)).
 
 ```ts
 import {
@@ -167,8 +167,8 @@ import {
   parseSettingsFile,
 } from "@lvl99dotcom/paintcanvas/lib/settings";
 
-const text = exportSettingsFile(collectSettings(canvas)); // { "$schema": ".../app-settings-1.0.0.json", "@type": "PaintCanvas/AppSettings", ... }
-await applySettings(canvas, parseSettingsFile(text)); // throws an AssetFileError for files it can't read
+const text = exportSettingsFile(collectSettings(canvas)); // { "$schema": ".../app-settings-2.0.0.json", "@type": "PaintCanvas/AppSettings", ... }
+await applySettings(canvas, parseSettingsFile(text, canvas.author)); // throws an AssetFileError for files it can't read
 ```
 
 ### Adding your app's own settings
@@ -191,7 +191,7 @@ canvas.settingsExtensions.add({
 - The key can't be one PaintCanvas uses (`RESERVED_SETTINGS_KEYS`) or another extension's.
 - Settings read before the extension is added are kept, and used when it's added, so it can be added after the settings are restored.
 - Invalid settings for an extension are ignored.
-- The app settings schema allows parts it doesn't name, so an app can publish a schema of its own that extends it (e.g. with `allOf` and a `$ref` to `app-settings-1.0.0.json`).
+- The app settings schema allows parts it doesn't name, so an app can publish a schema of its own that extends it (e.g. with `allOf` and a `$ref` to `app-settings-2.0.0.json`).
 
 ## Keeping the drawing
 
