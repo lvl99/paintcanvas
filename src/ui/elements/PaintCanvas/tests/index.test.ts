@@ -15,7 +15,7 @@ import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { createFakeLocks } from "../../../../testing/locks";
 import { createRecordingContext } from "../../../../testing/recordingContext";
 import { PROFILE_PRESETS } from "../../../../lib/profiles";
-import type { BrushConfig } from "../../../../lib/brushes/types";
+import type { BrushPreset } from "../../../../lib/brushes/types";
 import IndexedDbLayerStore, {
   IndexedDbAssetStore,
   IndexedDbSettingsStore,
@@ -415,15 +415,17 @@ describe("paint-canvas", () => {
     await layout.updateComplete;
     const config = () =>
       layout.shadowRoot!.querySelector("pc-brush-config") as
-        (HTMLElement & { config: { name?: string } }) | null;
+        (HTMLElement & { presetName?: string }) | null;
     expect(config()?.getAttribute("kind")).toBe("brush");
+    expect(config()!.presetName).toBe("Round 1px");
     config()!.dispatchEvent(
       new CustomEvent("pc-save", {
-        detail: { ...app.brush.preset, alpha: 0.5 },
+        detail: { config: { ...app.brush.preset, alpha: 0.5 }, name: "Half" },
       }),
     );
     await layout.updateComplete;
     expect(app.brush.preset.alpha).toBe(0.5);
+    expect(app.brush.name).toBe("Half");
     expect(config()).toBeNull();
     // The user's own preset can be deleted from the window
     const own = app.newPreset(app.eraser.preset, "Mine");
@@ -436,7 +438,7 @@ describe("paint-canvas", () => {
     app.togglePanel(Panel.Brush);
     layout.newPreset("brush");
     await layout.updateComplete;
-    expect(config()!.config.name).toBe("New brush");
+    expect(config()!.presetName).toBe("New brush");
     expect(app.panel).toBeNull();
   });
 
@@ -529,7 +531,7 @@ describe("paint-canvas", () => {
     await first.app.customPresets.save(preset);
     const graph = first.app.profiles.save({
       name: "Soft",
-      points: PROFILE_PRESETS[1]!.points,
+      points: PROFILE_PRESETS[1]!.content.points,
     })!;
     await vi.waitFor(async () =>
       expect(await new IndexedDbAssetStore("profiles", name).list()).toEqual([
@@ -559,7 +561,7 @@ describe("paint-canvas", () => {
   });
 
   it("should leave the implementer's asset stores alone without a settings store name", async () => {
-    const brushes = new IndexedDbAssetStore<BrushConfig>("brushes", "mine");
+    const brushes = new IndexedDbAssetStore<BrushPreset>("brushes", "mine");
     const { layout, app } = await setup(
       "",
       1000,

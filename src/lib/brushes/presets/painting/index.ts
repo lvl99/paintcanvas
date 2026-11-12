@@ -1,4 +1,3 @@
-import { BUILT_IN_AUTHOR } from "../../authors";
 import type { BrushConfig, BrushesConfig } from "../../types";
 import { SmoothingType } from "../../types";
 import { sizedPresets, spacedBy } from "../sized";
@@ -8,10 +7,11 @@ import SPLATTER_IMAGE from "./splatter.png?inline";
 import HAIR_IMAGE from "./hair.png?inline";
 import GRASS_IMAGE from "./grass.png?inline";
 
+/** Version of these presets */
+const VERSION = "1.0.0";
+
 /** Settings shared by the paint and texture presets */
-const DEFAULT_CONFIG: Partial<BrushConfig> = {
-  version: "1.0.0",
-  author: BUILT_IN_AUTHOR,
+const DEFAULT_CONFIG: BrushConfig = {
   constrainProportions: true,
   sampleRate: 5,
   smoothingType: SmoothingType.BezierCubic,
@@ -28,8 +28,7 @@ const TEN_TO_A_HUNDRED = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
 /** Thick paint whose bristles leave streaks along the stroke, narrower with lighter pen pressure */
 export const texturedPaint: BrushesConfig = sizedPresets(
-  "texturedPaint",
-  "Textured paint",
+  { idPrefix: "texturedPaint", name: "Textured paint", version: VERSION },
   [5, 10, 20, 30, 40, 50, 100],
   {
     ...DEFAULT_CONFIG,
@@ -45,8 +44,7 @@ export const texturedPaint: BrushesConfig = sizedPresets(
  * this only imitates the look.
  */
 export const wateryPaint: BrushesConfig = sizedPresets(
-  "wateryPaint",
-  "Watery paint",
+  { idPrefix: "wateryPaint", name: "Watery paint", version: VERSION },
   [5, 10, 20, 30, 40, 50],
   {
     ...DEFAULT_CONFIG,
@@ -61,8 +59,7 @@ export const wateryPaint: BrushesConfig = sizedPresets(
 
 /** Splashes of paint, scattered and turned at random */
 export const splatter: BrushesConfig = sizedPresets(
-  "splatter",
-  "Splatter",
+  { idPrefix: "splatter", name: "Splatter", version: VERSION },
   [50, 100, 150],
   {
     ...DEFAULT_CONFIG,
@@ -79,8 +76,7 @@ export const splatter: BrushesConfig = sizedPresets(
 
 /** Fine parallel strands, for hair and fur */
 export const hair: BrushesConfig = sizedPresets(
-  "hair",
-  "Hair",
+  { idPrefix: "hair", name: "Hair", version: VERSION },
   TEN_TO_A_HUNDRED,
   {
     ...DEFAULT_CONFIG,
@@ -93,8 +89,7 @@ export const hair: BrushesConfig = sizedPresets(
 
 /** Tufts of grass, leaning a little to either side and scattered along the stroke */
 export const grass: BrushesConfig = sizedPresets(
-  "grass",
-  "Grass",
+  { idPrefix: "grass", name: "Grass", version: VERSION },
   TEN_TO_A_HUNDRED,
   {
     ...DEFAULT_CONFIG,

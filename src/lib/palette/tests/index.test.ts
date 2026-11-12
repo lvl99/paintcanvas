@@ -10,15 +10,17 @@ import {
   colourPaletteCollectionSchema,
   colourPaletteFile,
   colourPaletteSchema,
+  UNTITLED_PALETTE_NAME,
 } from "..";
-import { AssetFileError, UUID_PATTERN } from "../../assets";
+import { AssetFileError, UNKNOWN_AUTHOR, UUID_PATTERN } from "../../assets";
 import { withoutType } from "../../validation/standalone";
 
 const palette = {
+  "@type": COLOUR_PALETTE_TYPE,
   id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
   name: "Sunset",
   author: { name: "Ada" },
-  colours: ["#ff0000", "#00FF00"],
+  content: { colours: ["#ff0000", "#00FF00"] },
 };
 
 /** A collection file with the given palettes, and other changes */
@@ -36,11 +38,11 @@ describe("colour palette schemas", () => {
 
   it("should be published with versioned URLs and types", () => {
     expect(colourPaletteSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-2.0.0.json",
     );
     expect(colourPaletteSchema["@type"]).toBe("PaintCanvas/ColourPalette");
     expect(colourPaletteCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-2.0.0.json",
     );
     expect(colourPaletteCollectionSchema["@type"]).toBe(
       "PaintCanvas/ColourPaletteCollection",
@@ -50,15 +52,16 @@ describe("colour palette schemas", () => {
   it("should compile in ajv strict mode and validate palettes and files", () => {
     expect(validatePalette(palette)).toBe(true);
     expect(
+      validatePalette({ ...palette, $schema: colourPaletteSchema.$id }),
+    ).toBe(true);
+    expect(
       validatePalette({
         ...palette,
-        $schema: colourPaletteSchema.$id,
-        "@type": COLOUR_PALETTE_TYPE,
+        group: "Warm",
+        version: "1.0.0",
+        content: { colours: [...DEFAULT_PALETTE] },
       }),
     ).toBe(true);
-    expect(validatePalette({ ...palette, colours: [...DEFAULT_PALETTE] })).toBe(
-      true,
-    );
     expect(validateFile(file([palette]))).toBe(true);
     expect(validateFile(file([]))).toBe(true);
   });
@@ -66,16 +69,22 @@ describe("colour palette schemas", () => {
   it.each([
     ["an ID that isn't a UUID", { id: "sunset" }],
     ["an empty name", { name: " " }],
-    ["a colour that isn't #rrggbb", { colours: ["#fff"] }],
-    ["a colour that isn't text", { colours: [255] }],
+    ["a colour that isn't #rrggbb", { content: { colours: ["#fff"] } }],
+    ["a colour that isn't text", { content: { colours: [255] } }],
     [
       "too many colours",
-      { colours: Array(MAX_PALETTE_COLOURS + 1).fill("#000000") },
+      { content: { colours: Array(MAX_PALETTE_COLOURS + 1).fill("#000000") } },
     ],
+    ["no colours", { content: {} }],
+    ["other content", { content: { colours: [], extra: true } }],
     ["other properties", { extra: true }],
     ["another type", { "@type": "Other" }],
+    ["no type", { "@type": undefined }],
+    ["no author", { author: undefined }],
   ])("should reject a palette with %s", (_label, changes) => {
-    expect(validatePalette({ ...palette, ...changes })).toBe(false);
+    expect(
+      validatePalette(JSON.parse(JSON.stringify({ ...palette, ...changes }))),
+    ).toBe(false);
   });
 
   it.each([
@@ -111,10 +120,32 @@ describe("colourPaletteFile", () => {
     );
     expect(rest).toEqual([]);
     expect(read).toEqual({
+      "@type": COLOUR_PALETTE_TYPE,
       id: expect.stringMatching(new RegExp(UUID_PATTERN)),
       name: LEGACY_PALETTE_NAME,
-      colours: ["#ff0000"],
+      author: UNKNOWN_AUTHOR,
+      content: { colours: ["#ff0000"] },
     });
+  });
+
+  it("should read a file of version 1, giving palettes without an author the user", () => {
+    const { content, ...header } = palette;
+    const items = [
+      { ...header, ...content },
+      { ...header, name: undefined, author: undefined, ...content },
+    ];
+    expect(
+      colourPaletteFile.read(
+        file(JSON.parse(JSON.stringify(items)), {
+          $schema:
+            "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-1.0.0.json",
+        }),
+        { author: "Bo" },
+      ),
+    ).toEqual([
+      palette,
+      { ...palette, name: UNTITLED_PALETTE_NAME, author: "Bo" },
+    ]);
   });
 
   it.each([
@@ -130,7 +161,7 @@ describe("colourPaletteFile", () => {
       JSON.stringify(
         file([], {
           $schema:
-            "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-2.0.0.json",
+            "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-3.0.0.json",
         }),
       ),
       "unsupported",

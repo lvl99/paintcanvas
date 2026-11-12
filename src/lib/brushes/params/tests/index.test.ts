@@ -20,7 +20,7 @@ const pen = (pressure: number, tiltX = 0, tiltY = 0) => ({
   tiltY,
 });
 const fixed = (value: number) => () => value;
-const base: BrushConfig = { id: "b" };
+const base: BrushConfig = {};
 
 describe("lerp, tiltAmount and tiltDirection", () => {
   it("should interpolate and measure tilt", () => {
@@ -64,7 +64,7 @@ describe("variationFactor", () => {
   });
 
   it("should put each input through the profile graph before it sets the factor", () => {
-    const overweight = PROFILE_PRESETS[1]!.points;
+    const overweight = PROFILE_PRESETS[1]!.content.points;
     // Overweight: 30% of the input goes 70% of the way from min to max
     expect(
       variationFactor(

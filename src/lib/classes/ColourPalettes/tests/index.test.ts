@@ -4,56 +4,93 @@ import ColourPalettes, {
   paletteName,
   sanitiseColourPalettes,
 } from "..";
-import { MAX_PALETTE_COLOURS, MAX_PALETTE_NAME_LENGTH } from "../../../palette";
+import {
+  COLOUR_PALETTE_TYPE,
+  MAX_PALETTE_COLOURS,
+  UNTITLED_PALETTE_NAME,
+} from "../../../palette";
+import { MAX_ASSET_TEXT_LENGTH, UNKNOWN_AUTHOR } from "../../../assets";
+import { testPalette } from "../../../../testing/assets";
 
 const id = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
 const other = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
 
 /** The palettes' names and colours */
 const summary = (palettes: ColourPalettes) =>
-  palettes.items.map(({ name, colours }) => `${name}: ${colours.join(" ")}`);
+  palettes.items.map(
+    ({ name, content }) => `${name}: ${content.colours.join(" ")}`,
+  );
 
 describe("paletteName", () => {
   it("should trim names, and refuse empty or long ones", () => {
     expect(paletteName("  Sunset ")).toBe("Sunset");
     expect(paletteName(" ")).toBeUndefined();
-    expect(
-      paletteName("x".repeat(MAX_PALETTE_NAME_LENGTH + 1)),
-    ).toBeUndefined();
+    expect(paletteName("x".repeat(MAX_ASSET_TEXT_LENGTH + 1))).toBeUndefined();
     expect(paletteName(1)).toBeUndefined();
   });
 });
 
 describe("sanitiseColourPalettes", () => {
   it("should keep palettes with a UUID, a name and valid colours, each ID once, with valid authors", () => {
+    const sunset = testPalette(["#FF0000", "red", "#ff0000"], {
+      id,
+      name: " Sunset ",
+      author: "Ada",
+      group: "Warm",
+      version: "1.0.0",
+    });
     expect(
-      sanitiseColourPalettes([
-        {
-          id,
-          name: " Sunset ",
-          colours: ["#FF0000", "red", "#ff0000"],
-          author: "Ada",
-        },
-        { id, name: "Again", colours: [] },
-        { id: other, name: "Sea", colours: [], author: { handle: "no name" } },
-        { id: "sea", name: "Sea", colours: [] },
-        { id: other, name: "", colours: [] },
-        { id: other, name: "Sea", colours: "#000000" },
-        null,
-      ]),
+      sanitiseColourPalettes(
+        [
+          sunset,
+          testPalette([], { id, name: "Again" }),
+          testPalette([], {
+            id: other,
+            name: "Sea",
+            author: { handle: "no name" } as never,
+            group: " ",
+            version: "",
+          }),
+          testPalette([], { id: "sea", name: "Sea" }),
+          testPalette([], { id: other, name: "" }),
+          { ...testPalette([], { id: other }), content: { colours: "#000" } },
+          null,
+        ],
+        "Bo",
+      ),
     ).toEqual([
-      { id, name: "Sunset", colours: ["#ff0000"], author: "Ada" },
-      { id: other, name: "Sea", colours: [] },
+      { ...sunset, name: "Sunset", content: { colours: ["#ff0000"] } },
+      {
+        "@type": COLOUR_PALETTE_TYPE,
+        id: other,
+        name: "Sea",
+        author: "Bo",
+        content: { colours: [] },
+      },
     ]);
     expect(sanitiseColourPalettes("nothing")).toBeUndefined();
   });
 
+  it("should upgrade palettes of version 1, naming ones without a name", () => {
+    expect(
+      sanitiseColourPalettes([
+        { id, name: "Sunset", colours: ["#ff0000"], author: "Ada" },
+        { id: other, colours: [] },
+      ]),
+    ).toEqual([
+      testPalette(["#ff0000"], { id, name: "Sunset", author: "Ada" }),
+      testPalette([], {
+        id: other,
+        name: UNTITLED_PALETTE_NAME,
+        author: UNKNOWN_AUTHOR,
+      }),
+    ]);
+  });
+
   it("should keep at most the most palettes", () => {
-    const many = Array.from({ length: MAX_SAVED_PALETTES + 1 }, () => ({
-      id: crypto.randomUUID(),
-      name: "P",
-      colours: [],
-    }));
+    const many = Array.from({ length: MAX_SAVED_PALETTES + 1 }, () =>
+      testPalette(),
+    );
     expect(sanitiseColourPalettes(many)).toHaveLength(MAX_SAVED_PALETTES);
   });
 });
@@ -65,21 +102,23 @@ describe("ColourPalettes", () => {
     palettes.addEventListener("change", change);
     const sunset = palettes.create(" Sunset ", ["#FF7700"], { name: "Ada" })!;
     expect(sunset).toEqual({
+      "@type": COLOUR_PALETTE_TYPE,
       id: expect.stringMatching(/^[0-9a-f-]{36}$/),
       name: "Sunset",
       author: { name: "Ada" },
-      colours: ["#ff7700"],
+      content: { colours: ["#ff7700"] },
     });
+    expect(palettes.create("Plain")?.author).toBe(UNKNOWN_AUTHOR);
     expect(palettes.get(sunset.id)).toBe(sunset);
     expect(palettes.create("")).toBeUndefined();
     expect(palettes.rename(sunset.id, "Dusk")).toBe(true);
     expect(palettes.rename(sunset.id, " ")).toBe(false);
     expect(palettes.rename("gone", "Dusk")).toBe(false);
-    expect(summary(palettes)).toEqual(["Dusk: #ff7700"]);
+    expect(summary(palettes)).toEqual(["Dusk: #ff7700", "Plain: "]);
     expect(palettes.remove("gone")).toBe(false);
     expect(palettes.remove(sunset.id)).toBe(true);
-    expect(palettes.items).toEqual([]);
-    expect(change).toHaveBeenCalledTimes(3);
+    expect(summary(palettes)).toEqual(["Plain: "]);
+    expect(change).toHaveBeenCalledTimes(4);
   });
 
   it("should add and remove colours, each once, up to the most", () => {

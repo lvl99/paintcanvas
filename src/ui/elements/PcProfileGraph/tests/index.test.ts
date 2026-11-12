@@ -21,7 +21,8 @@ afterEach(() => document.body.replaceChildren());
 const { Linear, BezierCubic } = Interpolation;
 
 /** Overweight's points */
-const curved = () => PROFILE_PRESETS[1]!.points.map((point) => ({ ...point }));
+const curved = () =>
+  PROFILE_PRESETS[1]!.content.points.map((point) => ({ ...point }));
 
 /** A graph 112px square from (0, 0), so a grid unit is 10px after the 0.6 unit margin (6px) */
 const setup = async (points: ProfilePoint[] = curved()) => {

@@ -14,6 +14,12 @@ import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { AutosaveState } from "../../LayerAutosave";
 import { BlendMode } from "../../Layer";
 import { MemoryDocumentStore } from "../../../../testing/documentStore";
+import {
+  testPalette,
+  testPreset,
+  testProfile,
+} from "../../../../testing/assets";
+import { BRUSH_PRESET_TYPE } from "../../../presets";
 
 const createApp = (options = {}) =>
   new PaintCanvas({ createCanvas: createFakeCanvasFactory(), ...options });
@@ -26,8 +32,13 @@ describe("PaintCanvas", () => {
     expect(app.authorHandle).toBe("");
     expect(app.maxCanvasSize).toBe(MAX_CANVAS_SIZE);
     expect(app.maxLayers).toBe(5);
-    expect(app.newPreset({ id: "round10" }, "Mine").author).toEqual({
-      name: "Unknown",
+    expect(app.newPreset({ width: 10 }, " Mine ")).toEqual({
+      "@type": BRUSH_PRESET_TYPE,
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      name: "Mine",
+      version: "1.0.0",
+      author: { name: "Unknown" },
+      content: { width: 10 },
     });
     expect(app.drawables).toEqual(app.layers.layers);
     expect(app.names).toEqual({
@@ -56,7 +67,7 @@ describe("PaintCanvas", () => {
     expect(app.layers.maxLayers).toBe(2);
     app.setCanvasSize(100, 100);
     expect(app.layers.maxLayers).toBe(2);
-    expect(app.newPreset({ id: "round10" }, "Mine").author).toEqual({
+    expect(app.newPreset({ width: 10 }, "Mine").author).toEqual({
       name: "Ada",
       handle: "ada",
     });
@@ -340,7 +351,7 @@ describe("PaintCanvas", () => {
     expect([app.strokes.width, app.strokes.height]).toEqual([2000, 2000]);
     app.setCanvasSize(300, 200);
     expect([app.strokes.width, app.strokes.height]).toEqual([300, 200]);
-    expect(app.tips.get({ id: "round" }).isRound).toBe(true);
+    expect(app.tips.get({}).isRound).toBe(true);
   });
 
   it("should close the open panel", () => {
@@ -379,13 +390,12 @@ describe("PaintCanvas", () => {
   });
 
   it("should list custom presets after the built-in ones for the brush and eraser", async () => {
-    const saved = {
-      id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
-      name: "Mine",
-      image: "data:image/png;base64,AAAA",
-    };
+    const saved = testPreset(
+      { image: "data:image/png;base64,AAAA" },
+      { id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a", name: "Mine" },
+    );
     const store = {
-      list: vi.fn(async () => [saved]),
+      list: vi.fn(async (): Promise<unknown[]> => [saved]),
       put: vi.fn(async () => undefined),
       remove: vi.fn(async () => undefined),
     };
@@ -400,22 +410,56 @@ describe("PaintCanvas", () => {
     expect(app.isBuiltInPreset(saved.id)).toBe(false);
   });
 
+  it("should upgrade assets of version 1 loaded from stores, giving them the user as their author", async () => {
+    const id = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
+    const store = (saved: unknown) => ({
+      list: vi.fn(async (): Promise<unknown[]> => [saved]),
+      put: vi.fn(async () => undefined),
+      remove: vi.fn(async () => undefined),
+    });
+    const linear = [
+      { x: 0, y: -10, i: "linear" as const },
+      { x: 10, y: 0, i: "linear" as const },
+    ];
+    const brushes = store({ id, name: "Mine", width: 4 });
+    const profiles = store({ id, name: "Soft", points: linear });
+    const palettes = store({ id, name: "Sunset", colours: ["#ff7700"] });
+    const app = createApp({
+      presetAuthor: () => "Ada",
+      stores: { brushes, profiles, palettes },
+    });
+    await app.profileSync?.ready;
+    await app.paletteSync?.ready;
+    await vi.waitFor(() => expect(brushes.put).toHaveBeenCalled());
+    const header = { id, author: "Ada" };
+    expect(app.customPresets.presets).toEqual([
+      testPreset({ width: 4 }, { ...header, name: "Mine" }),
+    ]);
+    expect(app.profiles.graphs).toEqual([
+      testProfile(linear, { ...header, name: "Soft" }),
+    ]);
+    expect(app.palettes.items).toEqual([
+      testPalette(["#ff7700"], { ...header, name: "Sunset" }),
+    ]);
+    expect(profiles.put).toHaveBeenCalledWith(app.profiles.graphs[0]);
+    expect(palettes.put).toHaveBeenCalledWith(app.palettes.items[0]);
+  });
+
   it("should keep profile graphs in their store, and use other stores", async () => {
-    const graph = {
-      id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
-      name: "Soft",
-      points: [
+    const graph = testProfile(
+      [
         { x: 0, y: -10, i: "linear" },
         { x: 10, y: 0, i: "linear" },
       ],
-    };
+      { id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a", name: "Soft" },
+    );
     const store = () => ({
       list: vi.fn(async (): Promise<unknown[]> => [graph]),
       put: vi.fn(async () => undefined),
       remove: vi.fn(async () => undefined),
     });
     const profiles = store();
-    const palette = { id: graph.id, name: "Sunset", colours: ["#ff7700"] };
+    const palette = testPalette(["#ff7700"], { id: graph.id, name: "Sunset" });
     const palettes = store();
     palettes.list.mockResolvedValue([palette]);
     const app = createApp({ stores: { profiles, palettes } });

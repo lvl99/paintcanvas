@@ -6,11 +6,10 @@ import BrushTip, {
 import { createOffscreenCanvas, type CanvasFactory } from "../../classes/Layer";
 
 /**
- * The key a preset's tip is kept under: its shape image (so presets and edited settings with the same shape share a
- * tip, and a changed shape loads anew), or its ID for shapes given as bytes.
+ * The key a tip is kept under: its shape image, as a data URL or bytes. Settings with the same shape share a tip, and a
+ * changed shape loads anew.
  */
-const tipKey = (preset: BrushConfig): string =>
-  typeof preset.image === "string" ? preset.image : preset.id;
+type TipKey = string | Uint8Array;
 
 /**
  * Loads and keeps each shape's brush tip. Until a shape's image has loaded, the round tip is used.
@@ -22,9 +21,9 @@ const tipKey = (preset: BrushConfig): string =>
  * const tip = tips.get(preset); // round until the image loads
  */
 export default class BrushTipCache extends EventTarget {
-  private readonly tips = new Map<string, BrushTip>();
+  private readonly tips = new Map<TipKey, BrushTip>();
 
-  private readonly loading = new Set<string>();
+  private readonly loading = new Set<TipKey>();
 
   private readonly round: BrushTip;
 
@@ -43,11 +42,12 @@ export default class BrushTipCache extends EventTarget {
   }
 
   /**
-   * Get a preset's tip, starting to load it if needed. Returns the round tip while loading or if loading fails.
+   * Get the tip of a brush's settings, starting to load it if needed. Returns the round tip while loading or if loading
+   * fails.
    */
   get(preset: BrushConfig): BrushTip {
-    if (!preset.image) return this.round;
-    const key = tipKey(preset);
+    const key = preset.image;
+    if (!key) return this.round;
     const tip = this.tips.get(key);
     if (tip) return tip;
     if (!this.loading.has(key)) void this.load(preset, key);
@@ -58,13 +58,13 @@ export default class BrushTipCache extends EventTarget {
    * Start loading every preset's tip, so the first stroke with each preset already uses its shape.
    */
   preload(presets: BrushesConfig): void {
-    for (const preset of Object.values(presets)) this.get(preset);
+    for (const preset of Object.values(presets)) this.get(preset.content);
   }
 
   /**
-   * Load a preset's tip and remember it under its key.
+   * Load the tip of a brush's settings and remember it under its key.
    */
-  private async load(preset: BrushConfig, key: string): Promise<void> {
+  private async load(preset: BrushConfig, key: TipKey): Promise<void> {
     this.loading.add(key);
     try {
       this.tips.set(

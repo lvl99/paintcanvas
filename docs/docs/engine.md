@@ -56,7 +56,7 @@ One of them is selected for configuration (`canvas.selectedColour`, the foregrou
 
 `canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE`), each once as lowercase `#rrggbb`. Its ID is `DEFAULT_PALETTE_ID`. Users can't change it: picking one of its colours sets the selected foreground or background colour, and changing that colour afterwards doesn't change the palette. It isn't saved with the app settings; colours older versions saved in it are moved to a palette of the user's own named "My colours" (`keepOlderPalette` from `@lvl99dotcom/paintcanvas/lib/settings`). An implementer can give it other colours with `set`.
 
-`canvas.palettes` (a `ColourPalettes`) holds the user's own palettes, each with an ID, a name, an optional author and its colours:
+`canvas.palettes` (a `ColourPalettes`) holds the user's own palettes. Each is an asset (see [Schemas and asset files](./schemas.md#assets)) with an ID, a name, an author and its colours (`content.colours`):
 
 ```ts
 const sunset = canvas.palettes.create("Sunset", ["#ff7700"], canvas.author);
@@ -74,7 +74,7 @@ The user's palettes are exported and imported as colour palette files (see [Sche
 import { colourPaletteFile } from "@lvl99dotcom/paintcanvas/lib/palette";
 
 const text = colourPaletteFile.write(canvas.palettes.items);
-canvas.palettes.merge(colourPaletteFile.parse(text)); // throws an AssetFileError for files it can't read
+canvas.palettes.merge(colourPaletteFile.parse(text, { author: canvas.author })); // throws an AssetFileError for files it can't read
 ```
 
 `<pc-panel-colours>` shows the user's palettes above PaintCanvas's, each with its own [+] to save the selected colour (PaintCanvas's has none, and its colours can't be deleted). Each of the user's palettes has a ⋮ menu (Rename…, Export, Delete…), and "New palette" makes one.
@@ -102,6 +102,7 @@ const canvas = new PaintCanvas({ stores: assets });
 ```
 
 - Brush presets (`canvas.customPresets`) are loaded from their store, leaving out invalid ones, and saved and deleted as they change.
+- Assets saved by older versions are upgraded when they're loaded, and saved again (see [Version 2.0.0](./schemas.md#version-200)).
 - Profile graphs (`canvas.profiles`) saved in their store are added when it's used, and changes are saved soon after (`canvas.profileSync`, an `AssetSync`, dispatches `error` when that fails).
 - Colour palettes (`canvas.palettes`) work like profile graphs (`canvas.paletteSync`).
 

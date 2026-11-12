@@ -20,6 +20,7 @@ import {
   profileGraphSchema,
 } from "../profiles/schema.ts";
 import { appSettingsSchema, settingsSchema } from "../settings/schema.ts";
+import { assetHeaderSchema } from "../assets/schema.ts";
 
 /**
  * A schema without its `@type` (which names what kind of thing it describes, e.g. `PaintCanvas/BrushConfig`), as ajv
@@ -125,6 +126,7 @@ export const generateValidatorsCode = (): string => {
     // Sub-schemas used more than once are compiled once
     schemas: shareRepeatedSchemas(
       [
+        assetHeaderSchema,
         brushPresetSchema,
         brushPresetCollectionSchema,
         colourPaletteSchema,
@@ -147,6 +149,7 @@ export const generateValidatorsCode = (): string => {
   return (
     GENERATED_HEADER +
     standaloneCode(ajv, {
+      validateAssetHeader: assetHeaderSchema.$id,
       validateBrushPreset: brushPresetSchema.$id,
       validateBrushPresetCollection: brushPresetCollectionSchema.$id,
       validateColourPalette: colourPaletteSchema.$id,

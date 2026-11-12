@@ -13,11 +13,11 @@ describe("brush shapes in a real browser", () => {
       }),
     );
     const shaped = Object.values(brushPresets).filter(
-      (preset) => typeof preset.image === "string",
+      (preset) => typeof preset.content.image === "string",
     );
     expect(shaped.length).toBeGreaterThan(0);
     for (const preset of shaped) {
-      const tip = await BrushTip.load(preset);
+      const tip = await BrushTip.load(preset.content);
       expect(tip.mask, preset.id).toBeDefined();
     }
   });

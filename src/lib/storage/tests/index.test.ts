@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from "vitest";
+import type { ProfileGraph } from "../../profiles";
+import { testProfile } from "../../../testing/assets";
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import IndexedDbLayerStore, {
@@ -233,12 +235,12 @@ describe("database upgrades", () => {
 });
 
 describe("IndexedDbAssetStore", () => {
-  const a = { id: "a", name: "A" };
-  const b = { id: "b", name: "B" };
+  const a = testProfile([], { id: "a", name: "A" });
+  const b = testProfile([], { id: "b", name: "B" });
 
   it("should keep assets of a kind under a name, in the order they were first saved", async () => {
     const factory = new IDBFactory();
-    const store = new IndexedDbAssetStore<{ id: string; name: string }>(
+    const store = new IndexedDbAssetStore<ProfileGraph>(
       "profiles",
       "app",
       factory,

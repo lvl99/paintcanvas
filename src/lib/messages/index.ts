@@ -50,7 +50,7 @@ const VALIDATORS: Record<CanvasMessageType, Validator<CanvasMessage>> = {
  * isn't empty.
  *
  * @example
- * validateCanvasMessage(JSON.parse(text)); // { valid: true, value: { protocol: 1, type: "patch", … } }
+ * validateCanvasMessage(JSON.parse(text)); // { valid: true, value: { protocol: 2, type: "patch", … } }
  */
 export const validateCanvasMessage = (
   input: unknown,

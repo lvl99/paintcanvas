@@ -1,4 +1,8 @@
-import type { BrushConfig, BrushesConfig } from "../../brushes/types";
+import type {
+  BrushConfig,
+  BrushesConfig,
+  BrushPreset,
+} from "../../brushes/types";
 
 /** Smallest brush size in pixels */
 export const MIN_BRUSH_SIZE = 1;
@@ -93,7 +97,10 @@ export default class BrushSettings extends EventTarget {
   /** ID of the selected preset */
   presetId: string;
 
-  /** The current settings: a copy of the selected preset, with any changes */
+  /** The name of the current settings: the selected preset's, unless changed with `apply` */
+  name: string;
+
+  /** The current settings: a copy of the selected preset's, with any changes */
   private current: BrushConfig;
 
   /**
@@ -108,8 +115,9 @@ export default class BrushSettings extends EventTarget {
     if (!first) throw new Error("At least one brush preset is required");
     this.presets = presets;
     this.presetId = first.id;
-    this.current = structuredClone(first);
-    this.applyPresetSize(first);
+    this.name = first.name;
+    this.current = structuredClone(first.content);
+    this.applyPresetSize(first.content);
   }
 
   /** The current settings: the selected preset's, with any changes made since selecting it */
@@ -118,7 +126,7 @@ export default class BrushSettings extends EventTarget {
   }
 
   /** The selected preset as saved, or undefined if it no longer exists */
-  get selectedPreset(): BrushConfig | undefined {
+  get selectedPreset(): BrushPreset | undefined {
     return this.presets[this.presetId];
   }
 
@@ -129,8 +137,9 @@ export default class BrushSettings extends EventTarget {
     const preset = this.presets[id];
     if (!preset) throw new Error(`Brush preset ${id} not found`);
     this.presetId = id;
-    this.current = structuredClone(preset);
-    this.applyPresetSize(preset);
+    this.name = preset.name;
+    this.current = structuredClone(preset.content);
+    this.applyPresetSize(preset.content);
     this.notify();
   }
 
@@ -141,15 +150,17 @@ export default class BrushSettings extends EventTarget {
    * brush.update({ alpha: 0.5, widthConfig: { usePressure: true } });
    */
   update(changes: Partial<BrushConfig>): void {
-    this.current = { ...this.current, ...changes, id: this.current.id };
+    this.current = { ...this.current, ...changes };
     this.notify();
   }
 
   /**
-   * Replace the current settings and size with a whole configuration (the configuration window's "Save").
+   * Replace the current settings and size with a whole configuration (the configuration window's "Save"), and their
+   * name if given.
    */
-  apply(config: BrushConfig): void {
-    this.current = { ...structuredClone(config), id: this.current.id };
+  apply(config: BrushConfig, name: string = this.name): void {
+    this.name = name;
+    this.current = structuredClone(config);
     this.applyPresetSize(config);
     this.notify();
   }
@@ -239,7 +250,7 @@ export default class BrushSettings extends EventTarget {
   }
 
   /**
-   * Use a preset's (or configuration's) default size.
+   * Use the default size of a preset's settings (or a configuration's).
    */
   private applyPresetSize(preset: BrushConfig): void {
     this.width = preset.width ?? MIN_BRUSH_SIZE;

@@ -1,13 +1,42 @@
-import type { Validator } from "../validation/validators.generated.js";
+import {
+  validateAssetHeader,
+  type Validator,
+} from "../validation/validators.generated.js";
 import {
   compareVersions,
   majorVersion,
   parseSchemaUrl,
   schemaUrl,
 } from "../schemas";
-import type { AssetCollectionFile } from "./schema";
+import {
+  UNKNOWN_AUTHOR,
+  toAsset,
+  type Asset,
+  type AssetAuthor,
+  type AssetCollectionFile,
+} from "./schema";
 
 export * from "./schema";
+
+/**
+ * The author, group and version of an untrusted asset (e.g. stored or imported), each checked on its own: an invalid or
+ * missing author is replaced with `author`, and an invalid group or version is left out.
+ *
+ * @example
+ * sanitiseAssetHeader({ author: { handle: "no.name" }, group: "Warm", version: "" }, "Ada"); // { author: "Ada", group: "Warm" }
+ */
+export const sanitiseAssetHeader = (
+  asset: Partial<Asset<unknown>>,
+  author: AssetAuthor,
+): Pick<Asset<unknown>, "author" | "group" | "version"> => {
+  const valid = (key: "author" | "group" | "version") =>
+    asset[key] !== undefined && validateAssetHeader({ [key]: asset[key] });
+  return {
+    author: valid("author") ? (asset.author as AssetAuthor) : author,
+    ...(valid("group") && { group: asset.group }),
+    ...(valid("version") && { version: asset.version }),
+  };
+};
 
 /** Why reading or writing an asset file failed */
 export type AssetFileErrorReason =
@@ -27,6 +56,12 @@ export class AssetFileError extends Error {
   }
 }
 
+/** What migrations use to fill in what files of older versions lack */
+export interface AssetFileContext {
+  /** The author of assets that have none: the user (default `UNKNOWN_AUTHOR`) */
+  author?: AssetAuthor;
+}
+
 /** Turns a file of an older version into the next version */
 export interface AssetFileMigration {
   /** Version it migrates from: a schema version, or one named by `legacyVersion` */
@@ -34,8 +69,31 @@ export interface AssetFileMigration {
   /** Version it migrates to */
   to: string;
   /** The file's data in the newer version (its `$schema` and `@type` are set for you) */
-  migrate(data: Record<string, unknown>): Record<string, unknown>;
+  migrate(
+    data: Record<string, unknown>,
+    context: Required<AssetFileContext>,
+  ): Record<string, unknown>;
 }
+
+/**
+ * Moves the assets of a version 1 collection file (header and content side by side) into version 2's shape (see
+ * `toAsset`), giving those without a name `name` and those without an author the user.
+ *
+ * @example
+ * assetsToVersion2("PaintCanvas/BrushPreset", "Untitled brush");
+ */
+export const assetsToVersion2 = (
+  type: string,
+  name: string,
+): AssetFileMigration => ({
+  from: "1.0.0",
+  to: "2.0.0",
+  migrate: (data, { author }) => ({
+    items: Array.isArray(data.items)
+      ? data.items.map((item) => toAsset(item, type, { name, author }))
+      : data.items,
+  }),
+});
 
 /** What an asset file is */
 export interface AssetFileConfig<T> {
@@ -91,12 +149,15 @@ export default class AssetFile<T> {
   /**
    * The assets in a file's data, migrated from an older version if needed. Throws an `AssetFileError` if it isn't
    * this kind of file, isn't valid, or is a version that can't be read.
+   *
+   * @param context - what migrations fill in, e.g. the author of assets that have none
    */
-  read(data: unknown): T[] {
+  read(data: unknown, context: AssetFileContext = {}): T[] {
     if (!isRecord(data)) throw new AssetFileError("invalid");
     let version = this.versionOf(data);
     if (version === undefined) throw new AssetFileError("invalid");
     const { migrations = [], type, validate } = this.config;
+    const filled = { author: context.author ?? UNKNOWN_AUTHOR };
     // Each migration moves the file on a version, until there are none left to apply
     for (
       let migration = migrations.find((m) => m.from === version);
@@ -104,7 +165,7 @@ export default class AssetFile<T> {
       migration = migrations.find((m) => m.from === version)
     ) {
       data = {
-        ...migration.migrate(data as Record<string, unknown>),
+        ...migration.migrate(data as Record<string, unknown>, filled),
         $schema: schemaUrl(this.config.schema, migration.to),
         "@type": type,
       };
@@ -123,17 +184,19 @@ export default class AssetFile<T> {
   /**
    * The assets in a file's text. Throws an `AssetFileError` if it isn't JSON, or (see `read`) can't be read.
    *
+   * @param context - what migrations fill in (see `read`)
+   *
    * @example
    * brushPresetFile.parse('{ "$schema": "...", "@type": "PaintCanvas/BrushConfigCollection", "items": [] }'); // []
    */
-  parse(text: string): T[] {
+  parse(text: string, context: AssetFileContext = {}): T[] {
     let data: unknown;
     try {
       data = JSON.parse(text);
     } catch {
       throw new AssetFileError("read");
     }
-    return this.read(data);
+    return this.read(data, context);
   }
 
   /**

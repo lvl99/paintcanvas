@@ -1,13 +1,11 @@
-import type { AssetAuthor, BrushConfig } from "../types";
+import { BUILT_IN_AUTHOR, UNKNOWN_AUTHOR } from "../../assets/schema";
+import type { AssetAuthor, BrushPreset } from "../types";
 
-/** The author of the presets that come with PaintCanvas, and their heading unless the implementer names it */
-export const BUILT_IN_AUTHOR = "PaintCanvas";
+// The author of the presets that come with PaintCanvas is also their heading, unless the implementer names it
+export { BUILT_IN_AUTHOR, UNKNOWN_AUTHOR };
 
 /** The heading of the user's own presets */
 export const MY_PRESETS = "My presets";
-
-/** The heading of presets without an author, and the author name of presets made by a user with no name or handle */
-export const UNKNOWN_AUTHOR = "Unknown";
 
 /** Names used when grouping presets, instead of PaintCanvas's own */
 export interface AuthorNames {
@@ -20,7 +18,7 @@ export interface AuthorNames {
 /** Presets listed under one heading */
 export interface PresetGroup {
   label: string;
-  presets: BrushConfig[];
+  presets: BrushPreset[];
 }
 
 /**
@@ -68,7 +66,7 @@ export const isOwnAuthor = (
  * authorGroup(preset, false, "ada.example"); // "My presets"
  */
 export const authorGroup = (
-  preset: BrushConfig,
+  preset: BrushPreset,
   builtIn: boolean,
   userHandle: string,
   names: AuthorNames = {},
@@ -85,13 +83,13 @@ export const authorGroup = (
  * @param isBuiltIn - whether a preset comes with the app
  */
 export const groupPresetsByAuthor = (
-  presets: BrushConfig[],
+  presets: BrushPreset[],
   isBuiltIn: (id: string) => boolean,
   userHandle: string,
   names: AuthorNames = {},
 ): PresetGroup[] => {
   const builtInLabel = names.builtIn ?? BUILT_IN_AUTHOR;
-  const groups = new Map<string, BrushConfig[]>();
+  const groups = new Map<string, BrushPreset[]>();
   for (const preset of presets) {
     const label = authorGroup(preset, isBuiltIn(preset.id), userHandle, names);
     groups.set(label, [...(groups.get(label) ?? []), preset]);

@@ -2,7 +2,13 @@ import { describe, it, expect } from "vitest";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import AssetFile, {
   AssetFileError,
+  UNKNOWN_AUTHOR,
+  assetSchema,
+  assetsToVersion2,
   authorSchema,
+  sanitiseAssetHeader,
+  toAsset,
+  upgradeAsset,
   collectionSchema,
   type AssetCollectionFile,
 } from "..";
@@ -54,7 +60,13 @@ const noteFile = new AssetFile<Note>({
     {
       from: "legacy",
       to: "1.0.0",
-      migrate: (data) => ({ notes: data.list }),
+      // Notes from before versioned schemas had no author: the user is given as theirs
+      migrate: (data, { author }) => ({
+        notes: (data.list as Note[]).map((note) => ({
+          ...note,
+          text: `${note.text} (${typeof author === "string" ? author : author.name})`,
+        })),
+      }),
     },
     {
       from: "1.0.0",
@@ -149,7 +161,18 @@ describe("AssetFile", () => {
         notes: [note],
       }),
     ).toEqual([note]);
-    expect(noteFile.read({ list: [note] })).toEqual([note]);
+    // Migrations are given the author of assets without one: the user, or the unknown author
+    expect(noteFile.read({ list: [note] }, { author: "Ada" })).toEqual([
+      { ...note, text: "Hello (Ada)" },
+    ]);
+    expect(
+      noteFile.parse(JSON.stringify({ list: [note] }), {
+        author: { name: "Bo" },
+      }),
+    ).toEqual([{ ...note, text: "Hello (Bo)" }]);
+    expect(noteFile.read({ list: [note] })).toEqual([
+      { ...note, text: `Hello (${UNKNOWN_AUTHOR})` },
+    ]);
   });
 
   it("should tell which version a file is", () => {
@@ -211,5 +234,143 @@ describe("AssetFile", () => {
 
   it("should describe its errors", () => {
     expect(new AssetFileError("empty").message).toBe("Asset file error: empty");
+  });
+});
+
+describe("assetSchema", () => {
+  const schema = assetSchema({
+    name: "test-note",
+    version: "1.0.0",
+    type: "Test/Note",
+    id: { type: "string" },
+    content: { type: "string" },
+  });
+  const validate = new Ajv2020({ strict: true }).compile(withoutType(schema));
+  const asset = {
+    "@type": "Test/Note",
+    id: "a",
+    name: "A",
+    author: "Ada",
+    content: "Hello",
+  };
+
+  it("should be published with a versioned URL and a type", () => {
+    expect(schema.$id).toBe(schemaUrl("test-note", "1.0.0"));
+    expect(schema["@type"]).toBe("Test/Note");
+  });
+
+  it("should need a type, ID, name, author and content, and allow a group, version and schema", () => {
+    expect(validate(asset)).toBe(true);
+    expect(
+      validate({
+        ...asset,
+        $schema: schema.$id,
+        group: "Notes",
+        version: "1.2.0",
+      }),
+    ).toBe(true);
+    for (const key of ["@type", "id", "name", "author", "content"])
+      expect(validate({ ...asset, [key]: undefined }), key).toBe(false);
+    expect(validate({ ...asset, "@type": "Other" })).toBe(false);
+    expect(validate({ ...asset, name: " " })).toBe(false);
+    expect(validate({ ...asset, group: "" })).toBe(false);
+    expect(validate({ ...asset, version: "" })).toBe(false);
+    expect(validate({ ...asset, extra: true })).toBe(false);
+  });
+});
+
+describe("toAsset and upgradeAsset", () => {
+  const defaults = { name: "Untitled", author: "Ada" };
+
+  it("should move an asset of version 1's settings into its content, keeping its header", () => {
+    const old = {
+      $schema: "x",
+      "@type": "Old/Type",
+      id: "a",
+      name: "A",
+      author: "Bo",
+      group: "G",
+      version: "1.0.0",
+      colours: ["#000000"],
+    };
+    const upgraded = {
+      "@type": "Test/Note",
+      id: "a",
+      name: "A",
+      author: "Bo",
+      group: "G",
+      version: "1.0.0",
+      content: { colours: ["#000000"] },
+    };
+    expect(toAsset(old, "Test/Note", defaults)).toEqual(upgraded);
+    expect(upgradeAsset(old, "Test/Note", defaults)).toEqual(upgraded);
+    // Already of version 2
+    expect(upgradeAsset(upgraded, "Test/Note", defaults)).toBe(upgraded);
+  });
+
+  it("should give an asset without a usable name or an author the defaults", () => {
+    expect(toAsset({ id: "a", name: " " }, "Test/Note", defaults)).toEqual({
+      "@type": "Test/Note",
+      id: "a",
+      name: "Untitled",
+      author: "Ada",
+      content: {},
+    });
+  });
+
+  it("should leave values that aren't objects as they are", () => {
+    for (const value of [null, "a", [1]])
+      expect(toAsset(value, "Test/Note", defaults)).toBe(value);
+    expect(upgradeAsset(null, "Test/Note", defaults)).toBeNull();
+  });
+});
+
+describe("assetsToVersion2", () => {
+  it("should move each item of a version 1 file into version 2's shape, leaving items that aren't a list", () => {
+    const migration = assetsToVersion2("Test/Note", "Untitled");
+    expect([migration.from, migration.to]).toEqual(["1.0.0", "2.0.0"]);
+    expect(
+      migration.migrate(
+        { items: [{ id: "a", text: "Hi" }] },
+        { author: "Ada" },
+      ),
+    ).toEqual({
+      items: [
+        {
+          "@type": "Test/Note",
+          id: "a",
+          name: "Untitled",
+          author: "Ada",
+          content: { text: "Hi" },
+        },
+      ],
+    });
+    expect(migration.migrate({ items: "x" }, { author: "Ada" })).toEqual({
+      items: "x",
+    });
+  });
+});
+
+describe("sanitiseAssetHeader", () => {
+  it("should keep a valid author, group and version, each checked on its own", () => {
+    expect(
+      sanitiseAssetHeader(
+        { author: { name: "Bo" }, group: "G", version: "1.0.0" },
+        "Ada",
+      ),
+    ).toEqual({ author: { name: "Bo" }, group: "G", version: "1.0.0" });
+    expect(
+      sanitiseAssetHeader(
+        {
+          author: { handle: "no.name" } as never,
+          group: " ",
+          version: "1".repeat(21),
+        },
+        "Ada",
+      ),
+    ).toEqual({ author: "Ada" });
+    expect(sanitiseAssetHeader({}, UNKNOWN_AUTHOR)).toEqual({
+      author: UNKNOWN_AUTHOR,
+    });
   });
 });

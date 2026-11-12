@@ -38,7 +38,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("BrushTip", () => {
   it("should use a crisp round shape when the preset has no image", async () => {
-    const tip = await BrushTip.load({ id: "round" });
+    const tip = await BrushTip.load({});
     expect(tip.isRound).toBe(true);
     expect(tip.outline).toBeUndefined();
     const { ctx, calls } = createRecordingContext();
@@ -57,7 +57,7 @@ describe("BrushTip", () => {
   });
 
   it("should skip rotation when there is none, and skip invisible stamps", async () => {
-    const tip = await BrushTip.load({ id: "round" });
+    const tip = await BrushTip.load({});
     const { ctx, calls } = createRecordingContext();
     tip.stamp(ctx as never, 0, 0, { ...params, rotation: 0 }, "#000");
     expect(calls.some(([name]) => name === "rotate")).toBe(false);
@@ -73,7 +73,7 @@ describe("BrushTip", () => {
     const image = { width: 2, height: 2 } as never;
     const decode = vi.fn(async () => image);
     const tip = await BrushTip.load(
-      { id: "img", image: "data:image/png;base64,AAAA" },
+      { image: "data:image/png;base64,AAAA" },
       decode,
       factory,
     );
@@ -92,7 +92,7 @@ describe("BrushTip", () => {
   it("should stamp image shapes tinted with the colour, re-tinting only when the colour changes", async () => {
     const { factory, contexts } = createRecordingCanvases();
     const tip = await BrushTip.load(
-      { id: "img", image: new Uint8Array([1]) },
+      { image: new Uint8Array([1]) },
       async () => ({ width: 2, height: 2 }) as never,
       factory,
     );

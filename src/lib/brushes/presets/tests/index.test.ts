@@ -5,6 +5,9 @@ import square from "../square";
 import drawing from "../drawing";
 import painting from "../painting";
 import sketching from "../sketching";
+import { builtInPreset, sizedPresets, spacedBy } from "../sized";
+import { BUILT_IN_AUTHOR } from "../../../assets/schema";
+import { BRUSH_PRESET_TYPE } from "../../../presets/schema";
 
 const allPresets = {
   ...round,
@@ -32,14 +35,17 @@ describe("presets", () => {
     "%s should have a matching ID and a size, sample rate and spacing within the allowed ranges",
     (key, preset) => {
       expect(preset.id).toBe(key);
-      expect(preset.width).toBeGreaterThanOrEqual(MIN_BRUSH_SIZE);
-      expect(preset.width).toBeLessThanOrEqual(MAX_BRUSH_SIZE);
-      expect(preset.height).toBeGreaterThanOrEqual(MIN_BRUSH_SIZE);
-      expect(preset.height).toBeLessThanOrEqual(MAX_BRUSH_SIZE);
-      expect(preset.sampleRate).toBeGreaterThanOrEqual(MIN_SAMPLE_RATE);
-      expect(preset.sampleRate).toBeLessThanOrEqual(MAX_SAMPLE_RATE);
-      expect(preset.spacing).toBeGreaterThanOrEqual(0);
-      expect(preset.spacing).toBeLessThanOrEqual(200);
+      expect(preset["@type"]).toBe(BRUSH_PRESET_TYPE);
+      expect(preset.author).toBe(BUILT_IN_AUTHOR);
+      expect(preset.version).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(preset.content.width).toBeGreaterThanOrEqual(MIN_BRUSH_SIZE);
+      expect(preset.content.width).toBeLessThanOrEqual(MAX_BRUSH_SIZE);
+      expect(preset.content.height).toBeGreaterThanOrEqual(MIN_BRUSH_SIZE);
+      expect(preset.content.height).toBeLessThanOrEqual(MAX_BRUSH_SIZE);
+      expect(preset.content.sampleRate).toBeGreaterThanOrEqual(MIN_SAMPLE_RATE);
+      expect(preset.content.sampleRate).toBeLessThanOrEqual(MAX_SAMPLE_RATE);
+      expect(preset.content.spacing).toBeGreaterThanOrEqual(0);
+      expect(preset.content.spacing).toBeLessThanOrEqual(200);
     },
   );
 });
@@ -47,7 +53,7 @@ describe("presets", () => {
 describe("pixel grid presets", () => {
   it("should be the square presets and the 1 pixel round preset", () => {
     const snapping = Object.values(allPresets)
-      .filter((preset) => preset.snapToPixelGrid)
+      .filter((preset) => preset.content.snapToPixelGrid)
       .map((preset) => preset.id);
     expect(snapping.sort()).toEqual(
       [
@@ -64,5 +70,54 @@ describe("brush and eraser presets", () => {
     expect(eraserPresets).toEqual(allPresets);
     expect(brushPresets).not.toBe(eraserPresets);
     expect(brushPresets.round1).not.toBe(eraserPresets.round1);
+  });
+});
+
+describe("builtInPreset", () => {
+  it("should make a preset by PaintCanvas from its header and settings", () => {
+    expect(
+      builtInPreset(
+        { id: "pen", name: "Pen", group: "Pens", version: "1.0.0" },
+        { width: 4 },
+      ),
+    ).toEqual({
+      "@type": BRUSH_PRESET_TYPE,
+      id: "pen",
+      name: "Pen",
+      group: "Pens",
+      version: "1.0.0",
+      author: BUILT_IN_AUTHOR,
+      content: { width: 4 },
+    });
+  });
+});
+
+describe("sizedPresets", () => {
+  it("should make one preset per size, named and grouped after the family", () => {
+    const presets = sizedPresets(
+      { idPrefix: "dot", name: "Dot", version: "2.0.0" },
+      [1, 40],
+      { alpha: 0.5 },
+      spacedBy(0.25),
+    );
+    expect(presets).toEqual({
+      dot1: builtInPreset(
+        { id: "dot1", name: "Dot 1px", group: "Dot", version: "2.0.0" },
+        { alpha: 0.5, width: 1, height: 1, spacing: 1 },
+      ),
+      dot40: builtInPreset(
+        { id: "dot40", name: "Dot 40px", group: "Dot", version: "2.0.0" },
+        { alpha: 0.5, width: 40, height: 40, spacing: 10 },
+      ),
+    });
+  });
+
+  it("should add nothing per size by default", () => {
+    const { dot5 } = sizedPresets(
+      { idPrefix: "dot", name: "Dot", version: "1.0.0" },
+      [5],
+      {},
+    );
+    expect(dot5?.content).toEqual({ width: 5, height: 5 });
   });
 });

@@ -3,31 +3,29 @@
 import { profileIdSchema, profilePointsSchema } from "../profiles/schema.ts";
 import {
   UUID_PATTERN,
-  authorSchema,
+  assetSchema,
   collectionSchema,
-  fileSchemaUrlSchema,
 } from "../assets/schema.ts";
-import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
 export { UUID_PATTERN };
 
 /** Version of the brush preset schema */
-export const BRUSH_PRESET_SCHEMA_VERSION = "1.0.0";
+export const BRUSH_PRESET_SCHEMA_VERSION = "2.0.0";
 
 /** `@type` of a brush preset */
-export const BRUSH_PRESET_TYPE = "PaintCanvas/BrushConfig";
+export const BRUSH_PRESET_TYPE = "PaintCanvas/BrushPreset";
 
 /** Version of the brush preset collection schema */
-export const BRUSH_PRESET_COLLECTION_SCHEMA_VERSION = "1.0.0";
+export const BRUSH_PRESET_COLLECTION_SCHEMA_VERSION = "2.0.0";
 
 /** `@type` of a brush preset collection file */
-export const BRUSH_PRESET_COLLECTION_TYPE = "PaintCanvas/BrushConfigCollection";
+export const BRUSH_PRESET_COLLECTION_TYPE = "PaintCanvas/BrushPresetCollection";
+
+/** Name given to a brush preset of an older version that has none */
+export const UNTITLED_PRESET_NAME = "Untitled brush";
 
 /** Most presets in one file */
 export const MAX_PRESETS_PER_FILE = 1000;
-
-/** Longest preset name (characters) */
-export const MAX_PRESET_TEXT_LENGTH = 100;
 
 /** Longest brush shape data URL (characters): a 2 MB PNG as base64 */
 export const MAX_SHAPE_DATA_URL_LENGTH =
@@ -64,30 +62,11 @@ const colourValue = {
   anyOf: [{ type: "number" }, { type: "string", maxLength: 20 }],
 } as const;
 
-/** Short text, such as a name */
-const text = {
-  type: "string",
-  minLength: 1,
-  maxLength: MAX_PRESET_TEXT_LENGTH,
-} as const;
-
-/** JSON schema for a brush preset a user made or imported (see `BrushConfig` in the app) */
-export const brushPresetSchema = {
-  $schema: SCHEMA_DIALECT,
-  $id: schemaUrl("brush-preset", BRUSH_PRESET_SCHEMA_VERSION),
-  "@type": BRUSH_PRESET_TYPE,
+/** JSON schema for a brush's settings: a brush preset's content (see `BrushConfig` in the app) */
+export const brushConfigSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["id"],
   properties: {
-    // Named when the preset is a file of its own
-    $schema: fileSchemaUrlSchema,
-    "@type": { const: BRUSH_PRESET_TYPE },
-    id: { type: "string", pattern: UUID_PATTERN },
-    name: text,
-    group: text,
-    version: { type: "string", maxLength: 20 },
-    author: authorSchema,
     image: {
       type: "string",
       pattern: PNG_DATA_URL_PATTERN,
@@ -125,6 +104,15 @@ export const brushPresetSchema = {
     snapToPixelGrid: { type: "boolean" },
   },
 } as const;
+
+/** JSON schema for a brush preset a user made or imported (see `BrushPreset` in the app) */
+export const brushPresetSchema = assetSchema({
+  name: "brush-preset",
+  version: BRUSH_PRESET_SCHEMA_VERSION,
+  type: BRUSH_PRESET_TYPE,
+  id: { type: "string", pattern: UUID_PATTERN },
+  content: brushConfigSchema,
+});
 
 /** JSON schema for a brush preset collection file */
 export const brushPresetCollectionSchema = collectionSchema({

@@ -389,7 +389,7 @@ export class PcToolSettings extends PcElement {
                   : undefined,
             })}
           ></span>
-          ${preset.name ?? preset.id}
+          ${settings.name}
         </button>
         <div class="field">
           <span aria-hidden="true">${this.t("paintCanvas.common.size")}</span>

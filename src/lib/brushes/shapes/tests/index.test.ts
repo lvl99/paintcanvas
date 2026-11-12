@@ -28,8 +28,10 @@ describe("built-in brush shapes", () => {
       ...Object.values(brushPresets),
       ...Object.values(eraserPresets),
     ])
-      if (preset.image !== undefined)
-        expect(images.has(preset.image as string), preset.id).toBe(true);
+      if (preset.content.image !== undefined)
+        expect(images.has(preset.content.image as string), preset.id).toBe(
+          true,
+        );
   });
 
   it("should tell which built-in shape a brush uses", () => {

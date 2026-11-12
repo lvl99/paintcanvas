@@ -8,6 +8,7 @@ import "../PcContextMenu";
 import "../PcButton";
 import type { MenuItem } from "../PcMenu";
 import ProfileGraphs from "../../../lib/classes/ProfileGraphs";
+import type { AssetAuthor } from "../../../lib/assets/schema";
 import {
   linearPoints,
   samePoints,
@@ -38,13 +39,14 @@ const CUSTOM = "";
  * Graphs are saved in `profiles` (the canvas's `ProfileGraphs`).
  *
  * @example
- * html`<pc-profile-editor .profiles=${app.profiles} .points=${points} profile-id="overweight" label="Width"
+ * html`<pc-profile-editor .profiles=${app.profiles} .author=${app.author} .points=${points} profile-id="overweight" label="Width"
  *   @pc-save=${(e) => use(e.detail)} @pc-close=${close}></pc-profile-editor>`
  */
 export class PcProfileEditor extends PcElement {
   static override properties = {
     ...PcElement.properties,
     profiles: { attribute: false },
+    author: { attribute: false },
     points: { attribute: false },
     profileId: { type: String, attribute: "profile-id" },
     label: { type: String },
@@ -89,6 +91,9 @@ export class PcProfileEditor extends PcElement {
   /** Where graphs are saved (the canvas's `ProfileGraphs`) */
   declare profiles: ProfileGraphs;
 
+  /** The author of graphs saved as new ones (the canvas's `author`; `UNKNOWN_AUTHOR` if not given) */
+  declare author?: AssetAuthor;
+
   /** The points it opens with */
   declare points?: ProfilePoint[];
 
@@ -127,14 +132,16 @@ export class PcProfileEditor extends PcElement {
     this.draft = structuredClone(this.points ?? linearPoints());
     const source = this.profiles.get(this.profileId);
     this.sourceId =
-      source && samePoints(source.points, this.draft) ? source.id : undefined;
+      source && samePoints(source.content.points, this.draft)
+        ? source.id
+        : undefined;
   }
 
   /** Load a graph's points */
   load(id: string): void {
     const graph = this.profiles.get(id);
     if (!graph) return;
-    this.draft = structuredClone(graph.points);
+    this.draft = structuredClone(graph.content.points);
     this.sourceId = graph.id;
   }
 
@@ -175,6 +182,8 @@ export class PcProfileEditor extends PcElement {
     const saved = this.profiles.save({
       id: existing?.id,
       name,
+      // A replaced graph keeps its author
+      author: existing?.author ?? this.author,
       points: this.draft,
     });
     if (saved) this.sourceId = saved.id;

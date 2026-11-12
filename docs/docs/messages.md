@@ -22,7 +22,7 @@ transport.onMessage((from, message) => canvas.receive(from, message));
 | `undo`   | A step undone                                            |
 | `redo`   | A step redone                                            |
 
-Every message has a `protocol` version and a `type`. `receive` checks messages first and ignores invalid ones; `validateCanvasMessage` (`@lvl99dotcom/paintcanvas/lib/messages`) checks them yourself.
+Every message has a `protocol` version (`PROTOCOL_VERSION`, now 2: a stroke's `preset` holds only its brush settings, not the preset's ID, name or author) and a `type`. `receive` checks messages first and ignores invalid ones; `validateCanvasMessage` (`@lvl99dotcom/paintcanvas/lib/messages`) checks them yourself.
 
 Other useful methods:
 

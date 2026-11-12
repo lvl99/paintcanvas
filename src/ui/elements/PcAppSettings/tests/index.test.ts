@@ -154,7 +154,7 @@ describe("pc-app-settings", () => {
         [
           JSON.stringify({
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.0.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-3.0.0.json",
           }),
         ],
         "newer.json",

@@ -1,20 +1,24 @@
-import type { Asset, AssetStoreLike } from "../../storage";
+import type { Asset, AssetAuthor } from "../../assets/schema";
+import type { AssetStoreLike } from "../../storage";
 
 /** Event dispatched when loading or saving assets fails (detail: the error) */
 export const ASSET_SYNC_ERROR_EVENT = "error";
 
 /** Assets kept in memory that `AssetSync` keeps in a store */
-export interface SyncedAssets<T extends Asset> extends EventTarget {
+export interface SyncedAssets<T extends Asset<unknown>> extends EventTarget {
   /** The assets, in order (dispatching `change` when they change) */
   readonly items: readonly T[];
-  /** Add assets loaded from the store (untrusted: leave out invalid ones), replacing ones with the same IDs */
-  merge(items: unknown[]): void;
+  /**
+   * Add assets loaded from the store (untrusted: leave out invalid ones, and upgrade older ones, giving those without an
+   * author `author`), replacing ones with the same IDs
+   */
+  merge(items: unknown[], author?: AssetAuthor): void;
 }
 
 /**
  * Keeps assets held in memory (e.g. profile graphs) in a store: the saved assets are added when it starts, assets only
- * in memory are saved (e.g. ones restored from older app settings), then each change saves the assets that changed and
- * deletes the ones that are gone.
+ * in memory or changed while added are saved (e.g. ones restored from older app settings, or older saved ones that were
+ * upgraded), then each change saves the assets that changed and deletes the ones that are gone.
  *
  * Dispatches an `error` event (with the error as `detail`) when loading or saving fails.
  *
@@ -23,7 +27,7 @@ export interface SyncedAssets<T extends Asset> extends EventTarget {
  * await sync.ready;
  * sync.stop();
  */
-export default class AssetSync<T extends Asset> extends EventTarget {
+export default class AssetSync<T extends Asset<unknown>> extends EventTarget {
   /** Resolves once the saved assets are loaded and any only in memory are saved */
   readonly ready: Promise<void>;
 
@@ -39,9 +43,15 @@ export default class AssetSync<T extends Asset> extends EventTarget {
     this.saving = this.saving.then(() => this.save());
   };
 
+  /**
+   * @param assets - the assets in memory
+   * @param store - where they're kept
+   * @param author - gives the author of older saved assets with none (the user)
+   */
   constructor(
     readonly assets: SyncedAssets<T>,
     readonly store: AssetStoreLike<T>,
+    readonly author?: () => AssetAuthor,
   ) {
     super();
     this.ready = this.start();
@@ -60,7 +70,7 @@ export default class AssetSync<T extends Asset> extends EventTarget {
     try {
       const listed = await this.store.list();
       if (this.stopped) return;
-      this.assets.merge(listed);
+      this.assets.merge(listed, this.author?.());
       for (const asset of listed)
         if (typeof (asset as Partial<T>)?.id === "string")
           this.saved.set((asset as T).id, JSON.stringify(asset));

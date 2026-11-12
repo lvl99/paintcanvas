@@ -1,6 +1,6 @@
 // Types describing brush and eraser presets, and the brush strokes they are applied along.
 import type { ProfilePoint } from "../../profiles";
-import type { AssetAuthor } from "../../assets/schema";
+import type { Asset } from "../../assets/schema";
 
 export type { AssetAuthor, AssetAuthorDetails } from "../../assets/schema";
 
@@ -100,17 +100,8 @@ export interface BrushParamConfig {
   profileId?: string;
 }
 
+/** A brush's settings: what a brush preset holds (its content), and what the brush engine draws with */
 export interface BrushConfig {
-  /** Unique ID */
-  id: string;
-  /** Brush name */
-  name?: string;
-  /** The family the preset belongs to (presets of the same group are listed together, e.g. "Round") */
-  group?: string;
-  /** Brush version */
-  version?: string;
-  /** Brush author */
-  author?: AssetAuthor;
   /**
    * Brush shape: an image whose alpha values define the shape (its colours are ignored).
    * A data URL string, or raw image file bytes. Defaults to a hard round shape.
@@ -231,7 +222,11 @@ export interface BrushConfig {
   snapToPixelGrid?: boolean;
 }
 
-export type BrushesConfig = Record<string, BrushConfig>;
+/** A named brush (or eraser) preset: a header that describes it, and its brush settings (`content`) */
+export type BrushPreset = Asset<BrushConfig>;
+
+/** Brush presets by ID */
+export type BrushesConfig = Record<string, BrushPreset>;
 
 export interface BrushStrokePoint {
   /** The X coordinate of the brush stroke point */

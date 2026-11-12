@@ -4,9 +4,11 @@ import { withoutType } from "../../validation/standalone";
 import { profileGraphSchema } from "../../profiles/schema";
 import { colourPaletteSchema } from "../../palette/schema";
 import { brushPresetSchema } from "../../presets/schema";
-import { AssetFileError } from "../../assets";
+import { AssetFileError, UNKNOWN_AUTHOR } from "../../assets";
 import {
   APP_SETTINGS_TYPE,
+  hasOlderAssets,
+  upgradeSettings,
   OLDER_PALETTE_NAME,
   appSettingsSchema,
   applySettings,
@@ -24,6 +26,30 @@ import { createFakeCanvasFactory } from "../../../testing/fakeCanvas";
 import { defaultShortcutBindings } from "../../utils/shortcuts";
 import { DEFAULT_PALETTE } from "../../palette";
 import { PROFILE_PRESETS, linearPoints } from "../../profiles";
+import { testPalette, testPreset, testProfile } from "../../../testing/assets";
+
+const id = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
+
+/** Version 1 assets: a palette, profile graph and brush preset with their header and content side by side */
+const version1Assets = {
+  palettes: [{ id, name: "Sunset", colours: ["#ff7700"] }],
+  profiles: [{ id, name: "Soft", author: "Bo", points: linearPoints() }],
+  brushes: [{ id, width: 10 }],
+};
+
+/** The same assets in version 2, with the author given to those without one */
+const version2Assets = (author: unknown) => ({
+  palettes: [
+    testPalette(["#ff7700"], { id, name: "Sunset", author: author as never }),
+  ],
+  profiles: [testProfile(linearPoints(), { id, name: "Soft", author: "Bo" })],
+  brushes: [
+    testPreset(
+      { width: 10 },
+      { id, name: "Untitled brush", author: author as never },
+    ),
+  ],
+});
 
 const createApp = () =>
   new PaintCanvas({
@@ -70,7 +96,7 @@ describe("settings schemas", () => {
       ].map(withoutType),
     });
     expect(appSettingsSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/app-settings-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.0.0.json",
     );
     expect(appSettingsSchema["@type"]).toBe("PaintCanvas/AppSettings");
     const validateSettings = ajv.getSchema(settingsSchema.$id)!;
@@ -85,21 +111,21 @@ describe("settings schemas", () => {
     expect(validateSettings(settings)).toBe(true);
     expect(validateFile(file(settings))).toBe(true);
     expect(validateSettings({ palette: ["red"] })).toBe(false);
-    const id = "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a";
     expect(
-      validateSettings({
-        profiles: [{ id, name: "Soft", points: linearPoints() }],
-      }),
+      validateSettings({ profiles: [testProfile(linearPoints(), { id })] }),
     ).toBe(true);
     // The user's own graphs have UUIDs
     expect(
       validateSettings({
-        profiles: [{ id: "a", name: "Soft", points: linearPoints() }],
+        profiles: [testProfile(linearPoints(), { id: "a" })],
       }),
     ).toBe(false);
-    expect(
-      validateSettings({ profiles: [{ id: "a", name: "", points: [] }] }),
-    ).toBe(false);
+    expect(validateSettings({ profiles: [testProfile([], { id })] })).toBe(
+      false,
+    );
+    // Assets of version 1 aren't valid without upgrading them first
+    expect(validateSettings(version1Assets)).toBe(false);
+    expect(validateFile(file(version2Assets("Ada")))).toBe(true);
     expect(validateFile(file({ shortcuts: { cut: { key: "" } } }))).toBe(false);
     expect(keyComboSchema.required).toEqual(["key"]);
   });
@@ -112,6 +138,17 @@ describe("isValidSettings", () => {
     expect(isValidSettings({ palette: [] }).valid).toBe(true);
     expect(isValidSettings({ shortcuts: { deselect: null } }).valid).toBe(true);
     expect(isValidSettings({}).valid).toBe(true);
+  });
+
+  it("should upgrade assets of version 1, giving those without an author the one given", () => {
+    expect(isValidSettings(version1Assets, "Ada")).toEqual({
+      valid: true,
+      value: version2Assets("Ada"),
+    });
+    expect(isValidSettings(version1Assets)).toEqual({
+      valid: true,
+      value: version2Assets(UNKNOWN_AUTHOR),
+    });
   });
 
   it.each([
@@ -246,7 +283,10 @@ describe("collectSettings and applySettings", () => {
     source.setColour("#ff0000");
     source.setColour("#00ff00", "background");
     source.ui.update({ theme: "dark", locale: "fr", rendering: "gpu" });
-    source.profiles.save({ name: "Soft", points: PROFILE_PRESETS[1]!.points });
+    source.profiles.save({
+      name: "Soft",
+      points: PROFILE_PRESETS[1]!.content.points,
+    });
     source.palettes.create("Sunset", ["#ff7700"], "Ada");
     const target = createApp();
     await applySettings(target, collectSettings(source));
@@ -267,10 +307,11 @@ describe("collectSettings and applySettings", () => {
     await applySettings(app, { palette: ["#123456", "#ABCDEF", "red"] });
     expect(app.palettes.items).toEqual([
       {
+        "@type": "PaintCanvas/ColourPalette",
         id: expect.any(String),
         name: OLDER_PALETTE_NAME,
         author: { name: "Unknown" },
-        colours: ["#123456", "#abcdef"],
+        content: { colours: ["#123456", "#abcdef"] },
       },
     ]);
     await applySettings(app, { palette: ["#123456", "#abcdef"] });
@@ -310,6 +351,26 @@ describe("exportSettingsFile and parseSettingsFile", () => {
         JSON.stringify(legacyFile({ palette: ["#123456"] }, "myapp-settings")),
       ),
     ).toEqual({ palette: ["#123456"] });
+    expect(
+      parseSettingsFile(JSON.stringify(legacyFile(version1Assets)), "Ada"),
+    ).toEqual(version2Assets("Ada"));
+  });
+
+  it("should read settings files of version 1, upgrading their assets", () => {
+    const text = JSON.stringify(
+      file(
+        { ...version1Assets, livecanvas: { sound: true } },
+        {
+          $schema:
+            "https://lvl99.github.io/paintcanvas/schemas/app-settings-1.0.0.json",
+        },
+      ),
+    );
+    expect(parseSettingsFile(text, "Ada")).toEqual({
+      ...version2Assets("Ada"),
+      livecanvas: { sound: true },
+    });
+    expect(failure(text.replace('"#ff7700"', '"red"'))).toBe("invalid");
   });
 
   it.each([
@@ -338,7 +399,7 @@ describe("exportSettingsFile and parseSettingsFile", () => {
           {},
           {
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.0.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-3.0.0.json",
           },
         ),
       ),
@@ -351,7 +412,7 @@ describe("exportSettingsFile and parseSettingsFile", () => {
           {},
           {
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/app-settings-1.1.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.1.0.json",
           },
         ),
       ),
@@ -389,14 +450,31 @@ describe("settings extensions", () => {
 
   it("should add the brush presets in settings, leaving out invalid ones", async () => {
     const app = createApp();
-    const preset = { id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a", name: "Mine" };
+    const preset = testPreset({}, { id, name: "Mine" });
     await applySettings(app, {
-      brushes: [preset, { id: "round1" } as never],
+      brushes: [preset, testPreset({}, { id: "round1" })],
     });
     expect(app.customPresets.presets).toEqual([preset]);
     expect(collectSettings(app).brushes).toEqual([preset]);
     expect(collectSettings(app, { without: ["brushes"] })).not.toHaveProperty(
       "brushes",
     );
+  });
+});
+
+describe("upgradeSettings and hasOlderAssets", () => {
+  it("should upgrade only the assets of version 1, and tell when there are some", () => {
+    const upgraded = version2Assets("Ada");
+    expect(hasOlderAssets(version1Assets)).toBe(true);
+    expect(hasOlderAssets(upgraded)).toBe(false);
+    expect(hasOlderAssets({ palettes: [null], brushes: "x" })).toBe(false);
+    expect(hasOlderAssets("settings")).toBe(false);
+    expect(upgradeSettings(version1Assets, "Ada")).toEqual(upgraded);
+    expect(upgradeSettings(upgraded, "Bo")).toEqual(upgraded);
+    expect(upgradeSettings({ ui: {}, brushes: "x" })).toEqual({
+      ui: {},
+      brushes: "x",
+    });
+    expect(upgradeSettings("settings")).toBe("settings");
   });
 });

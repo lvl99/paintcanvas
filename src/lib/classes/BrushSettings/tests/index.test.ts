@@ -8,6 +8,7 @@ import BrushSettings, {
 } from "..";
 import { round } from "../../../brushes/presets/round";
 import type { BrushesConfig } from "../../../brushes/types";
+import { testPreset } from "../../../../testing/assets";
 
 describe("clamp", () => {
   it("should clamp between min and max", () => {
@@ -53,9 +54,12 @@ describe("BrushSettings", () => {
     );
   });
 
-  it("should select the first preset and its size", () => {
+  it("should select the first preset, its name and its size", () => {
     const brush = new BrushSettings(round);
-    expect(brush.preset.id).toBe("round1");
+    expect(brush.presetId).toBe("round1");
+    expect(brush.name).toBe("Round 1px");
+    expect(brush.preset).toEqual(round.round1?.content);
+    expect(brush.preset).not.toBe(round.round1?.content);
     expect([brush.width, brush.height]).toEqual([1, 1]);
   });
 
@@ -64,6 +68,7 @@ describe("BrushSettings", () => {
     const listener = vi.fn();
     brush.addEventListener("change", listener);
     brush.select("round20");
+    expect(brush.name).toBe("Round 20px");
     expect([brush.width, brush.height]).toEqual([20, 20]);
     expect(listener).toHaveBeenCalledOnce();
     expect(() => brush.select("missing")).toThrow(
@@ -111,7 +116,7 @@ describe("BrushSettings", () => {
   });
 
   it("should use defaults for presets without size settings", () => {
-    const presets: BrushesConfig = { plain: { id: "plain" } };
+    const presets: BrushesConfig = { plain: testPreset() };
     const brush = new BrushSettings(presets);
     expect([brush.width, brush.height]).toEqual([
       MIN_BRUSH_SIZE,
@@ -125,27 +130,32 @@ describe("BrushSettings", () => {
     const brush = new BrushSettings(round);
     const listener = vi.fn();
     brush.addEventListener("change", listener);
-    brush.update({ alpha: 0.5, id: "ignored" });
-    expect(brush.preset).toMatchObject({ id: "round1", alpha: 0.5 });
-    expect(brush.selectedPreset?.alpha).toBeUndefined();
+    brush.update({ alpha: 0.5 });
+    expect(brush.preset).toMatchObject({ spacing: 1, alpha: 0.5 });
+    expect(brush.selectedPreset?.content.alpha).toBeUndefined();
     expect(listener).toHaveBeenCalledOnce();
     brush.select("round10");
     expect(brush.preset.alpha).toBeUndefined();
   });
 
-  it("should apply a whole configuration, with its size", () => {
+  it("should apply a whole configuration, with its size, keeping the name unless given one", () => {
     const brush = new BrushSettings(round);
-    brush.apply({ id: "other", width: 30, height: 12, spacing: 9 });
-    expect(brush.preset).toMatchObject({ id: "round1", spacing: 9 });
+    brush.apply({ width: 30, height: 12, spacing: 9 });
+    expect(brush.preset).toEqual({ width: 30, height: 12, spacing: 9 });
+    expect(brush.name).toBe("Round 1px");
     expect([brush.width, brush.height]).toEqual([30, 12]);
+    brush.apply({ width: 5 }, "Mine");
+    expect(brush.name).toBe("Mine");
+    expect(brush.presetId).toBe("round1");
   });
 
   it("should replace the presets, keeping the current settings if the selected one is gone", () => {
     const brush = new BrushSettings(round);
     brush.select("round20");
-    brush.setPresets({ only: { id: "only", width: 3 } });
+    brush.setPresets({ only: testPreset({ width: 3 }, { id: "only" }) });
     expect(brush.selectedPreset).toBeUndefined();
-    expect(brush.preset.id).toBe("round20");
+    expect(brush.preset.width).toBe(20);
+    expect(brush.name).toBe("Round 20px");
     expect(() => brush.setPresets({})).toThrow(
       "At least one brush preset is required",
     );
@@ -163,7 +173,7 @@ describe("BrushSettings", () => {
 
   it("should keep constrained proportions when resizing to either end and back", () => {
     const brush = new BrushSettings({
-      oval: { id: "oval", width: 30, height: 10, constrainProportions: true },
+      oval: testPreset({ width: 30, height: 10, constrainProportions: true }),
     });
     brush.resize(-100);
     expect([brush.width, brush.height]).toEqual([3, 1]);
@@ -177,7 +187,7 @@ describe("BrushSettings", () => {
 
   it("should resize from the larger side when the brush is taller than wide", () => {
     const brush = new BrushSettings({
-      tall: { id: "tall", width: 10, height: 40, constrainProportions: true },
+      tall: testPreset({ width: 10, height: 40, constrainProportions: true }),
     });
     brush.resize(-100);
     expect([brush.width, brush.height]).toEqual([1, 4]);

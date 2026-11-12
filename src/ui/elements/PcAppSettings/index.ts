@@ -120,7 +120,10 @@ export class PcAppSettings extends PcElement {
     const app = this.app;
     if (!app) return;
     try {
-      await applySettings(app, parseSettingsFile(await file.text()));
+      await applySettings(
+        app,
+        parseSettingsFile(await file.text(), app.author),
+      );
       emit(this, "pc-toast", {
         message: this.t("paintCanvas.settings.imported"),
         kind: "success",

@@ -41,7 +41,12 @@ import RemoteDocumentAutosave, {
 } from "../RemoteDocumentAutosave";
 import type { ProfileGraph } from "../../profiles";
 import { brushPresets, eraserPresets } from "../../brushes";
-import type { AssetAuthor, BrushConfig } from "../../brushes/types";
+import type {
+  AssetAuthor,
+  BrushConfig,
+  BrushPreset,
+} from "../../brushes/types";
+import { BRUSH_PRESET_TYPE } from "../../presets/schema";
 import {
   BUILT_IN_AUTHOR,
   UNKNOWN_AUTHOR,
@@ -500,7 +505,7 @@ export default class PaintCanvas extends EventTarget {
     this.info = newDocumentInfo(this.author);
     this.tips.preload(this.brush.presets);
     this.tips.preload(this.eraser.presets);
-    this.customPresets = new CustomPresets();
+    this.customPresets = new CustomPresets(undefined, () => this.author);
     this.customPresets.addEventListener("change", () =>
       this.listCustomPresets(),
     );
@@ -955,11 +960,11 @@ export default class PaintCanvas extends EventTarget {
     void this.customPresets.useStore(stores.brushes).catch(() => undefined);
     this.profilesAutosave?.stop();
     this.profilesAutosave = stores.profiles
-      ? new AssetSync(this.profiles, stores.profiles)
+      ? new AssetSync(this.profiles, stores.profiles, () => this.author)
       : undefined;
     this.palettesAutosave?.stop();
     this.palettesAutosave = stores.palettes
-      ? new AssetSync(this.palettes, stores.palettes)
+      ? new AssetSync(this.palettes, stores.palettes, () => this.author)
       : undefined;
     this.notify();
   }
@@ -1612,20 +1617,20 @@ export default class PaintCanvas extends EventTarget {
 
   /**
    * Make a new custom preset from settings: a new ID, the given name, and the author from the `presetAuthor` option.
+   * It has no group, as groups are only for the presets that come with the app.
    *
    * @example
-   * app.newPreset(app.brush.preset, "My brush"); // { ...settings, id: "0b5c…", name: "My brush", author: { name, handle } }
+   * app.newPreset(app.brush.preset, "My brush");
+   * // { "@type": "PaintCanvas/BrushPreset", id: "0b5c…", name: "My brush", author: { name, handle }, content: settings }
    */
-  newPreset(settings: BrushConfig, name: string): BrushConfig {
-    const copy = structuredClone(settings);
-    // Families are only for the presets that come with the app
-    delete copy.group;
+  newPreset(settings: BrushConfig, name: string): BrushPreset {
     return {
-      ...copy,
+      "@type": BRUSH_PRESET_TYPE,
       id: crypto.randomUUID(),
       name: name.trim(),
       version: "1.0.0",
       author: this.presetAuthor(),
+      content: structuredClone(settings),
     };
   }
 
