@@ -64,8 +64,12 @@ ul {
 /* Create, Import and Export side by side */
 .actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
+}
+/* New brush has a row of its own, above Import and Export */
+.actions .new-preset {
+  grid-column: 1 / -1;
 }
 .visually-hidden {
   position: absolute;

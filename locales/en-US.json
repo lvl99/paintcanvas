@@ -121,7 +121,7 @@
   "paintCanvas.brushMenu.size": "{tool} size",
   "paintCanvas.numberSlider.hint": "Drag sideways to change, or tap to type",
   "paintCanvas.brushMenu.newPreset": "New preset",
-  "paintCanvas.brushMenu.create": "Create",
+  "paintCanvas.brushMenu.create": "New brush",
   "paintCanvas.brushMenu.import": "Import",
   "paintCanvas.brushMenu.export": "Export",
   "paintCanvas.presets.myPresets": "My presets",

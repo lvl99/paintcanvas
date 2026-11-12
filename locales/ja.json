@@ -121,7 +121,7 @@
   "paintCanvas.brushMenu.size": "{tool}のサイズ",
   "paintCanvas.numberSlider.hint": "左右にドラッグして変更、タップして入力",
   "paintCanvas.brushMenu.newPreset": "新しいプリセット",
-  "paintCanvas.brushMenu.create": "作成",
+  "paintCanvas.brushMenu.create": "新しいブラシ",
   "paintCanvas.brushMenu.import": "読み込み",
   "paintCanvas.brushMenu.export": "書き出し",
   "paintCanvas.presets.myPresets": "マイプリセット",

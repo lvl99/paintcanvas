@@ -121,7 +121,7 @@
   "paintCanvas.brushMenu.size": "Taille : {tool}",
   "paintCanvas.numberSlider.hint": "Faire glisser latéralement pour modifier, ou toucher pour saisir",
   "paintCanvas.brushMenu.newPreset": "Nouveau préréglage",
-  "paintCanvas.brushMenu.create": "Créer",
+  "paintCanvas.brushMenu.create": "Nouveau pinceau",
   "paintCanvas.brushMenu.import": "Importer",
   "paintCanvas.brushMenu.export": "Exporter",
   "paintCanvas.presets.myPresets": "Mes préréglages",
