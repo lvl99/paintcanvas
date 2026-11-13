@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
 import { LONG_PRESS_MS, channelGradient, type PcPanelColours } from "..";
 import type { PcColourPair } from "../../PcColourPair";
-import type { PcDialog } from "../../PcDialog";
+import { CANCEL_CHOICE, type PcDialog } from "../../PcDialog";
 import type { PcMenu } from "../../PcMenu";
 import { Panel } from "../../../../lib/classes/PaintCanvas";
 import { events, mount, query, queryAll } from "../../../../testing/elements";
@@ -135,6 +135,35 @@ describe("pc-panel-colours", () => {
     expect(element.shadowRoot!.querySelector(".palette")).toBeNull();
     await element.importFile(new File(["{}"], "x.json"));
     await element.exportFile();
+  });
+
+  it("should ask in dialogs by default, and have no icon of its own", async () => {
+    const { element } = await setup();
+    expect(element.panelIcon).toBe("");
+    const confirmed = element.confirm({
+      heading: "Delete?",
+      confirm: "Delete",
+      cancel: "Cancel",
+    });
+    const dialog = await vi.waitFor(() =>
+      query<PcDialog>(element, "pc-dialog"),
+    );
+    await dialog.updateComplete;
+    dialog.choose(CANCEL_CHOICE);
+    expect(await confirmed).toBe(false);
+    const named = element.prompt({
+      heading: "Name",
+      label: "Name",
+      value: "",
+      confirm: "Save",
+      cancel: "Cancel",
+    });
+    const prompt = await vi.waitFor(() =>
+      query<PcDialog>(element, "pc-dialog"),
+    );
+    await prompt.updateComplete;
+    prompt.choose(CANCEL_CHOICE);
+    expect(await named).toBeNull();
   });
 
   it("should show the selected colour's hex value and RGB values, following the selected colour", async () => {
@@ -512,6 +541,19 @@ describe("pc-panel-colours", () => {
     get<PcDialog>(element, "pc-dialog").choose("delete");
     await element.updateComplete;
     expect(mine(app)).toEqual([]);
+  });
+
+  it("should cope with the palette being deleted while one of its colours is focused and asked about", async () => {
+    const { app, element } = await setup();
+    swatches(element)[1]!.click();
+    press(swatches(element)[1]!, "Delete");
+    await element.updateComplete;
+    app.palettes.remove(MINE);
+    await element.updateComplete;
+    get<PcDialog>(element, "pc-dialog").choose("delete");
+    await element.updateComplete;
+    expect(swatches(element)).toHaveLength(0);
+    expect(app.palettes.items).toEqual([]);
   });
 
   it("should show the delete cursor while Alt is held", async () => {
