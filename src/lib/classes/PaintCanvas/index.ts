@@ -1051,11 +1051,12 @@ export default class PaintCanvas extends EventTarget {
 
   /**
    * Keep the whole drawing in a remote store (e.g. the user's account online), or stop, without one: changes are saved
-   * every few minutes (see `RemoteDocumentAutosave`), or when asked with `canvas.remoteAutosave.save()`. Returns the
-   * autosave.
+   * every few minutes, or in `idle` mode once drawing pauses and when the page is hidden (see `RemoteDocumentAutosave`),
+   * or when asked with `canvas.remoteAutosave.save()`. Returns the autosave.
    *
    * @example
    * canvas.useRemoteDocumentStore(myAccountStore, { intervalMs: 10 * 60 * 1000 });
+   * canvas.useRemoteDocumentStore(myAccountStore, { mode: "idle", idleMs: 60 * 1000 });
    */
   useRemoteDocumentStore(
     store: DocumentStoreLike | undefined,
