@@ -1,0 +1,1331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lvl99.github.io/paintcanvas/schemas/brush-preset-2.1.0.json",
+  "@type": "PaintCanvas/BrushPreset",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "@type",
+    "id",
+    "name",
+    "author",
+    "content"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "@type": {
+      "const": "PaintCanvas/BrushPreset"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S"
+    },
+    "author": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "did": {
+              "type": "string",
+              "maxLength": 2048,
+              "pattern": "^did:[a-z]+:[a-zA-Z0-9._:%-]+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "handle": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "email": {
+              "type": "string",
+              "maxLength": 254
+            },
+            "homepage": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        }
+      ]
+    },
+    "group": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20
+    },
+    "updatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$",
+          "maxLength": 2796226
+        },
+        "colourMode": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "hue": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 20
+            }
+          ]
+        },
+        "hueConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "saturation": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 20
+            }
+          ]
+        },
+        "saturationConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "lightness": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 20
+            }
+          ]
+        },
+        "lightnessConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "red": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 20
+            }
+          ]
+        },
+        "redConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "green": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 20
+            }
+          ]
+        },
+        "greenConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "blue": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 20
+            }
+          ]
+        },
+        "blueConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "alphaConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "width": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "widthConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "heightConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "constrainProportions": {
+          "type": "boolean"
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360
+        },
+        "rotationConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "offsetX": {
+          "type": "number",
+          "minimum": -256,
+          "maximum": 256
+        },
+        "offsetXConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "offsetY": {
+          "type": "number",
+          "minimum": -256,
+          "maximum": 256
+        },
+        "offsetYConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "useRandomise": {
+              "type": "boolean"
+            },
+            "minRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxRandomise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "usePressure": {
+              "type": "boolean"
+            },
+            "minPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxPressure": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "useTilt": {
+              "type": "boolean"
+            },
+            "minTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "profile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "sampleRate": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 400
+        },
+        "smoothingType": {
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "spacing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "snapToPixelGrid": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
