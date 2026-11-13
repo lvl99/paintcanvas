@@ -910,7 +910,7 @@ export default class PaintCanvas extends EventTarget {
       author,
       dateCreated,
       dateOpened,
-      ...(updatedAt === undefined ? {} : { updatedAt }),
+      updatedAt,
     });
     return true;
   }

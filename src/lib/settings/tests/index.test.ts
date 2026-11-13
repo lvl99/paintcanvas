@@ -318,6 +318,7 @@ describe("collectSettings and applySettings", () => {
     await applySettings(app, { palette: ["#123456", "#abcdef"] });
     keepOlderPalette(app, [...DEFAULT_PALETTE]);
     keepOlderPalette(app, ["red"]);
+    keepOlderPalette(app, "red" as never);
     expect(app.palettes.items).toHaveLength(1);
     expect(app.palette.colours).toEqual(DEFAULT_PALETTE);
   });
