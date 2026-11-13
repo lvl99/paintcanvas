@@ -82,10 +82,10 @@ export const withAuthor = (
 };
 
 /**
- * Details for a new document: a new ID, a name, an author and the time now.
+ * Details for a new document: a new ID, a name, an author, and the time now (as when it was made, opened and changed).
  *
  * @example
- * newDocumentInfo("Ada"); // { id: "1b9d…", name: "Untitled", author: [{ name: "Ada" }], dateCreated: "2026-…", … }
+ * newDocumentInfo("Ada"); // { id: "1b9d…", name: "Untitled", author: [{ name: "Ada" }], dateCreated: "2026-…", updatedAt: "2026-…", … }
  */
 export const newDocumentInfo = (
   author?: AssetAuthor,
@@ -97,6 +97,7 @@ export const newDocumentInfo = (
   author: author === undefined ? [] : [authorDetails(author)],
   dateCreated: now.toISOString(),
   dateOpened: now.toISOString(),
+  updatedAt: now.toISOString(),
 });
 
 /**

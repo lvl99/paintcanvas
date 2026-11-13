@@ -38,11 +38,11 @@ describe("colour palette schemas", () => {
 
   it("should be published with versioned URLs and types", () => {
     expect(colourPaletteSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-2.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-2.1.0.json",
     );
     expect(colourPaletteSchema["@type"]).toBe("PaintCanvas/ColourPalette");
     expect(colourPaletteCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-2.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/colour-palette-collection-2.1.0.json",
     );
     expect(colourPaletteCollectionSchema["@type"]).toBe(
       "PaintCanvas/ColourPaletteCollection",

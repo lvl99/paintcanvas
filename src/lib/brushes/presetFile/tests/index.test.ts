@@ -52,7 +52,7 @@ describe("brushPresetFile", () => {
     const json = brushPresetFile.write([preset]);
     expect(JSON.parse(json)).toEqual({
       $schema:
-        "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.0.0.json",
+        "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.1.0.json",
       "@type": "PaintCanvas/BrushPresetCollection",
       items: [preset],
     });

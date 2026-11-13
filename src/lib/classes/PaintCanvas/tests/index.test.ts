@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { DEFAULT_PALETTE } from "../../../palette";
-import PaintCanvas, { MAX_CANVAS_SIZE, Panel, Tool } from "..";
+import PaintCanvas, {
+  DOCUMENT_MODIFIED_EVENT,
+  MAX_CANVAS_SIZE,
+  Panel,
+  Tool,
+} from "..";
 import {
   BEFORE_COMMIT_EVENT,
   STROKE_BEGIN_EVENT,
@@ -38,6 +43,7 @@ describe("PaintCanvas", () => {
       name: "Mine",
       version: "1.0.0",
       author: { name: "Unknown" },
+      updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       content: { width: 10 },
     });
     expect(app.drawables).toEqual(app.layers.layers);
@@ -480,6 +486,71 @@ describe("PaintCanvas", () => {
     app.profiles.remove(graph.id);
     expect(profiles.remove).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(brushes.list).toHaveBeenCalled());
+  });
+
+  it("should mark the drawing changed when its layers, size or name change, but not when opened or a layer is selected", () => {
+    vi.useFakeTimers({ now: new Date("2030-01-01T00:00:00.000Z") });
+    const app = createApp({ width: 20, height: 10 });
+    const info = app.documentInfo;
+    expect(info.updatedAt).toBe(info.dateCreated);
+    const modified = vi.fn();
+    app.addEventListener(DOCUMENT_MODIFIED_EVENT, modified);
+    const changedAt = (step: () => void) => {
+      vi.advanceTimersByTime(1000);
+      modified.mockClear();
+      step();
+      return modified.mock.calls.length > 0
+        ? app.documentInfo.updatedAt
+        : undefined;
+    };
+    const now = () => new Date().toISOString();
+    const bottom = app.layers.active;
+    const top = app.layers.create();
+    expect(app.documentInfo.updatedAt).toBe(now());
+    expect(changedAt(() => app.layers.select(bottom.id))).toBeUndefined();
+    expect(changedAt(() => app.layers.markChanged(bottom.id))).toBe(now());
+    expect(changedAt(() => app.layers.rename(top.id, "Ink"))).toBe(now());
+    expect(changedAt(() => app.layers.update(top.id, { visible: false }))).toBe(
+      now(),
+    );
+    expect(changedAt(() => app.layers.moveDown(top.id))).toBe(now());
+    expect(changedAt(() => app.layers.remove(top.id))).toBe(now());
+    expect(changedAt(() => app.renameDocument("Sea"))).toBe(now());
+    expect(changedAt(() => app.renameDocument(" "))).toBeUndefined();
+    expect(changedAt(() => app.setCanvasSize(30, 30))).toBe(now());
+
+    // Opening or restoring a drawing doesn't count
+    const saved = { ...app.documentInfo };
+    expect(
+      changedAt(() => {
+        app.restoreDocumentInfo({
+          ...info,
+          updatedAt: "2026-11-13T09:30:00.000Z",
+        });
+        app.restoreLayers(
+          10,
+          10,
+          [{ id: "a", name: "A" }],
+          [{} as CanvasImageSource],
+          "a",
+        );
+      }),
+    ).toBeUndefined();
+    expect(app.documentInfo).toMatchObject({
+      id: info.id,
+      updatedAt: "2026-11-13T09:30:00.000Z",
+      dateOpened: now(),
+    });
+    const { updatedAt: _unused, ...older } = saved;
+    void _unused;
+    app.restoreDocumentInfo(older);
+    expect(app.documentInfo.updatedAt).toBe(saved.dateCreated);
+    expect(changedAt(() => app.newDocument())).toBeUndefined();
+    expect(app.documentInfo.updatedAt).toBe(app.documentInfo.dateCreated);
+    expect(
+      changedAt(() => app.layers.select(app.layers.active.id)),
+    ).toBeUndefined();
+    vi.useRealTimers();
   });
 
   it("should keep the drawing in a remote store, replacing or stopping the one before", () => {

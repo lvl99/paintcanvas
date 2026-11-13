@@ -15,14 +15,14 @@ describe("build schemas", () => {
   it("should name each schema's file by its published URL", () => {
     const files = schemaFiles();
     expect([...files.keys()]).toEqual([
-      "brush-preset-2.0.0.json",
-      "brush-preset-collection-2.0.0.json",
-      "colour-palette-2.0.0.json",
-      "colour-palette-collection-2.0.0.json",
-      "profile-graph-2.0.0.json",
-      "profile-graph-collection-2.0.0.json",
-      "document-1.0.0.json",
-      "app-settings-2.0.0.json",
+      "brush-preset-2.1.0.json",
+      "brush-preset-collection-2.1.0.json",
+      "colour-palette-2.1.0.json",
+      "colour-palette-collection-2.1.0.json",
+      "profile-graph-2.1.0.json",
+      "profile-graph-collection-2.1.0.json",
+      "document-1.1.0.json",
+      "app-settings-2.1.0.json",
     ]);
     for (const schema of PUBLISHED_SCHEMAS) {
       const json = JSON.parse(

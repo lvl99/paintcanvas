@@ -157,6 +157,8 @@ The theme and language are applied by the elements that change them, given the c
 
 Without the layout, use `SettingsAutosave` (`@lvl99dotcom/paintcanvas/lib/classes/SettingsAutosave`) with `IndexedDbSettingsStore` (`@lvl99dotcom/paintcanvas/lib/storage`), or your own store with `load` and `save`.
 
+Saved settings have `updatedAt`: when the user last changed them. `SettingsAutosave` sets it when they change and keeps it when they're restored; `settingsAutosave.updatedAt` reads it. To use settings kept somewhere else (e.g. the user's account online) without counting them as a new change, apply them with `settingsAutosave.apply(settings)`, which keeps their own `updatedAt`. `collectSettings(canvas, { updatedAt })` includes it in collected settings.
+
 Settings are exported and imported as app settings files, matching the [app settings schema](./schemas.md) (`app-settings-2.0.0.json`, `@type` `PaintCanvas/AppSettings`). A file also holds the user's colour palettes, profile graphs and brush presets; importing one adds them to the user's own. Settings files from before versioned schemas and of version 1 are read too, with their assets upgraded (see [Version 2.0.0](./schemas.md#version-200)).
 
 ```ts

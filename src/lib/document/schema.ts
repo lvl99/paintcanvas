@@ -3,6 +3,7 @@
 // (`DocumentFile`, matching `documentSchema`).
 // Imported with extensions, as the validator build script runs this file in Node
 import {
+  DATE_TIME_PATTERN,
   UUID_PATTERN,
   authorDetailsSchema,
   fileSchemaUrlSchema,
@@ -10,8 +11,10 @@ import {
 } from "../assets/schema.ts";
 import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
+export { DATE_TIME_PATTERN };
+
 /** Version of the document schema */
-export const DOCUMENT_SCHEMA_VERSION = "1.0.0";
+export const DOCUMENT_SCHEMA_VERSION = "1.1.0";
 
 /** `@type` of a document */
 export const DOCUMENT_TYPE = "PaintCanvas/Document";
@@ -57,8 +60,13 @@ export interface DocumentInfo {
   author: AssetAuthorDetails[];
   /** When it was started (ISO 8601 date and time) */
   dateCreated: string;
-  /** When it was last opened (ISO 8601 date and time) */
+  /** When it was last opened (ISO 8601 date and time); opening it doesn't count as changing it */
   dateOpened: string;
+  /**
+   * When it was last changed (ISO 8601 date and time): its layers, size or details. Documents from before 1.1.0 have
+   * none (the canvas uses `dateCreated` for them).
+   */
+  updatedAt?: string;
 }
 
 /** A layer in a document, with its pixels as an image (`T`) the size of the canvas */
@@ -128,10 +136,6 @@ const name = {
   pattern: "\\S",
 } as const;
 
-/** Matches an ISO 8601 date and time, e.g. `2026-11-11T09:30:00.000Z` */
-export const DATE_TIME_PATTERN =
-  "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$";
-
 const date = { type: "string", pattern: DATE_TIME_PATTERN } as const;
 
 /** JSON schema for a document file */
@@ -167,6 +171,7 @@ export const documentSchema = {
     },
     dateCreated: date,
     dateOpened: date,
+    updatedAt: date,
     width: size,
     height: size,
     layers: {

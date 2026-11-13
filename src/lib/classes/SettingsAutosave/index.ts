@@ -5,6 +5,7 @@ import {
   collectSettings,
   hasOlderAssets,
   isValidSettings,
+  type AppSettings,
 } from "../../settings";
 
 /** How long to wait after settings change before saving, so quick changes (e.g. dragging a colour slider) are saved together (milliseconds) */
@@ -25,6 +26,9 @@ export interface SettingsAutosaveOptions {
  * saved soon after they happen. While the canvas keeps colour palettes or profile graphs in stores of their own (see
  * `PaintCanvas.useAssetStores`), they are left out of the saved settings (ones restored from older settings are added,
  * so those stores keep them).
+ *
+ * The settings are saved with when the user last changed them (`updatedAt`): set when they change, kept as it was when
+ * they're restored, and taken from settings applied with `apply` (e.g. ones synced from elsewhere).
  *
  * Dispatches an `error` event (with the error as `detail`) when loading or saving fails.
  *
@@ -48,6 +52,9 @@ export default class SettingsAutosave extends EventTarget {
 
   /** The settings last saved or restored, as JSON, to skip saving unchanged settings */
   private saved?: string;
+
+  /** When the settings were last changed */
+  private changedAt?: string;
 
   private stopped = false;
 
@@ -82,6 +89,14 @@ export default class SettingsAutosave extends EventTarget {
   }
 
   /**
+   * When the user last changed the settings (ISO 8601 date and time), or undefined if they haven't since settings had
+   * it (and none were applied with one).
+   */
+  get updatedAt(): string | undefined {
+    return this.changedAt;
+  }
+
+  /**
    * Stop saving changes, saving any that are waiting.
    */
   stop(): void {
@@ -95,16 +110,38 @@ export default class SettingsAutosave extends EventTarget {
   }
 
   /**
-   * Save the settings now if they changed since they were last saved.
+   * Save the settings now if they changed since they were last saved, marking them changed now (`updatedAt`).
    */
-  async save(): Promise<void> {
+  save(): Promise<void> {
+    return this.write(() => new Date().toISOString());
+  }
+
+  /**
+   * Use settings from elsewhere (e.g. synced from the user's account online; see `applySettings`) and save them,
+   * keeping their `updatedAt` (or marking them changed now, without one), so they don't count as a new change.
+   *
+   * @example
+   * if (remote.updatedAt > (autosave.updatedAt ?? "")) await autosave.apply(remote);
+   */
+  async apply(settings: AppSettings): Promise<void> {
+    await this.ready;
+    await applySettings(this.app, settings);
+    this.saved = undefined;
+    clearTimeout(this.timer);
+    await this.write(() => settings.updatedAt ?? new Date().toISOString());
+  }
+
+  /**
+   * Save the settings if they changed since they were last saved, with `updatedAt` from `changedAt`.
+   */
+  private async write(changedAt: () => string | undefined): Promise<void> {
     this.timer = undefined;
-    const settings = this.collect();
-    const json = JSON.stringify(settings);
+    const json = JSON.stringify(this.collect());
     if (json === this.saved) return;
     this.saved = json;
+    this.changedAt = changedAt();
     try {
-      await this.store.save(settings);
+      await this.store.save(this.collect(this.changedAt));
     } catch (error) {
       this.saved = undefined;
       this.fail(error);
@@ -118,6 +155,7 @@ export default class SettingsAutosave extends EventTarget {
       const loaded = await this.store.load();
       const result = isValidSettings(loaded, this.app.author);
       if (result.valid && !this.stopped) {
+        this.changedAt = result.value.updatedAt;
         await applySettings(this.app, result.value);
         older = result.value.palette !== undefined || hasOlderAssets(loaded);
       }
@@ -132,17 +170,18 @@ export default class SettingsAutosave extends EventTarget {
     // it's only done once
     if (older) {
       this.saved = undefined;
-      await this.save();
+      await this.write(() => this.changedAt);
     }
   }
 
-  /** The canvas's settings to save, without the assets kept in stores of their own */
-  private collect() {
+  /** The canvas's settings to save, without the assets kept in stores of their own, and changed at a time if given */
+  private collect(updatedAt?: string) {
     const stores = this.app.assetStores;
     return collectSettings(this.app, {
       without: (["brushes", "palettes", "profiles"] as const).filter(
         (kind) => stores[kind] !== undefined,
       ),
+      updatedAt,
     });
   }
 

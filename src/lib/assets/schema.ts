@@ -10,6 +10,16 @@ export const UUID_PATTERN =
 /** Matches a decentralised identifier, e.g. `did:plc:abc123` */
 export const DID_PATTERN = "^did:[a-z]+:[a-zA-Z0-9._:%-]+$";
 
+/** Matches an ISO 8601 date and time, e.g. `2026-11-11T09:30:00.000Z` */
+export const DATE_TIME_PATTERN =
+  "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$";
+
+/** Schema of an ISO 8601 date and time */
+export const dateTimeSchema = {
+  type: "string",
+  pattern: DATE_TIME_PATTERN,
+} as const;
+
 /** Longest author name or handle (characters) */
 export const MAX_AUTHOR_TEXT_LENGTH = 100;
 
@@ -70,6 +80,11 @@ export interface Asset<T> {
   group?: string;
   /** The asset's own version (not its schema's), e.g. `1.1.0` */
   version?: string;
+  /**
+   * When the user last made or changed it (ISO 8601 date and time). Loading or upgrading it doesn't change it. Assets
+   * from before schema 2.1.0 have none.
+   */
+  updatedAt?: string;
   /** What the asset holds, e.g. a brush preset's brush settings */
   content: T;
 }
@@ -82,6 +97,7 @@ export const ASSET_HEADER_KEYS = [
   "author",
   "group",
   "version",
+  "updatedAt",
 ] as const;
 
 /** Short text, such as an author's name */
@@ -137,6 +153,7 @@ export const assetHeaderSchema = {
       minLength: 1,
       maxLength: MAX_ASSET_VERSION_LENGTH,
     },
+    updatedAt: dateTimeSchema,
   },
 } as const;
 
@@ -184,6 +201,7 @@ export const assetSchema = <C extends object, I extends object>({
       author: assetHeaderSchema.properties.author,
       group: assetHeaderSchema.properties.group,
       version: assetHeaderSchema.properties.version,
+      updatedAt: assetHeaderSchema.properties.updatedAt,
       content,
     },
   }) as const;

@@ -13,6 +13,7 @@ import {
 } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 import { testPreset } from "../../../../testing/assets";
+import { UNKNOWN_AUTHOR } from "../../../../lib/assets";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -110,6 +111,18 @@ describe("pc-panel-brushes", () => {
     await app.customPresets.save(mine, theirs);
     return { mine, theirs };
   };
+
+  it("should name the group of presets by an unknown author in the chosen language", async () => {
+    const app = createApp();
+    await app.customPresets.save(
+      testPreset({}, { name: "Lost", author: UNKNOWN_AUTHOR }),
+    );
+    const element = await mount<PcPanelBrushes>("pc-panel-brushes", { app });
+    expect(queryAll(element, "h3").map((h) => h.textContent)).toContain(
+      "Unknown",
+    );
+    expect(query(element, 'ul[aria-label="Unknown"]')).toBeTruthy();
+  });
 
   it("should group presets by author, with actions below", async () => {
     const app = createApp();

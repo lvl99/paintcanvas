@@ -69,11 +69,11 @@ describe("brush preset schemas", () => {
 
   it("should be published with a versioned URL and a type", () => {
     expect(brushPresetSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-2.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-2.1.0.json",
     );
     expect(brushPresetSchema["@type"]).toBe("PaintCanvas/BrushPreset");
     expect(brushPresetCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.1.0.json",
     );
     expect(brushPresetCollectionSchema["@type"]).toBe(
       "PaintCanvas/BrushPresetCollection",

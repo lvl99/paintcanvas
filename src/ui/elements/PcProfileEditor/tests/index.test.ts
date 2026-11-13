@@ -151,7 +151,7 @@ describe("pc-profile-editor", () => {
       cancelling: true,
     });
     expect(profiles.graphs).toEqual([
-      { ...soft, content: { points: curved() } },
+      { ...soft, updatedAt: expect.any(String), content: { points: curved() } },
     ]);
 
     // Not saved when the name or replacing is declined

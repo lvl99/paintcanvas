@@ -111,7 +111,7 @@ export default class ColourPalettes extends EventTarget {
   }
 
   /**
-   * Make a palette with a name (trimmed) and colours. Returns it, or undefined if the name isn't valid or there's no
+   * Make a palette with a name (trimmed) and colours, made now (`updatedAt`). Returns it, or undefined if the name isn't valid or there's no
    * room.
    *
    * @example
@@ -129,6 +129,7 @@ export default class ColourPalettes extends EventTarget {
           id: crypto.randomUUID(),
           name,
           author,
+          updatedAt: new Date().toISOString(),
           content: { colours },
         },
       ],
@@ -214,7 +215,7 @@ export default class ColourPalettes extends EventTarget {
     if (next) this.update(next);
   }
 
-  /** Change a palette's name or content. Returns whether it exists. */
+  /** Change a palette's name or content, marking it changed now (`updatedAt`). Returns whether it exists. */
   private change(
     id: string,
     changes: Partial<Pick<ColourPalette, "name" | "content">>,
@@ -222,7 +223,9 @@ export default class ColourPalettes extends EventTarget {
     if (!this.get(id)) return false;
     this.update(
       this.values.map((palette) =>
-        palette.id === id ? { ...palette, ...changes } : palette,
+        palette.id === id
+          ? { ...palette, ...changes, updatedAt: new Date().toISOString() }
+          : palette,
       ),
     );
     return true;

@@ -4,18 +4,18 @@ sidebar_position: 9
 
 # Schemas and asset files
 
-PaintCanvas describes its assets with JSON schemas (draft 2020-12), published at `https://lvl99.github.io/paintcanvas/schemas/`. Each schema's `$id` is its URL and names its version, e.g. `brush-preset-2.0.0.json`. Its `@type` names the kind of thing it describes.
+PaintCanvas describes its assets with JSON schemas (draft 2020-12), published at `https://lvl99.github.io/paintcanvas/schemas/`. Each schema's `$id` is its URL and names its version, e.g. `brush-preset-2.1.0.json`. Its `@type` names the kind of thing it describes.
 
 | Schema                                 | `@type`                               | What it is                                                                                                                 |
 | -------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `brush-preset-2.0.0.json`              | `PaintCanvas/BrushPreset`             | A brush preset                                                                                                             |
-| `brush-preset-collection-2.0.0.json`   | `PaintCanvas/BrushPresetCollection`   | A file of brush presets                                                                                                    |
-| `colour-palette-2.0.0.json`            | `PaintCanvas/ColourPalette`           | A named list of colours                                                                                                    |
-| `colour-palette-collection-2.0.0.json` | `PaintCanvas/ColourPaletteCollection` | A file of colour palettes                                                                                                  |
-| `profile-graph-2.0.0.json`             | `PaintCanvas/ProfileGraph`            | A profile graph                                                                                                            |
-| `profile-graph-collection-2.0.0.json`  | `PaintCanvas/ProfileGraphCollection`  | A file of profile graphs                                                                                                   |
-| `document-1.0.0.json`                  | `PaintCanvas/Document`                | A drawing (see [Saving and opening drawings](./documents.md))                                                              |
-| `app-settings-2.0.0.json`              | `PaintCanvas/AppSettings`             | A file of app settings, with the user's assets (see [Keeping the user's settings](./layout.md#keeping-the-users-settings)) |
+| `brush-preset-2.1.0.json`              | `PaintCanvas/BrushPreset`             | A brush preset                                                                                                             |
+| `brush-preset-collection-2.1.0.json`   | `PaintCanvas/BrushPresetCollection`   | A file of brush presets                                                                                                    |
+| `colour-palette-2.1.0.json`            | `PaintCanvas/ColourPalette`           | A named list of colours                                                                                                    |
+| `colour-palette-collection-2.1.0.json` | `PaintCanvas/ColourPaletteCollection` | A file of colour palettes                                                                                                  |
+| `profile-graph-2.1.0.json`             | `PaintCanvas/ProfileGraph`            | A profile graph                                                                                                            |
+| `profile-graph-collection-2.1.0.json`  | `PaintCanvas/ProfileGraphCollection`  | A file of profile graphs                                                                                                   |
+| `document-1.1.0.json`                  | `PaintCanvas/Document`                | A drawing (see [Saving and opening drawings](./documents.md))                                                              |
+| `app-settings-2.1.0.json`              | `PaintCanvas/AppSettings`             | A file of app settings, with the user's assets (see [Keeping the user's settings](./layout.md#keeping-the-users-settings)) |
 
 ## Assets
 
@@ -27,6 +27,7 @@ Every asset (an `Asset<T>` from `@lvl99dotcom/paintcanvas/lib/assets`) has a hea
 - `author`: a name, or `{ did, name, handle, email, homepage }`.
 - `group` (optional): the family it belongs to, e.g. "Round".
 - `version` (optional): the asset's own version, e.g. `1.1.0`, not its schema's.
+- `updatedAt` (optional): when the user last made or changed it (ISO 8601). Making a preset (`canvas.newPreset`), making, renaming or changing a palette's colours, and saving or renaming a profile graph set it; loading, importing, merging and upgrading keep what it was.
 - `content`: a brush preset's brush settings (`BrushConfig`), a palette's colours (`{ colours }`, a `ColourPaletteConfig`) or a profile graph's points (`{ points }`, a `ProfileGraphConfig`).
 
 ```json
@@ -47,7 +48,7 @@ Users export and import assets in collection files:
 
 ```json
 {
-  "$schema": "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.0.0.json",
+  "$schema": "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.1.0.json",
   "@type": "PaintCanvas/BrushPresetCollection",
   "items": [
     {
@@ -87,6 +88,10 @@ A schema's version is separate from PaintCanvas's version:
 - Files of a newer version than the app knows are refused, as `unsupported`.
 
 Brush preset and colour palette files from before versioned schemas (`format` and `version: 1`) are migrated too.
+
+### When things were changed (`updatedAt`)
+
+Version 2.1.0 of the asset, collection and app settings schemas, and version 1.1.0 of the document schema, add an optional `updatedAt`: when the user last changed the asset, settings or drawing. Apps that keep copies in more than one place (e.g. the browser and the user's account online) can keep the one changed last. Opening or loading something never changes it.
 
 ### Version 2.0.0
 

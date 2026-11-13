@@ -142,11 +142,11 @@ describe("profile graph schemas", () => {
 
   it("should be published with versioned URLs and types", () => {
     expect(profileGraphSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-2.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-2.1.0.json",
     );
     expect(profileGraphSchema["@type"]).toBe("PaintCanvas/ProfileGraph");
     expect(profileGraphCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.1.0.json",
     );
     expect(profileGraphCollectionSchema["@type"]).toBe(
       "PaintCanvas/ProfileGraphCollection",

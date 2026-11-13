@@ -118,4 +118,37 @@ describe("AssetSync", () => {
     notes.change([b]);
     expect(store.put).not.toHaveBeenCalled();
   });
+
+  it("should do nothing once stopped while loading fails", async () => {
+    const notes = new Notes();
+    const store = fakeStore();
+    store.list.mockRejectedValueOnce(new Error("offline"));
+    const sync = new AssetSync(notes, store);
+    sync.stop();
+    await sync.ready;
+    notes.change([b]);
+    expect(store.put).not.toHaveBeenCalled();
+  });
+
+  it("should not save a change waiting behind a save once stopped", async () => {
+    const notes = new Notes();
+    const store = fakeStore();
+    const sync = new AssetSync(notes, store);
+    await sync.ready;
+    let finish = () => {};
+    store.put.mockImplementationOnce(
+      () =>
+        new Promise<undefined>(
+          (resolve) => (finish = () => resolve(undefined)),
+        ),
+    );
+    notes.change([a]);
+    await vi.waitFor(() => expect(store.put).toHaveBeenCalledOnce());
+    // Waits for the save of `a`
+    notes.change([a, b]);
+    sync.stop();
+    finish();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(store.put).toHaveBeenCalledOnce();
+  });
 });

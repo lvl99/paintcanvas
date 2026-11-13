@@ -43,9 +43,10 @@ describe("PaintCanvas documents", () => {
     const saved = await source.exportDocument();
     expect(saved).toMatchObject({
       $schema:
-        "https://lvl99.github.io/paintcanvas/schemas/document-1.0.0.json",
+        "https://lvl99.github.io/paintcanvas/schemas/document-1.1.0.json",
       "@type": "PaintCanvas/Document",
       id: source.documentInfo.id,
+      updatedAt: source.documentInfo.updatedAt,
       name: "Sunset",
       author: [{ name: "Unknown" }],
       width: 20,
@@ -82,6 +83,8 @@ describe("PaintCanvas documents", () => {
       id: saved.id,
       name: "Sunset",
       dateCreated: saved.dateCreated,
+      // Opening it isn't changing it
+      updatedAt: saved.updatedAt,
     });
     expect(loaded.documentInfo.dateOpened >= saved.dateOpened).toBe(true);
     expect([loaded.width, loaded.height]).toEqual([20, 10]);

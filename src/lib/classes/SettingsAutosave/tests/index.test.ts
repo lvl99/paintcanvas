@@ -63,7 +63,50 @@ describe("SettingsAutosave", () => {
     expect(store.save).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(store.save).toHaveBeenCalledOnce();
-    expect(store.value).toEqual(collectSettings(app));
+    expect(autosave.updatedAt).toBe(new Date().toISOString());
+    expect(store.value).toEqual(
+      collectSettings(app, { updatedAt: autosave.updatedAt }),
+    );
+  });
+
+  it("should keep when the restored settings were changed, until they change", async () => {
+    vi.useFakeTimers({ now: new Date("2030-01-01T00:00:00.000Z") });
+    const app = createApp();
+    const updatedAt = "2026-11-13T09:30:00.000Z";
+    const store = createStore({ updatedAt, ui: { theme: "dark" } });
+    const autosave = new SettingsAutosave(app, store);
+    await autosave.ready;
+    expect(autosave.updatedAt).toBe(updatedAt);
+    await autosave.save();
+    expect(store.save).not.toHaveBeenCalled();
+    app.ui.update({ theme: "light" });
+    await vi.runAllTimersAsync();
+    expect(store.value).toMatchObject({
+      updatedAt: "2030-01-01T00:00:00.500Z",
+    });
+    autosave.stop();
+  });
+
+  it("should apply settings from elsewhere, keeping when they were changed", async () => {
+    vi.useFakeTimers({ now: new Date("2030-01-01T00:00:00.000Z") });
+    const app = createApp();
+    const store = createStore();
+    const autosave = new SettingsAutosave(app, store);
+    const updatedAt = "2026-11-13T09:30:00.000Z";
+    await autosave.apply({ updatedAt, ui: { theme: "dark" } });
+    expect(app.ui.data.theme).toBe("dark");
+    expect(autosave.updatedAt).toBe(updatedAt);
+    expect(store.value).toMatchObject({ updatedAt, ui: { theme: "dark" } });
+    await vi.runAllTimersAsync();
+    expect(store.save).toHaveBeenCalledOnce();
+    // The same settings are saved again with their own time; ones without a time are changed now
+    await autosave.apply({ updatedAt: "2026-11-14T00:00:00.000Z" });
+    expect(store.value).toMatchObject({
+      updatedAt: "2026-11-14T00:00:00.000Z",
+    });
+    await autosave.apply({ ui: { theme: "light" } });
+    expect(autosave.updatedAt).toBe("2030-01-01T00:00:00.000Z");
+    autosave.stop();
   });
 
   it("should not save when only other parts of the canvas change", async () => {
@@ -152,7 +195,9 @@ describe("SettingsAutosave", () => {
     app.setColour("#222222");
     await vi.runAllTimersAsync();
     expect(store.save).toHaveBeenCalledTimes(2);
-    expect(store.value).toEqual(collectSettings(app));
+    expect(store.value).toEqual(
+      collectSettings(app, { updatedAt: autosave.updatedAt }),
+    );
   });
 
   it("should skip saving settings that are the same as the saved ones", async () => {

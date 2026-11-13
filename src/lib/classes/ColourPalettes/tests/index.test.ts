@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { DATE_TIME_PATTERN } from "../../../assets/schema";
 import ColourPalettes, {
   MAX_SAVED_PALETTES,
   paletteName,
@@ -106,12 +107,16 @@ describe("ColourPalettes", () => {
       id: expect.stringMatching(/^[0-9a-f-]{36}$/),
       name: "Sunset",
       author: { name: "Ada" },
+      updatedAt: expect.stringMatching(new RegExp(DATE_TIME_PATTERN)),
       content: { colours: ["#ff7700"] },
     });
     expect(palettes.create("Plain")?.author).toBe(UNKNOWN_AUTHOR);
     expect(palettes.get(sunset.id)).toBe(sunset);
     expect(palettes.create("")).toBeUndefined();
+    vi.useFakeTimers({ now: new Date("2030-01-01T00:00:00.000Z") });
     expect(palettes.rename(sunset.id, "Dusk")).toBe(true);
+    expect(palettes.get(sunset.id)?.updatedAt).toBe("2030-01-01T00:00:00.000Z");
+    vi.useRealTimers();
     expect(palettes.rename(sunset.id, " ")).toBe(false);
     expect(palettes.rename("gone", "Dusk")).toBe(false);
     expect(summary(palettes)).toEqual(["Dusk: #ff7700", "Plain: "]);

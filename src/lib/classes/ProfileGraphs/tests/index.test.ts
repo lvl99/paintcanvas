@@ -11,7 +11,11 @@ import {
   PROFILE_GRAPH_TYPE,
   UNTITLED_PROFILE_NAME,
 } from "../../../profiles/schema";
-import { MAX_ASSET_TEXT_LENGTH, UNKNOWN_AUTHOR } from "../../../assets/schema";
+import {
+  DATE_TIME_PATTERN,
+  MAX_ASSET_TEXT_LENGTH,
+  UNKNOWN_AUTHOR,
+} from "../../../assets/schema";
 import { testProfile } from "../../../../testing/assets";
 
 const { Linear, BezierCubic } = Interpolation;
@@ -170,6 +174,7 @@ describe("ProfileGraphs", () => {
       id: soft.id,
       name: "Softer",
       author: UNKNOWN_AUTHOR,
+      updatedAt: expect.stringMatching(new RegExp(DATE_TIME_PATTERN)),
       content: { points: linearPoints() },
     });
     expect(profiles.graphs).toEqual([replaced]);
