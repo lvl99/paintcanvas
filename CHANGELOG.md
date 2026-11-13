@@ -2,6 +2,28 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.10.0 (2026-11-13)
+
+When documents, assets and settings were last changed, saving to remote stores after a pause in drawing, and an optional document store in the browser.
+
+### Fixed
+
+- The colours panel copes with a palette being deleted while one of its colours is focused or being asked about.
+
+### Added
+
+- `updatedAt` (optional, ISO 8601) on documents (`DocumentInfo`), assets (`Asset<T>`) and app settings (`AppSettings`), so copies kept in more than one place can be synced by which was changed last. Opening or loading never changes it. Schemas: document 1.1.0; brush-preset, colour-palette, profile-graph and their collections 2.1.0; app-settings 2.1.0. Files without it stay valid.
+  - The canvas sets a document's `updatedAt` when layer pixels, settings, order or the layer list change, the canvas is resized, or the document is renamed, and dispatches `modified` (`DOCUMENT_MODIFIED_EVENT`). New documents start with `dateCreated`, and so do ones opened from before documents had it.
+  - `canvas.newPreset`, palette create, rename, add colour and remove colour, and profile graph save and rename set an asset's `updatedAt`.
+  - `SettingsAutosave` sets the settings' `updatedAt` when they change and keeps it when restoring them. New `settingsAutosave.updatedAt`, `settingsAutosave.apply(settings)` (keeps the applied settings' own `updatedAt`), and `collectSettings(app, { updatedAt })`.
+- `RemoteDocumentAutosave` `idle` mode (`mode: "idle"`, `idleMs`, default `REMOTE_IDLE_MS` of 1 minute): saves once drawing pauses, when the page is hidden, or when the window loses focus.
+- `IndexedDbDocumentStore` (`@lvl99dotcom/paintcanvas/lib/documentStore`, optional): a document store in the browser with `list()` (`DocumentSummary`s, most recently opened first, without layers), `remove(id)` and `markOpened(id)`.
+
+### Changed
+
+- `RemoteDocumentAutosave` only counts changes to the drawing (the canvas's `modified` event) as unsaved changes; other canvas changes, such as switching tools, no longer do. `RemoteAutosaveCanvas` no longer needs `layers`.
+- `updatedAt` is a reserved app settings key, so settings extensions can't use it.
+
 ## 0.9.0 (2026-11-12)
 
 Assets with a header and their content, and 2.0.0 schemas.
