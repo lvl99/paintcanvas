@@ -8,13 +8,13 @@ import {
 } from "../assets/schema.ts";
 
 /** Version of the colour palette schema */
-export const COLOUR_PALETTE_SCHEMA_VERSION = "2.0.0";
+export const COLOUR_PALETTE_SCHEMA_VERSION = "2.1.0";
 
 /** `@type` of a colour palette */
 export const COLOUR_PALETTE_TYPE = "PaintCanvas/ColourPalette";
 
 /** Version of the colour palette collection schema */
-export const COLOUR_PALETTE_COLLECTION_SCHEMA_VERSION = "2.0.0";
+export const COLOUR_PALETTE_COLLECTION_SCHEMA_VERSION = "2.1.0";
 
 /** `@type` of a colour palette collection file */
 export const COLOUR_PALETTE_COLLECTION_TYPE =

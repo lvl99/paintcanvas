@@ -792,7 +792,7 @@ describe("pc-panel-colours", () => {
     );
     await element.actOnPalette(sunset.id, "export");
     expect(colourPaletteFile.parse(saved[0]!)).toEqual([
-      { ...sunset, name: "Dusk" },
+      { ...sunset, name: "Dusk", updatedAt: expect.any(String) },
     ]);
     await element.actOnPalette(sunset.id, "delete");
     expect(element.confirm).toHaveBeenCalledWith(

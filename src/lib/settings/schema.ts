@@ -22,11 +22,11 @@ import type { ProfileGraph } from "../profiles/index.ts";
 import { MAX_SAVED_PROFILES, profileGraphSchema } from "../profiles/schema.ts";
 import { MAX_PRESETS_PER_FILE, brushPresetSchema } from "../presets/schema.ts";
 import type { BrushPreset } from "../brushes/types/index.ts";
-import { fileSchemaUrlSchema } from "../assets/schema.ts";
+import { dateTimeSchema, fileSchemaUrlSchema } from "../assets/schema.ts";
 import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
 /** Version of the app settings schema */
-export const APP_SETTINGS_SCHEMA_VERSION = "2.0.0";
+export const APP_SETTINGS_SCHEMA_VERSION = "2.1.0";
 
 /** `@type` of an app settings file */
 export const APP_SETTINGS_TYPE = "PaintCanvas/AppSettings";
@@ -58,6 +58,11 @@ export interface AppSettings {
   brushes?: BrushPreset[];
   /** The theme, language and where canvases draw */
   ui?: Partial<UiSettingsData>;
+  /**
+   * When the user last changed their settings (ISO 8601 date and time; see `SettingsAutosave`). Loading them doesn't
+   * change it. Settings from before schema 2.1.0 have none.
+   */
+  updatedAt?: string;
   /** Parts added by wrapper apps, by their keys */
   [extension: string]: unknown;
 }
@@ -146,6 +151,7 @@ const settingsProperties = {
       rendering: { enum: RENDERINGS },
     },
   },
+  updatedAt: dateTimeSchema,
 } as const;
 
 /**

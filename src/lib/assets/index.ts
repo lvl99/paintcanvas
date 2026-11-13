@@ -19,8 +19,8 @@ import {
 export * from "./schema";
 
 /**
- * The author, group and version of an untrusted asset (e.g. stored or imported), each checked on its own: an invalid or
- * missing author is replaced with `author`, and an invalid group or version is left out.
+ * The author, group, version and `updatedAt` of an untrusted asset (e.g. stored or imported), each checked on its own:
+ * an invalid or missing author is replaced with `author`, and an invalid group, version or `updatedAt` is left out.
  *
  * @example
  * sanitiseAssetHeader({ author: { handle: "no.name" }, group: "Warm", version: "" }, "Ada"); // { author: "Ada", group: "Warm" }
@@ -28,13 +28,14 @@ export * from "./schema";
 export const sanitiseAssetHeader = (
   asset: Partial<Asset<unknown>>,
   author: AssetAuthor,
-): Pick<Asset<unknown>, "author" | "group" | "version"> => {
-  const valid = (key: "author" | "group" | "version") =>
+): Pick<Asset<unknown>, "author" | "group" | "version" | "updatedAt"> => {
+  const valid = (key: "author" | "group" | "version" | "updatedAt") =>
     asset[key] !== undefined && validateAssetHeader({ [key]: asset[key] });
   return {
     author: valid("author") ? (asset.author as AssetAuthor) : author,
     ...(valid("group") && { group: asset.group }),
     ...(valid("version") && { version: asset.version }),
+    ...(valid("updatedAt") && { updatedAt: asset.updatedAt }),
   };
 };
 

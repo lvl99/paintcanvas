@@ -128,6 +128,12 @@ export const TOOL_PANELS: Partial<Record<Tool, Panel>> = {
 /** Canvas width and height when none is given */
 export const DEFAULT_CANVAS_SIZE = 2000;
 
+/**
+ * Event dispatched when the drawing is changed: its layers, size or details (and its `documentInfo.updatedAt` is set).
+ * Opening or restoring a drawing doesn't dispatch it.
+ */
+export const DOCUMENT_MODIFIED_EVENT = "modified";
+
 /** Largest canvas width or height allowed when the `maxCanvasSize` option isn't given */
 export const MAX_CANVAS_SIZE = 2000;
 
@@ -333,6 +339,12 @@ export default class PaintCanvas extends EventTarget {
   /** Keeps the drawing in a remote store */
   private remoteDocumentAutosave?: RemoteDocumentAutosave;
 
+  /** The user's layers as last seen (see `layersSignature`), to tell whether a change modified them */
+  private lastLayersSignature = "";
+
+  /** Whether a drawing is being restored or opened, which doesn't count as changing it */
+  private restoring = false;
+
   /** Settings wrapper apps add to the app settings (see `SettingsExtension`) */
   readonly settingsExtensions = new SettingsExtensions();
 
@@ -395,6 +407,15 @@ export default class PaintCanvas extends EventTarget {
     const transformer = this.transformer;
     if (!transformer.pending || transformer.layer !== this.layerStack.active)
       this.syncTransform();
+  };
+
+  // Count changes to the user's layers (pixels, settings, order, or which layers there are) as changing the drawing;
+  // selecting a layer doesn't
+  private readonly onLayersModified = () => {
+    const signature = this.layersSignature();
+    if (signature === this.lastLayersSignature) return;
+    this.lastLayersSignature = signature;
+    this.markModified();
   };
 
   private readonly onStrokeBegin = () => this.background.strokeStarted();
@@ -550,9 +571,11 @@ export default class PaintCanvas extends EventTarget {
     );
     this.watchLayersAndMask();
     if (options.width !== undefined || options.height !== undefined) {
-      this.setCanvasSize(
-        options.width ?? this.canvasWidth,
-        options.height ?? this.canvasHeight,
+      this.whileRestoring(() =>
+        this.setCanvasSize(
+          options.width ?? this.canvasWidth,
+          options.height ?? this.canvasHeight,
+        ),
       );
     }
     if (options.layerStore) this.useLayerStore(options.layerStore);
@@ -741,14 +764,20 @@ export default class PaintCanvas extends EventTarget {
     const trimmed = name.trim();
     if (!trimmed) return false;
     this.setDocumentInfo({ ...this.info, name: trimmed });
+    this.markModified();
     return true;
   }
 
   /**
-   * Use details of a drawing being restored (e.g. kept in the browser), marking it opened now.
+   * Use details of a drawing being restored (e.g. kept in the browser), marking it opened now. Its `updatedAt` is kept
+   * (one without, from before documents had it, gets its `dateCreated`).
    */
   restoreDocumentInfo(info: DocumentInfo): void {
-    this.setDocumentInfo({ ...info, dateOpened: new Date().toISOString() });
+    this.setDocumentInfo({
+      ...info,
+      dateOpened: new Date().toISOString(),
+      updatedAt: info.updatedAt ?? info.dateCreated,
+    });
   }
 
   /**
@@ -759,7 +788,7 @@ export default class PaintCanvas extends EventTarget {
    * canvas.newDocument("Sketch");
    */
   newDocument(name?: string): void {
-    this.layerStack.replace([{ name: "Layer 1" }]);
+    this.whileRestoring(() => this.layerStack.replace([{ name: "Layer 1" }]));
     this.history.clear();
     this.setDocumentInfo(newDocumentInfo(this.author, name));
   }
@@ -874,8 +903,15 @@ export default class PaintCanvas extends EventTarget {
         images[layers.length + i] as ImageBitmap,
       ),
     );
-    const { id, name, author, dateCreated, dateOpened } = document;
-    this.restoreDocumentInfo({ id, name, author, dateCreated, dateOpened });
+    const { id, name, author, dateCreated, dateOpened, updatedAt } = document;
+    this.restoreDocumentInfo({
+      id,
+      name,
+      author,
+      dateCreated,
+      dateOpened,
+      ...(updatedAt === undefined ? {} : { updatedAt }),
+    });
     return true;
   }
 
@@ -922,14 +958,53 @@ export default class PaintCanvas extends EventTarget {
   ): void {
     if (layers.length > this.maxLayers)
       throw new Error(`Cannot have more than ${this.maxLayers} layers`);
-    this.setCanvasSize(width, height);
-    this.layerStack
-      .replace(layers)
-      .forEach((layer, i) =>
+    this.whileRestoring(() => {
+      this.setCanvasSize(width, height);
+      const restored = this.layerStack.replace(layers);
+      restored.forEach((layer, i) =>
         layer.context.drawImage(images[i] as CanvasImageSource, 0, 0),
       );
-    this.layerStack.select(activeLayer);
+      this.layerStack.select(activeLayer);
+    });
     this.history.clear();
+  }
+
+  /**
+   * Run a change that restores or opens a drawing, which doesn't count as changing it (see `DocumentInfo.updatedAt`).
+   */
+  private whileRestoring(change: () => void): void {
+    const restoring = this.restoring;
+    this.restoring = true;
+    try {
+      change();
+    } finally {
+      this.restoring = restoring;
+      this.lastLayersSignature = this.layersSignature();
+    }
+  }
+
+  /**
+   * The user's layers in short: each one's ID, settings and pixel version, top first. It changes when they're modified,
+   * but not when another layer is selected.
+   */
+  private layersSignature(): string {
+    const stack = this.layerStack;
+    return stack.layers
+      .map(
+        (layer) =>
+          `${layer.id}|${layer.name}|${layer.visible}|${layer.opacity}|${layer.blendMode}|${layer.alphaLock}|${stack.pixelVersion(layer.id)}`,
+      )
+      .join("\n");
+  }
+
+  /**
+   * Mark the drawing changed now (its `updatedAt`, see `DocumentInfo`) and dispatch `modified`, unless it's being
+   * restored or opened.
+   */
+  private markModified(): void {
+    if (this.restoring) return;
+    this.info = { ...this.info, updatedAt: new Date().toISOString() };
+    this.dispatchEvent(new Event(DOCUMENT_MODIFIED_EVENT));
   }
 
   /** Where the user's assets are kept (see `useAssetStores`) */
@@ -1226,6 +1301,8 @@ export default class PaintCanvas extends EventTarget {
    */
   private watchLayersAndMask(): void {
     this.layerStack.addEventListener("change", this.onLayersOrMaskChange);
+    this.layerStack.addEventListener("change", this.onLayersModified);
+    this.lastLayersSignature = this.layersSignature();
     this.currentSelection.addEventListener("change", this.onLayersOrMaskChange);
     this.strokeEngine.addEventListener(
       BEFORE_COMMIT_EVENT,
@@ -1616,7 +1693,8 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
-   * Make a new custom preset from settings: a new ID, the given name, and the author from the `presetAuthor` option.
+   * Make a new custom preset from settings: a new ID, the given name, the author from the `presetAuthor` option, and
+   * made now (`updatedAt`).
    * It has no group, as groups are only for the presets that come with the app.
    *
    * @example
@@ -1630,6 +1708,7 @@ export default class PaintCanvas extends EventTarget {
       name: name.trim(),
       version: "1.0.0",
       author: this.presetAuthor(),
+      updatedAt: new Date().toISOString(),
       content: structuredClone(settings),
     };
   }
@@ -1725,6 +1804,7 @@ export default class PaintCanvas extends EventTarget {
     this.history.removeEventListener(UNDO_EVENT, this.onHistoryStep);
     this.history.removeEventListener(REDO_EVENT, this.onHistoryStep);
     this.layerStack.removeEventListener("change", this.onLayersOrMaskChange);
+    this.layerStack.removeEventListener("change", this.onLayersModified);
     this.currentSelection.removeEventListener(
       "change",
       this.onLayersOrMaskChange,
@@ -1753,6 +1833,7 @@ export default class PaintCanvas extends EventTarget {
     this.canvasResized(width, height);
     this.clipboard = undefined;
     this.watchLayersAndMask();
+    this.markModified();
     this.notify();
   }
 

@@ -96,7 +96,7 @@ describe("settings schemas", () => {
       ].map(withoutType),
     });
     expect(appSettingsSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.1.0.json",
     );
     expect(appSettingsSchema["@type"]).toBe("PaintCanvas/AppSettings");
     const validateSettings = ajv.getSchema(settingsSchema.$id)!;
@@ -311,6 +311,7 @@ describe("collectSettings and applySettings", () => {
         id: expect.any(String),
         name: OLDER_PALETTE_NAME,
         author: { name: "Unknown" },
+        updatedAt: expect.any(String),
         content: { colours: ["#123456", "#abcdef"] },
       },
     ]);
@@ -412,7 +413,7 @@ describe("exportSettingsFile and parseSettingsFile", () => {
           {},
           {
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.1.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.2.0.json",
           },
         ),
       ),

@@ -105,10 +105,12 @@ export const isValidSettings = (
 /** Assets that app settings can hold */
 export type SettingsAsset = "brushes" | "palettes" | "profiles";
 
-/** What `collectSettings` leaves out */
+/** What `collectSettings` leaves out or adds */
 export interface CollectSettingsOptions {
   /** Assets to leave out, e.g. ones kept in stores of their own */
   without?: readonly SettingsAsset[];
+  /** When the settings were last changed, to include as their `updatedAt` (see `SettingsAutosave.updatedAt`) */
+  updatedAt?: string;
 }
 
 /**
@@ -118,10 +120,11 @@ export interface CollectSettingsOptions {
  * @example
  * collectSettings(canvas).palettes; // the user's own palettes
  * collectSettings(canvas, { without: ["profiles"] }).profiles; // undefined
+ * collectSettings(canvas, { updatedAt: autosave.updatedAt }).updatedAt; // "2026-11-13T…"
  */
 export const collectSettings = (
   app: PaintCanvas,
-  { without = [] }: CollectSettingsOptions = {},
+  { without = [], updatedAt }: CollectSettingsOptions = {},
 ): AppSettings => ({
   input: structuredClone(app.input.data) as InputSettingsData,
   shortcuts: structuredClone(app.shortcuts.bindings),
@@ -137,6 +140,7 @@ export const collectSettings = (
     : { brushes: structuredClone(app.customPresets.presets) }),
   ui: { ...app.ui.data },
   ...structuredClone(app.settingsExtensions.collect()),
+  ...(updatedAt === undefined ? {} : { updatedAt }),
 });
 
 /** Name of the palette that colours saved in PaintCanvas's palette by older versions are moved to */

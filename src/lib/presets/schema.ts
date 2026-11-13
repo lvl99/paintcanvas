@@ -10,13 +10,13 @@ import {
 export { UUID_PATTERN };
 
 /** Version of the brush preset schema */
-export const BRUSH_PRESET_SCHEMA_VERSION = "2.0.0";
+export const BRUSH_PRESET_SCHEMA_VERSION = "2.1.0";
 
 /** `@type` of a brush preset */
 export const BRUSH_PRESET_TYPE = "PaintCanvas/BrushPreset";
 
 /** Version of the brush preset collection schema */
-export const BRUSH_PRESET_COLLECTION_SCHEMA_VERSION = "2.0.0";
+export const BRUSH_PRESET_COLLECTION_SCHEMA_VERSION = "2.1.0";
 
 /** `@type` of a brush preset collection file */
 export const BRUSH_PRESET_COLLECTION_TYPE = "PaintCanvas/BrushPresetCollection";

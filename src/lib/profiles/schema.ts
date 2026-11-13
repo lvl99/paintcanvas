@@ -21,12 +21,12 @@ export const UNTITLED_PROFILE_NAME = "Untitled graph";
 export const MAX_SAVED_PROFILES = 100;
 
 /** Version of the profile graph schema */
-export const PROFILE_GRAPH_SCHEMA_VERSION = "2.0.0";
+export const PROFILE_GRAPH_SCHEMA_VERSION = "2.1.0";
 
 export { PROFILE_GRAPH_TYPE };
 
 /** Version of the profile graph collection schema */
-export const PROFILE_GRAPH_COLLECTION_SCHEMA_VERSION = "2.0.0";
+export const PROFILE_GRAPH_COLLECTION_SCHEMA_VERSION = "2.1.0";
 
 /** `@type` of a profile graph collection file */
 export const PROFILE_GRAPH_COLLECTION_TYPE =

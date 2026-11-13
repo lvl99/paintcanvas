@@ -10,6 +10,7 @@ export const RESERVED_SETTINGS_KEYS: readonly string[] = [
   "profiles",
   "brushes",
   "ui",
+  "updatedAt",
 ];
 
 /**

@@ -70,7 +70,7 @@ describe("document schema", () => {
 
   it("should be published with a versioned URL and type, and compile and validate documents with ajv", () => {
     expect(documentSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/document-1.0.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/document-1.1.0.json",
     );
     expect(documentSchema["@type"]).toBe("PaintCanvas/Document");
     const ajv = new Ajv2020({ strict: true });
@@ -82,6 +82,8 @@ describe("document schema", () => {
     expect(validate({ ...file, width: 0 })).toBe(false);
     expect(validate.errors?.[0]?.instancePath).toBe("/width");
     expect(validate({ ...file, dateCreated: "yesterday" })).toBe(false);
+    expect(validate({ ...file, updatedAt: date })).toBe(true);
+    expect(validate({ ...file, updatedAt: "today" })).toBe(false);
     expect(validate({ ...file, id: "sunset" })).toBe(false);
     expect(
       validate({ ...file, thumbnail: { width: 201, height: 1, content: PNG } }),
@@ -160,6 +162,7 @@ describe("newDocumentInfo", () => {
       author: [{ name: "Ada" }],
       dateCreated: date,
       dateOpened: date,
+      updatedAt: date,
     });
     expect(newDocumentInfo()).toMatchObject({
       name: UNTITLED_DOCUMENT_NAME,
@@ -254,7 +257,7 @@ describe("documentToFile and documentFromFile", () => {
       {
         ...file,
         $schema:
-          "https://lvl99.github.io/paintcanvas/schemas/document-1.1.0.json",
+          "https://lvl99.github.io/paintcanvas/schemas/document-1.2.0.json",
       },
       "unsupported",
     ],

@@ -14,6 +14,7 @@ const graph = {
   id: "2f1d3c5e-7a90-4b5c-8d1a-0b5c4c3e8d1a",
   name: "Soft",
   author: "Ada",
+  updatedAt: "2026-11-13T09:30:00.000Z",
   content: { points },
 };
 
@@ -22,7 +23,7 @@ describe("profileGraphFile", () => {
     const json = profileGraphFile.write([graph]);
     expect(JSON.parse(json)).toEqual({
       $schema:
-        "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.0.0.json",
+        "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.1.0.json",
       "@type": "PaintCanvas/ProfileGraphCollection",
       items: [graph],
     });
@@ -56,8 +57,8 @@ describe("profileGraphFile", () => {
       ],
     };
     expect(profileGraphFile.read(file, { author: "Ada" })).toEqual([
-      { ...graph, author: "Bo" },
-      { ...graph, name: UNTITLED_PROFILE_NAME },
+      { ...graph, author: "Bo", updatedAt: undefined },
+      { ...graph, name: UNTITLED_PROFILE_NAME, updatedAt: undefined },
     ]);
     expect(profileGraphFile.read(file)[1]?.author).toBe(UNKNOWN_AUTHOR);
   });

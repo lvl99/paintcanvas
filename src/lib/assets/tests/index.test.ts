@@ -361,6 +361,15 @@ describe("sanitiseAssetHeader", () => {
     ).toEqual({ author: { name: "Bo" }, group: "G", version: "1.0.0" });
     expect(
       sanitiseAssetHeader(
+        { author: "Bo", updatedAt: "2026-11-13T09:30:00.000Z" },
+        "Ada",
+      ),
+    ).toEqual({ author: "Bo", updatedAt: "2026-11-13T09:30:00.000Z" });
+    expect(
+      sanitiseAssetHeader({ author: "Bo", updatedAt: "yesterday" }, "Ada"),
+    ).toEqual({ author: "Bo" });
+    expect(
+      sanitiseAssetHeader(
         {
           author: { handle: "no.name" } as never,
           group: " ",

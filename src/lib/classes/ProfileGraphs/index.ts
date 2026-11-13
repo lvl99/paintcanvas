@@ -167,7 +167,8 @@ export default class ProfileGraphs extends EventTarget {
   }
 
   /**
-   * Save a graph as one of the user's own: as a new one (with a new UUID), or in place of the one with its ID. Returns
+   * Save a graph as one of the user's own, changed now (`updatedAt`): as a new one (with a new UUID), or in place of
+   * the one with its ID. Returns
    * the saved graph, or undefined if it can't be saved (no name, invalid points, a preset's ID, or no room).
    *
    * @example
@@ -184,6 +185,7 @@ export default class ProfileGraphs extends EventTarget {
           id: index >= 0 ? draft.id : crypto.randomUUID(),
           name: draft.name,
           author,
+          updatedAt: new Date().toISOString(),
           content: { points: draft.points },
         },
       ],

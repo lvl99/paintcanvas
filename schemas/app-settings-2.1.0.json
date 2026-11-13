@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.1.0.json",
+  "@type": "PaintCanvas/AppSettings",
+  "type": "object",
+  "required": [
+    "$schema",
+    "@type"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "@type": {
+      "const": "PaintCanvas/AppSettings"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scrollPan": {
+          "type": "boolean"
+        },
+        "pinchZoom": {
+          "type": "boolean"
+        },
+        "modifierScrollZoom": {
+          "type": "boolean"
+        },
+        "focusPen": {
+          "type": "boolean"
+        },
+        "gestures": {
+          "type": "object",
+          "maxProperties": 20,
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 50
+          }
+        }
+      }
+    },
+    "shortcuts": {
+      "type": "object",
+      "maxProperties": 200,
+      "propertyNames": {
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key"
+            ],
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "cmd": {
+                "type": "boolean"
+              },
+              "ctrl": {
+                "type": "boolean"
+              },
+              "shift": {
+                "type": "boolean"
+              },
+              "alt": {
+                "type": "boolean"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "palettes": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "https://lvl99.github.io/paintcanvas/schemas/colour-palette-2.1.0.json"
+      }
+    },
+    "colours": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foreground",
+        "background"
+      ],
+      "properties": {
+        "foreground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "https://lvl99.github.io/paintcanvas/schemas/profile-graph-2.1.0.json"
+      }
+    },
+    "brushes": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "https://lvl99.github.io/paintcanvas/schemas/brush-preset-2.1.0.json"
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "enum": [
+            "light",
+            "dark",
+            "system"
+          ]
+        },
+        "locale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 35,
+          "pattern": "^[A-Za-z0-9-]+$"
+        },
+        "rendering": {
+          "enum": [
+            "cpu",
+            "gpu"
+          ]
+        }
+      }
+    },
+    "updatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+    }
+  }
+}
