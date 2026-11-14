@@ -9,6 +9,7 @@ import {
   tiltAmount,
   tiltDirection,
   variationFactor,
+  withPenInput,
 } from "..";
 import type { BrushConfig } from "../../types";
 
@@ -326,5 +327,71 @@ describe("pointInput", () => {
       tiltY: 5,
       isPen: true,
     });
+  });
+});
+
+describe("withPenInput", () => {
+  const on = { penPressure: true, penTilt: true };
+  const off = { penPressure: false, penTilt: false };
+
+  it("should vary the size with pressure over the full range when the preset doesn't, and keep the preset's range when it does", () => {
+    const preset: BrushConfig = {
+      alpha: 0.5,
+      widthConfig: { usePressure: true, minPressure: 0.4, maxPressure: 0.9 },
+      // A range kept while off isn't used
+      heightConfig: { minPressure: 0.2 },
+    };
+    const result = withPenInput(preset, { penPressure: true, penTilt: false });
+    expect(result.alpha).toBe(0.5);
+    expect(result.widthConfig).toEqual({
+      usePressure: true,
+      minPressure: 0.4,
+      maxPressure: 0.9,
+      useTilt: false,
+    });
+    expect(result.heightConfig).toEqual({
+      usePressure: true,
+      minPressure: 0,
+      maxPressure: 1,
+      useTilt: false,
+    });
+    // The preset is unchanged
+    expect(preset.heightConfig).toEqual({ minPressure: 0.2 });
+    expect(
+      stampParams(result, { width: 20, height: 20 }, pen(0.5), fixed(0)).height,
+    ).toBe(10);
+  });
+
+  it("should turn the rotation to the pen's lean with tilt, and vary the size with tilt only where the preset does", () => {
+    const result = withPenInput(
+      { widthConfig: { useTilt: true, minTilt: 0.5 }, heightConfig: {} },
+      on,
+    );
+    expect(result.rotationConfig).toEqual({ useTilt: true });
+    expect(result.widthConfig?.useTilt).toBe(true);
+    expect(result.heightConfig?.useTilt).toBe(false);
+    expect(withPenInput(base, on).widthConfig?.useTilt).toBe(false);
+  });
+
+  it("should leave out pressure and tilt when off, whatever the preset says", () => {
+    const result = withPenInput(
+      {
+        widthConfig: { usePressure: true, useTilt: true },
+        rotationConfig: { useTilt: true, useRandomise: true },
+        alphaConfig: { usePressure: true },
+      },
+      off,
+    );
+    expect(result.widthConfig).toEqual({ usePressure: false, useTilt: false });
+    expect(result.heightConfig).toEqual({ usePressure: false, useTilt: false });
+    expect(result.rotationConfig).toEqual({
+      useTilt: false,
+      useRandomise: true,
+    });
+    // Other settings keep the preset's
+    expect(result.alphaConfig).toEqual({ usePressure: true });
+    expect(
+      stampParams(result, { width: 20, height: 20 }, pen(0.1), fixed(0)).width,
+    ).toBe(20);
   });
 });

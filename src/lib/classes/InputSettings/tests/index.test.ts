@@ -9,13 +9,15 @@ import InputSettings, {
 import { DEFAULT_GESTURES } from "../../../utils/gestures";
 
 describe("defaultInputSettings", () => {
-  it("should turn all navigation on, use the default gestures and turn focus pen mode off", () => {
+  it("should turn all navigation on, use the default gestures, turn focus pen mode off, pen pressure on and pen tilt off", () => {
     expect(defaultInputSettings()).toEqual({
       scrollPan: true,
       pinchZoom: true,
       modifierScrollZoom: true,
       gestures: DEFAULT_GESTURES,
       focusPen: false,
+      penPressure: true,
+      penTilt: false,
     });
   });
 

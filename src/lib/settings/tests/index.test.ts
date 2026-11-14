@@ -96,7 +96,7 @@ describe("settings schemas", () => {
       ].map(withoutType),
     });
     expect(appSettingsSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.1.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.2.0.json",
     );
     expect(appSettingsSchema["@type"]).toBe("PaintCanvas/AppSettings");
     const validateSettings = ajv.getSchema(settingsSchema.$id)!;
@@ -138,6 +138,9 @@ describe("isValidSettings", () => {
     expect(isValidSettings({ palette: [] }).valid).toBe(true);
     expect(isValidSettings({ shortcuts: { deselect: null } }).valid).toBe(true);
     expect(isValidSettings({}).valid).toBe(true);
+    expect(
+      isValidSettings({ input: { penPressure: false, penTilt: true } }).valid,
+    ).toBe(true);
   });
 
   it("should upgrade assets of version 1, giving those without an author the one given", () => {
@@ -162,6 +165,11 @@ describe("isValidSettings", () => {
       "an unknown input setting",
       { input: { tilt: true } },
       "additional properties",
+    ],
+    [
+      "a pen setting that isn't on or off",
+      { input: { penPressure: 1 } },
+      "/input/penPressure must be boolean",
     ],
     [
       "a gesture that isn't a name",
@@ -278,7 +286,7 @@ describe("collectSettings and applySettings", () => {
 
   it("should use settings on another canvas", async () => {
     const source = createApp();
-    source.input.update({ focusPen: true });
+    source.input.update({ focusPen: true, penPressure: false, penTilt: true });
     source.shortcuts.set("tool-brush", { key: "p" });
     source.setColour("#ff0000");
     source.setColour("#00ff00", "background");
@@ -414,7 +422,7 @@ describe("exportSettingsFile and parseSettingsFile", () => {
           {},
           {
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.2.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.3.0.json",
           },
         ),
       ),

@@ -15,7 +15,7 @@ PaintCanvas describes its assets with JSON schemas (draft 2020-12), published at
 | `profile-graph-2.1.0.json`             | `PaintCanvas/ProfileGraph`            | A profile graph                                                                                                            |
 | `profile-graph-collection-2.1.0.json`  | `PaintCanvas/ProfileGraphCollection`  | A file of profile graphs                                                                                                   |
 | `document-1.1.0.json`                  | `PaintCanvas/Document`                | A drawing (see [Saving and opening drawings](./documents.md))                                                              |
-| `app-settings-2.1.0.json`              | `PaintCanvas/AppSettings`             | A file of app settings, with the user's assets (see [Keeping the user's settings](./layout.md#keeping-the-users-settings)) |
+| `app-settings-2.2.0.json`              | `PaintCanvas/AppSettings`             | A file of app settings, with the user's assets (see [Keeping the user's settings](./layout.md#keeping-the-users-settings)) |
 
 ## Assets
 
@@ -92,6 +92,10 @@ Brush preset and colour palette files from before versioned schemas (`format` an
 ### When things were changed (`updatedAt`)
 
 Version 2.1.0 of the asset, collection and app settings schemas, and version 1.1.0 of the document schema, add an optional `updatedAt`: when the user last changed the asset, settings or drawing. Apps that keep copies in more than one place (e.g. the browser and the user's account online) can keep the one changed last. Opening or loading something never changes it.
+
+### Pen pressure and tilt settings
+
+Version 2.2.0 of the app settings schema adds `penPressure` and `penTilt` to the input settings (see `InputSettings`).
 
 ### Version 2.0.0
 

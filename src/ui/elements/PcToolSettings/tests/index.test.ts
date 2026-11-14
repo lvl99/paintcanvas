@@ -3,7 +3,6 @@ import "..";
 import {
   hasToolSettings,
   sliderToZoom,
-  withSource,
   ZOOM_SLIDER_STEPS,
   zoomPercent,
   zoomToSlider,
@@ -87,22 +86,6 @@ describe("hasToolSettings", () => {
   });
 });
 
-describe("withSource", () => {
-  it("should turn a source on or off, keeping ranges", () => {
-    expect(
-      withSource(
-        { widthConfig: { minPressure: 0.2 } },
-        ["widthConfig", "heightConfig"],
-        "usePressure",
-        true,
-      ),
-    ).toEqual({
-      widthConfig: { minPressure: 0.2, usePressure: true },
-      heightConfig: { usePressure: true },
-    });
-  });
-});
-
 describe("pc-tool-settings", () => {
   it("should show nothing without an app or for tools without settings", async () => {
     const empty = await mount<PcToolSettings>("pc-tool-settings");
@@ -128,7 +111,7 @@ describe("pc-tool-settings", () => {
     );
   });
 
-  it("should show and hide pressure, tilt, focus pen mode, width, constrain proportions and height in a popover from the cog button", async () => {
+  it("should show and hide width, constrain proportions and height in a popover from the cog button", async () => {
     const { app, element } = await setup();
     const button = query<HTMLButtonElement>(element, "button.size-settings");
     const popover = query<PcPopover>(element, "pc-popover.size-popover");
@@ -148,18 +131,8 @@ describe("pc-tool-settings", () => {
           : "constrain",
       ),
     ).toEqual(["width", "constrain", "height"]);
-    // The toggles above the sizes
-    expect(popover.firstElementChild!.classList.contains("size-toggles")).toBe(
-      true,
-    );
-    expect(
-      [...popover.querySelectorAll(".size-toggles > *")].map(
-        (e) => e.querySelector("input")?.className ?? e.classList[0],
-      ),
-    ).toEqual(["pressure", "tilt", "focus-pen"]);
-    expect(
-      element.shadowRoot!.querySelector(".start input.pressure"),
-    ).toBeNull();
+    // The pen toggles are on the bar, not in the popover
+    expect(popover.querySelector("input.pressure")).toBeNull();
 
     // Opens under the button, pointing at it
     const place = vi.spyOn(popover, "placeBelow");
@@ -295,7 +268,7 @@ describe("pc-tool-settings", () => {
     expect(height.value).toBe(85);
   });
 
-  it("should turn pressure and tilt on and off", async () => {
+  it("should turn pen pressure and tilt on and off for every preset, without changing the preset", async () => {
     const { app, element } = await setup();
     const toggle = async (selector: string, checked: boolean) => {
       const box = query<HTMLInputElement>(element, selector);
@@ -304,33 +277,46 @@ describe("pc-tool-settings", () => {
       await element.updateComplete;
       return box;
     };
+    const before = app.brush.preset;
+    // Pressure is on and tilt off to start with
+    expect(query<HTMLInputElement>(element, "input.pressure").checked).toBe(
+      true,
+    );
+    expect(query<HTMLInputElement>(element, "input.tilt").checked).toBe(false);
+    const pressure = await toggle("input.pressure", false);
+    expect(app.input.data.penPressure).toBe(false);
+    expect(pressure.checked).toBe(false);
+    await toggle("input.tilt", true);
+    expect(app.input.data.penTilt).toBe(true);
+    // The brush's settings are unchanged
+    expect(app.brush.preset).toBe(before);
+    // Another preset keeps them
+    app.brush.select("round20");
+    await element.updateComplete;
     expect(query<HTMLInputElement>(element, "input.pressure").checked).toBe(
       false,
     );
-    const pressure = await toggle("input.pressure", true);
-    expect(app.brush.preset.widthConfig?.usePressure).toBe(true);
-    expect(app.brush.preset.heightConfig?.usePressure).toBe(true);
-    expect(pressure.checked).toBe(true);
-    await toggle("input.pressure", false);
-    expect(app.brush.preset.widthConfig?.usePressure).toBe(false);
-    await toggle("input.tilt", true);
-    expect(app.brush.preset.rotationConfig?.useTilt).toBe(true);
     expect(query<HTMLInputElement>(element, "input.tilt").checked).toBe(true);
-    await toggle("input.tilt", false);
-    expect(app.brush.preset.rotationConfig?.useTilt).toBe(false);
+    // Changed elsewhere (e.g. restored settings)
+    app.input.update({ penPressure: true });
+    await element.updateComplete;
+    expect(query<HTMLInputElement>(element, "input.pressure").checked).toBe(
+      true,
+    );
   });
 
   it.each([Tool.Brush, Tool.Eraser])(
-    "should switch focus pen mode on and off, after tilt in the size settings, for tool %s",
+    "should show pressure, tilt and focus pen mode on the bar after the size settings button, for tool %s",
     async (tool) => {
       const { app, element } = await setup(tool);
-      const toggle = query<HTMLButtonElement>(
-        element,
-        ".size-toggles > button.focus-pen",
-      );
-      expect(
-        toggle.previousElementSibling!.querySelector("input.tilt"),
-      ).not.toBeNull();
+      const cog = query(element, ".start > button.size-settings");
+      const pressure = cog.nextElementSibling!;
+      const tilt = pressure.nextElementSibling!;
+      const toggle = tilt.nextElementSibling as HTMLButtonElement;
+      expect(pressure.querySelector("input.pressure")).not.toBeNull();
+      expect(pressure.getAttribute("title")).toBe("Pressure");
+      expect(tilt.querySelector("input.tilt")).not.toBeNull();
+      expect(toggle.classList.contains("focus-pen")).toBe(true);
       expect(toggle.getAttribute("aria-label")).toBe("Focus pen mode");
       expect(toggle.getAttribute("aria-pressed")).toBe("false");
       expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(

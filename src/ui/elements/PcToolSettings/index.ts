@@ -12,7 +12,6 @@ import PaintCanvas, {
   type SampleMode,
 } from "../../../lib/classes/PaintCanvas";
 import type BrushSettings from "../../../lib/classes/BrushSettings";
-import type { BrushConfig, BrushParamConfig } from "../../../lib/brushes/types";
 import {
   MAX_BRUSH_SIZE,
   MIN_BRUSH_SIZE,
@@ -33,15 +32,6 @@ const MASK_TOOLS: readonly Tool[] = [
   Tool.PolygonLasso,
   Tool.FreeformLasso,
 ];
-
-/** Settings varied with pen pressure by the pressure toggle */
-const PRESSURE_PARAMS = ["widthConfig", "heightConfig"] as const;
-
-/** Settings varied with pen tilt by the tilt toggle */
-const TILT_PARAMS = ["widthConfig", "heightConfig", "rotationConfig"] as const;
-
-/** A setting's variation config key */
-type ParamKey = (typeof TILT_PARAMS)[number];
 
 /** How a setting's `pc-number-slider` works (see `renderNumberField`) */
 interface NumberFieldOptions {
@@ -79,25 +69,6 @@ export const hasToolSettings = (tool: Tool): boolean =>
   tool === Tool.Zoom ||
   tool === Tool.ColourSample ||
   MASK_TOOLS.includes(tool);
-
-/**
- * Turn pressure or tilt on or off for some of a brush's settings, keeping their ranges.
- *
- * @example
- * withSource(preset, ["widthConfig"], "usePressure", true); // { widthConfig: { ...preset.widthConfig, usePressure: true } }
- */
-export const withSource = (
-  preset: BrushConfig,
-  params: readonly ParamKey[],
-  source: "usePressure" | "useTilt",
-  on: boolean,
-): Partial<BrushConfig> =>
-  Object.fromEntries(
-    params.map((param) => [
-      param,
-      { ...preset[param], [source]: on } satisfies BrushParamConfig,
-    ]),
-  );
 
 /**
  * An angle rounded to 2 decimal places.
@@ -159,11 +130,12 @@ export const zoomPercent = (zoom: number): string => {
  * slots add your own items to each. (Cut, copy and paste are `<pc-clipboard-tools>`.)
  *
  * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`), the
- *   size settings (a cog button that shows or hides a popover under it with pressure, tilt and focus pen mode above the
- *   width, constrain proportions and height), opacity and "Configure" (fires `pc-configure-brush` with the tool,
- *   "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right or up
- *   to raise them, left or down to lower them, or tapped to type a value. Focus pen mode: only pens draw, and touches
- *   are ignored while a pen is down or just lifted.
+ *   size settings (a cog button that shows or hides a popover under it with the width, constrain proportions and
+ *   height), pen pressure, pen tilt and focus pen mode, opacity and "Configure" (fires `pc-configure-brush` with the
+ *   tool, "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right
+ *   or up to raise them, left or down to lower them, or tapped to type a value. Pen pressure, pen tilt and focus pen
+ *   mode are the user's input settings (`app.input`), so they apply to every preset (see `withPenInput`). Focus pen
+ *   mode: only pens draw, and touches are ignored while a pen is down or just lifted.
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
  *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform). The width, height
@@ -297,21 +269,44 @@ export class PcToolSettings extends PcElement {
   }
 
   /**
-   * Render the focus pen mode toggle, for the brush and eraser: while on, only pens draw, and touches are ignored while a
-   * pen is down or just lifted.
+   * Render the pen toggles, for the brush and eraser: pressure and tilt (which apply to every preset, see
+   * `withPenInput`), and focus pen mode (while on, only pens draw, and touches are ignored while a pen is down or just
+   * lifted).
    */
-  private renderFocusPen(app: PaintCanvas) {
-    const on = app.input.data.focusPen;
-    return html`<button
-      type="button"
-      class="focus-pen icon-button"
-      title=${this.t("paintCanvas.toolSettings.focusPenHint")}
-      aria-label=${this.t("paintCanvas.toolSettings.focusPen")}
-      aria-pressed=${String(on)}
-      @click=${() => app.input.update({ focusPen: !on })}
-    >
-      <img src=${this.iconUrl("focusPen")} alt="" />
-    </button>`;
+  private renderPenToggles(app: PaintCanvas) {
+    const { focusPen, penPressure, penTilt } = app.input.data;
+    const toggle = (
+      setting: "penPressure" | "penTilt",
+      className: string,
+      icon: "pressure" | "tilt",
+      on: boolean,
+    ) => {
+      const label = this.t(`paintCanvas.toolSettings.${icon}`);
+      return html`<label class="icon-toggle" title=${label}>
+        <input
+          type="checkbox"
+          class=${className}
+          .checked=${live(on)}
+          @change=${(e: Event) =>
+            app.input.update({
+              [setting]: (e.target as HTMLInputElement).checked,
+            })}
+        />
+        ${iconLabel(this.iconUrl(icon), label)}
+      </label>`;
+    };
+    return html`${toggle("penPressure", "pressure", "pressure", penPressure)}
+      ${toggle("penTilt", "tilt", "tilt", penTilt)}
+      <button
+        type="button"
+        class="focus-pen icon-button"
+        title=${this.t("paintCanvas.toolSettings.focusPenHint")}
+        aria-label=${this.t("paintCanvas.toolSettings.focusPen")}
+        aria-pressed=${String(focusPen)}
+        @click=${() => app.input.update({ focusPen: !focusPen })}
+      >
+        <img src=${this.iconUrl("focusPen")} alt="" />
+      </button>`;
   }
 
   /**
@@ -361,10 +356,6 @@ export class PcToolSettings extends PcElement {
     kind: "brush" | "eraser",
   ): ToolView {
     const preset = settings.preset;
-    const pressure = PRESSURE_PARAMS.some(
-      (param) => preset[param]?.usePressure,
-    );
-    const tilt = TILT_PARAMS.some((param) => preset[param]?.useTilt);
     const label = this.t(
       kind === "eraser" ? "paintCanvas.tool.eraser" : "paintCanvas.tool.brush",
     );
@@ -410,7 +401,7 @@ export class PcToolSettings extends PcElement {
         >
           <img src=${this.iconUrl("cog")} alt="" />
         </button>
-
+        ${this.renderPenToggles(app)}
         ${this.renderNumberField(
           "opacity",
           this.t("paintCanvas.common.opacity"),
@@ -432,49 +423,6 @@ export class PcToolSettings extends PcElement {
         ?open=${this.sizeOpen}
         @pc-close=${this.closeSizeSettings}
       >
-        <div class="size-toggles">
-          <label
-            class="icon-toggle"
-            title=${this.t("paintCanvas.toolSettings.pressure")}
-          >
-            <input
-              type="checkbox"
-              class="pressure"
-              .checked=${pressure}
-              @change=${(e: Event) =>
-                settings.update(
-                  withSource(
-                    preset,
-                    PRESSURE_PARAMS,
-                    "usePressure",
-                    (e.target as HTMLInputElement).checked,
-                  ),
-                )}
-            />
-            ${iconLabel(this.iconUrl("pressure"), this.t("paintCanvas.toolSettings.pressure"))}
-          </label>
-          <label
-            class="icon-toggle"
-            title=${this.t("paintCanvas.toolSettings.tilt")}
-          >
-            <input
-              type="checkbox"
-              class="tilt"
-              .checked=${tilt}
-              @change=${(e: Event) =>
-                settings.update(
-                  withSource(
-                    preset,
-                    TILT_PARAMS,
-                    "useTilt",
-                    (e.target as HTMLInputElement).checked,
-                  ),
-                )}
-            />
-            ${iconLabel(this.iconUrl("tilt"), this.t("paintCanvas.toolSettings.tilt"))}
-          </label>
-          ${this.renderFocusPen(app)}
-        </div>
         <div class="size-fields">
           ${this.renderNumberField(
             "width",

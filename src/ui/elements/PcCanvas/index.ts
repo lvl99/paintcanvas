@@ -50,7 +50,7 @@ import {
 import { PASTEBOARD_COLOUR } from "../../../lib/rendering/compositing";
 import { gestureAction, type TouchGesture } from "../../../lib/utils/gestures";
 import type { BrushStrokePoint } from "../../../lib/brushes/types";
-import { snapToPixelGrid } from "../../../lib/brushes/params";
+import { snapToPixelGrid, withPenInput } from "../../../lib/brushes/params";
 import type BrushSettings from "../../../lib/classes/BrushSettings";
 
 /** Toolbar width in CSS pixels (kept clear when fitting the canvas) */
@@ -830,7 +830,8 @@ export class PcCanvas extends PcElement {
       {
         layer,
         mode: erasing ? "erase" : "paint",
-        preset: settings.preset,
+        // The user's pen pressure and tilt settings win over the preset's
+        preset: withPenInput(settings.preset, app.input.data),
         size: { width: settings.width, height: settings.height },
         colour: erasing ? app.backgroundColour : app.colour,
         tip: app.tips.get(settings.preset),
