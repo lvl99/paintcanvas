@@ -22,6 +22,7 @@
   "paintCanvas.profileGraph.point": "点 {number}：{x}, {y}",
   "paintCanvas.profileGraph.remove": "点を削除",
   "paintCanvas.profileGraph.linear": "角（直線）",
+  "paintCanvas.profileGraph.bezierQuad": "やわらか（2次ベジェ）",
   "paintCanvas.profileGraph.bezier": "なめらか（3次ベジェ）",
   "paintCanvas.profiles.linear": "リニア",
   "paintCanvas.profiles.overweight": "重め",

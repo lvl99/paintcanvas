@@ -22,6 +22,7 @@
   "paintCanvas.profileGraph.point": "점 {number}: {x}, {y}",
   "paintCanvas.profileGraph.remove": "점 삭제",
   "paintCanvas.profileGraph.linear": "뾰족한 모서리 (선형)",
+  "paintCanvas.profileGraph.bezierQuad": "부드럽게 굽힘 (2차 베지어)",
   "paintCanvas.profileGraph.bezier": "부드럽게 (3차 베지어)",
   "paintCanvas.profiles.linear": "선형",
   "paintCanvas.profiles.overweight": "강하게",

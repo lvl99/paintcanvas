@@ -22,6 +22,7 @@
   "paintCanvas.profileGraph.point": "Point {number}: {x}, {y}",
   "paintCanvas.profileGraph.remove": "Remove point",
   "paintCanvas.profileGraph.linear": "Sharp corner (linear)",
+  "paintCanvas.profileGraph.bezierQuad": "Softened (bezier quadratic)",
   "paintCanvas.profileGraph.bezier": "Smooth (bezier cubic)",
   "paintCanvas.profiles.linear": "Linear",
   "paintCanvas.profiles.overweight": "Overweight",

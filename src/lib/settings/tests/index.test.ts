@@ -96,7 +96,7 @@ describe("settings schemas", () => {
       ].map(withoutType),
     });
     expect(appSettingsSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.2.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.3.0.json",
     );
     expect(appSettingsSchema["@type"]).toBe("PaintCanvas/AppSettings");
     const validateSettings = ajv.getSchema(settingsSchema.$id)!;
@@ -423,7 +423,7 @@ describe("exportSettingsFile and parseSettingsFile", () => {
           {},
           {
             $schema:
-              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.3.0.json",
+              "https://lvl99.github.io/paintcanvas/schemas/app-settings-2.4.0.json",
           },
         ),
       ),

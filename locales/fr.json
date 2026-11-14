@@ -22,6 +22,7 @@
   "paintCanvas.profileGraph.point": "Point {number} : {x}, {y}",
   "paintCanvas.profileGraph.remove": "Supprimer le point",
   "paintCanvas.profileGraph.linear": "Angle net (linéaire)",
+  "paintCanvas.profileGraph.bezierQuad": "Adouci (bézier quadratique)",
   "paintCanvas.profileGraph.bezier": "Lisse (bézier cubique)",
   "paintCanvas.profiles.linear": "Linéaire",
   "paintCanvas.profiles.overweight": "Surpondéré",
