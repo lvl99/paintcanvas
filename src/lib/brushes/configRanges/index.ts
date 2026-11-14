@@ -258,3 +258,71 @@ export const selectSource = (
   }
   return { [key]: variation };
 };
+
+/** A pen input a brush setting can vary with */
+export type PenSource = "pressure" | "tilt";
+
+/** The settings the tool settings bar's pressure and tilt popovers vary */
+export const PEN_PARAMS = [
+  "width",
+  "height",
+  "alpha",
+  "rotation",
+] as const satisfies readonly VaryingParam[];
+
+/** How a setting varies with a source, to compare: off, or on with its range and profile graph */
+const sourceState = (
+  config: BrushConfig,
+  param: VaryingParam,
+  source: VariationSource,
+): string => {
+  const variation = config[configKey(param)] ?? {};
+  const [useKey, minKey, maxKey] = SOURCE_KEYS[source];
+  if (!variation[useKey]) return "off";
+  const [minDefault, maxDefault] = SOURCE_DEFAULTS[source];
+  return JSON.stringify([
+    variation[minKey] ?? minDefault,
+    variation[maxKey] ?? maxDefault,
+    variation.profile ?? null,
+  ]);
+};
+
+/**
+ * Whether any of the pen settings (`PEN_PARAMS`) varies with a source differently from a preset: turned on or off, or
+ * with another range or profile graph.
+ *
+ * @example
+ * differsFromPreset({ widthConfig: { usePressure: true } }, {}, "pressure"); // true
+ */
+export const differsFromPreset = (
+  config: BrushConfig,
+  preset: BrushConfig,
+  source: PenSource,
+): boolean =>
+  PEN_PARAMS.some(
+    (param) =>
+      sourceState(config, param, source) !== sourceState(preset, param, source),
+  );
+
+/**
+ * Put back how a preset varies the pen settings (`PEN_PARAMS`) that vary with a source differently from it, as config
+ * changes: each such setting's whole variation (every source, as one at a time can be on, and its profile graph).
+ *
+ * @example
+ * resetSource({ widthConfig: { usePressure: true } }, {}, "pressure"); // { widthConfig: {} }
+ */
+export const resetSource = (
+  config: BrushConfig,
+  preset: BrushConfig,
+  source: PenSource,
+): Partial<BrushConfig> =>
+  Object.fromEntries(
+    PEN_PARAMS.filter(
+      (param) =>
+        sourceState(config, param, source) !==
+        sourceState(preset, param, source),
+    ).map((param) => {
+      const key = configKey(param);
+      return [key, structuredClone(preset[key] ?? {})];
+    }),
+  );

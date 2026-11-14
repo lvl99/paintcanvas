@@ -10,13 +10,17 @@ button[aria-expanded="true"] {
   background: var(--pc-surface-active);
 }
 /* The size settings' button while they're shown: purple, like a toggle that's on */
-.size-settings[aria-expanded="true"] {
+.size-settings[aria-expanded="true"],
+.pressure-settings[aria-expanded="true"],
+.tilt-settings[aria-expanded="true"] {
   border-color: var(--pc-accent);
   background: var(--pc-accent);
   color: var(--pc-accent-text);
 }
-/* Toggles that are on, and the selected option: purple, so it's obvious (the icon stays the same) */
+/* Toggles that are on, the selected option, and pen settings changed from the preset's: purple, so it's obvious (the
+   icon stays the same) */
 button[aria-pressed="true"],
+button.changed,
 .icon-toggle:has(input:checked),
 .icon-toggle:has(input:checked):hover {
   border-color: var(--pc-accent);
@@ -95,8 +99,8 @@ button img {
 .size {
   min-width: 56px;
 }
-/* The size settings, with room around them */
-.size-popover::part(popover) {
+/* The popovers, with room around them */
+pc-popover::part(popover) {
   padding: 15px;
 }
 /* The size settings: the width, constrain proportions and height */

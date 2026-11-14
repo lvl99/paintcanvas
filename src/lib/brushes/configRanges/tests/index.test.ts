@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { PROFILE_PRESETS } from "../../../profiles";
 import type { BrushConfig } from "../../types";
-import { readRange, selectSource, toggleSource, writeRange } from "..";
+import {
+  differsFromPreset,
+  readRange,
+  resetSource,
+  selectSource,
+  toggleSource,
+  writeRange,
+} from "..";
 
 const none = { pressure: false, tilt: false, randomise: false };
 
@@ -254,5 +261,84 @@ describe("selectSource", () => {
         "tilt",
       ).rotationConfig,
     ).toMatchObject({ useTilt: true, minTilt: 1, maxTilt: 1 });
+  });
+});
+
+describe("differsFromPreset", () => {
+  const preset: BrushConfig = {
+    widthConfig: { usePressure: true, minPressure: 0.5 },
+    rotationConfig: { useRandomise: true },
+  };
+
+  it("should be false when the pen settings vary with a source as the preset does", () => {
+    expect(differsFromPreset(structuredClone(preset), preset, "pressure")).toBe(
+      false,
+    );
+    // Defaults count as the same, and other settings and sources don't count
+    expect(
+      differsFromPreset(
+        {
+          widthConfig: { usePressure: true, minPressure: 0.5, maxPressure: 1 },
+          offsetXConfig: { usePressure: true },
+          alphaConfig: { useRandomise: true },
+        },
+        preset,
+        "pressure",
+      ),
+    ).toBe(false);
+  });
+
+  it("should be true when a source is turned on or off, or its range or profile graph differs", () => {
+    expect(differsFromPreset({}, preset, "pressure")).toBe(true);
+    expect(
+      differsFromPreset(
+        { widthConfig: { usePressure: true, minPressure: 0.2 } },
+        preset,
+        "pressure",
+      ),
+    ).toBe(true);
+    expect(
+      differsFromPreset(
+        {
+          widthConfig: {
+            usePressure: true,
+            minPressure: 0.5,
+            profile: PROFILE_PRESETS[1]!.content.points,
+          },
+        },
+        preset,
+        "pressure",
+      ),
+    ).toBe(true);
+    expect(
+      differsFromPreset(
+        { ...preset, heightConfig: { useTilt: true } },
+        preset,
+        "tilt",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("resetSource", () => {
+  it("should put back the whole variation of each pen setting that differs with the source, and nothing else", () => {
+    const preset: BrushConfig = {
+      rotationConfig: { useRandomise: true, minRandomise: 0.2 },
+      alphaConfig: { usePressure: true },
+    };
+    const config: BrushConfig = {
+      // Switched to pressure, turning randomise off
+      rotationConfig: { usePressure: true, useRandomise: false },
+      // Varies with tilt, which isn't reset with pressure
+      widthConfig: { useTilt: true },
+      alphaConfig: { usePressure: true },
+    };
+    const changes = resetSource(config, preset, "pressure");
+    expect(changes).toEqual({
+      rotationConfig: { useRandomise: true, minRandomise: 0.2 },
+    });
+    // A copy
+    expect(changes.rotationConfig).not.toBe(preset.rotationConfig);
+    expect(resetSource(config, preset, "tilt")).toEqual({ widthConfig: {} });
   });
 });
