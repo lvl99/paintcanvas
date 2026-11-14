@@ -10,6 +10,12 @@ const isFormControl = (target: EventTarget | undefined): boolean =>
   target instanceof HTMLSelectElement;
 
 /**
+ * Whether a touch is a pen's (Safari reports Apple Pencil touches as `touchType: "stylus"`).
+ */
+const isStylus = (touch: Touch): boolean =>
+  (touch as Touch & { touchType?: string }).touchType === "stylus";
+
+/**
  * Whether an element can scroll further by a distance (positive: right or down), along one axis.
  *
  * @example
@@ -74,7 +80,7 @@ export const scrollsWithin = (
 /**
  * Stop the page from scrolling or zooming while it's used inside an element (e.g. the drawing app): wheel and touch
  * scrolling only scroll what can scroll inside it (e.g. a panel), and pinches, Cmd/Ctrl + scroll and Safari's gesture
- * events don't zoom the page. Pair with `touch-action: none` on the element, which stops touches starting on it from
+ * events don't zoom the page. A pen's single touches are left alone, so its taps press buttons. Pair with `touch-action: none` on the element, which stops touches starting on it from
  * scrolling the page or zooming it with a pinch or double tap. Keyboard zoom (Cmd/Ctrl + plus and minus) isn't
  * stopped, so the page can still be zoomed. Returns a function that stops it.
  *
@@ -104,6 +110,8 @@ export const lockPage = (element: HTMLElement): (() => void) => {
     const deltaX = from.x - touch.clientX;
     const deltaY = from.y - touch.clientY;
     const single = event.touches.length === 1;
+    // A pen's touches are left to the browser, so its taps press buttons (an Apple Pencil tap moves a little)
+    if (single && isStylus(touch)) return;
     // Not moved yet, or a form control's own drag (e.g. a range slider)
     if (single && deltaX === 0 && deltaY === 0) return;
     if (single && isFormControl(event.composedPath()[0])) return;

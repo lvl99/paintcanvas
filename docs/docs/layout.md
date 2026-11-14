@@ -63,7 +63,7 @@ Until the scripts load, `<paint-canvas>` and the content you put in its slots (e
 
 The demo does this with a thin bar across the top.
 
-While the layout is used, the page doesn't scroll or zoom: touches on it don't pan or zoom the page (`touch-action: none`), and the wheel, touch drags, pinches, Cmd/Ctrl + scroll and Safari's gesture events only scroll what scrolls inside it, such as a panel. Keyboard zoom (Cmd/Ctrl + plus and minus) isn't stopped. `lockPage(element)` from `@lvl99dotcom/paintcanvas/ui/pageLock` does the same for your own element.
+While the layout is used, the page doesn't scroll or zoom: touches on it don't pan or zoom the page (`touch-action: none`), and the wheel, touch drags, pinches, Cmd/Ctrl + scroll and Safari's gesture events only scroll what scrolls inside it, such as a panel. A pen's touches are left to the browser, so its taps press buttons. Keyboard zoom (Cmd/Ctrl + plus and minus) isn't stopped. `lockPage(element)` from `@lvl99dotcom/paintcanvas/ui/pageLock` does the same for your own element.
 
 ## Panes, panels and menus
 
