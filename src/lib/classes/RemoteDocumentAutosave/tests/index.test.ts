@@ -14,6 +14,7 @@ const createCanvas = () => {
     count: number;
   };
   canvas.count = 0;
+  canvas.flushModified = vi.fn();
   canvas.createDocument = vi.fn(
     async () => ({ id: `doc-${++canvas.count}` }) as unknown as DrawingDocument,
   );
@@ -156,6 +157,24 @@ describe("RemoteDocumentAutosave", () => {
     expect(autosave.saving).toBe(true);
     await vi.advanceTimersByTimeAsync(100);
     expect(store.saves).toHaveLength(2);
+    autosave.stop();
+  });
+
+  it("should see a change the canvas is still waiting to mark, before saving or telling whether there are changes", async () => {
+    const canvas = createCanvas();
+    const autosave = new RemoteDocumentAutosave(
+      canvas,
+      new MemoryDocumentStore(),
+    );
+    autosave.start();
+    // The canvas marks its waiting change when asked
+    vi.mocked(canvas.flushModified).mockImplementationOnce(() =>
+      modify(canvas),
+    );
+    expect(autosave.hasChanges).toBe(true);
+    await autosave.save();
+    expect(canvas.flushModified).toHaveBeenCalledTimes(2);
+    expect(autosave.hasChanges).toBe(false);
     autosave.stop();
   });
 

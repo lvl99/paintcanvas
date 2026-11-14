@@ -516,6 +516,7 @@ export class PaintCanvasElement extends PcElement {
       app.width,
       app.height,
       app.transform.preview ?? app.strokes.preview,
+      app.createCanvas,
     );
     return this.saveFile(blob, screenshotName(undefined, app.names.filePrefix));
   }

@@ -3,6 +3,7 @@ import { DEFAULT_PALETTE } from "../../../palette";
 import PaintCanvas, {
   DOCUMENT_MODIFIED_EVENT,
   MAX_CANVAS_SIZE,
+  MODIFIED_DEBOUNCE_MS,
   Panel,
   Tool,
 } from "..";
@@ -15,6 +16,7 @@ import {
   createFakeCanvasFactory,
   fakeContext,
 } from "../../../../testing/fakeCanvas";
+import { createRecordingCanvasFactory } from "../../../../testing/recordingCanvas";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
 import { AutosaveState } from "../../LayerAutosave";
 import { BlendMode } from "../../Layer";
@@ -499,6 +501,7 @@ describe("PaintCanvas", () => {
       vi.advanceTimersByTime(1000);
       modified.mockClear();
       step();
+      vi.advanceTimersByTime(MODIFIED_DEBOUNCE_MS);
       return modified.mock.calls.length > 0
         ? app.documentInfo.updatedAt
         : undefined;
@@ -506,6 +509,7 @@ describe("PaintCanvas", () => {
     const now = () => new Date().toISOString();
     const bottom = app.layers.active;
     const top = app.layers.create();
+    vi.advanceTimersByTime(MODIFIED_DEBOUNCE_MS);
     expect(app.documentInfo.updatedAt).toBe(now());
     expect(changedAt(() => app.layers.select(bottom.id))).toBeUndefined();
     expect(changedAt(() => app.layers.markChanged(bottom.id))).toBe(now());
@@ -539,7 +543,7 @@ describe("PaintCanvas", () => {
     expect(app.documentInfo).toMatchObject({
       id: info.id,
       updatedAt: "2026-11-13T09:30:00.000Z",
-      dateOpened: now(),
+      dateOpened: new Date(Date.now() - MODIFIED_DEBOUNCE_MS).toISOString(),
     });
     const { updatedAt: _unused, ...older } = saved;
     void _unused;
@@ -551,6 +555,62 @@ describe("PaintCanvas", () => {
       changedAt(() => app.layers.select(app.layers.active.id)),
     ).toBeUndefined();
     vi.useRealTimers();
+  });
+
+  it("should mark changes modified only once they've stopped for the debounce time, restarting it on each change", () => {
+    vi.useFakeTimers({ now: new Date("2030-01-01T00:00:00.000Z") });
+    const app = createApp({ width: 20, height: 10 });
+    const created = app.documentInfo.updatedAt;
+    const modified = vi.fn();
+    app.addEventListener(DOCUMENT_MODIFIED_EVENT, modified);
+    app.layers.markChanged(app.layers.active.id);
+    vi.advanceTimersByTime(MODIFIED_DEBOUNCE_MS - 1);
+    app.renameDocument("Sea");
+    vi.advanceTimersByTime(MODIFIED_DEBOUNCE_MS - 1);
+    // Nothing is marked while changes keep coming
+    expect(modified).not.toHaveBeenCalled();
+    expect(app.documentInfo.updatedAt).toBe(created);
+    vi.advanceTimersByTime(1);
+    expect(modified).toHaveBeenCalledTimes(1);
+    expect(app.documentInfo.updatedAt).toBe(new Date().toISOString());
+    // Nothing waiting: flushing does nothing
+    app.flushModified();
+    expect(modified).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("should mark a waiting change before making a document, and forget it when opening a drawing or destroyed", async () => {
+    vi.useFakeTimers({ now: new Date("2030-01-01T00:00:00.000Z") });
+    const app = createApp({
+      width: 20,
+      height: 10,
+      createCanvas: createRecordingCanvasFactory().factory,
+    });
+    const modified = vi.fn();
+    app.addEventListener(DOCUMENT_MODIFIED_EVENT, modified);
+    vi.advanceTimersByTime(1000);
+    app.renameDocument("Sea");
+    const document = await app.createDocument({ thumbnail: false });
+    expect(modified).toHaveBeenCalledTimes(1);
+    expect(document.updatedAt).toBe(new Date().toISOString());
+    // Opening a drawing forgets a change to the one before
+    app.renameDocument("Sky");
+    app.newDocument();
+    app.renameDocument("Land");
+    app.restoreDocumentInfo({ ...app.documentInfo });
+    app.renameDocument("Lake");
+    app.destroy();
+    vi.advanceTimersByTime(MODIFIED_DEBOUNCE_MS);
+    expect(modified).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("should make brush tips with the canvas's own factory", () => {
+    const factory = createFakeCanvasFactory();
+    const app = new PaintCanvas({ createCanvas: factory });
+    const tips = app.tips as unknown as { createCanvas: unknown };
+    expect(app.createCanvas).toBe(factory);
+    expect(tips.createCanvas).toBe(factory);
   });
 
   it("should keep the drawing in a remote store, replacing or stopping the one before", () => {

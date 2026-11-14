@@ -24,6 +24,7 @@ import ProfileGraphs from "../../../lib/classes/ProfileGraphs";
 import { isLinear, LINEAR_PROFILE_ID } from "../../../lib/profiles";
 import type { RangeDetail } from "../PcSliderRange";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
+import { createMemoryCanvas } from "../../../lib/classes/Layer";
 import {
   SmoothingType,
   type BrushConfig,
@@ -190,14 +191,17 @@ export class PcBrushConfig extends PcElement {
   prompt: PromptFn = (options) => askText(this.renderRoot, options);
 
   /** Turns files into brush shapes (replaceable for tests) */
-  readShape: (file: File) => Promise<ShapeImage> = readShapeImage;
+  readShape: (file: File) => Promise<ShapeImage> = (file) =>
+    readShapeImage(file, { createCanvas: this.app?.createCanvas });
 
   /**
    * Reads a brush shape from the clipboard, or else from image data copied on the canvas (replaceable for tests)
    */
   readClipboard: () => Promise<ShapeImage> = () =>
-    readClipboardShape(navigator.clipboard, {}, async () =>
-      this.app?.copiedPng(),
+    readClipboardShape(
+      navigator.clipboard,
+      { createCanvas: this.app?.createCanvas },
+      async () => this.app?.copiedPng(),
     );
 
   constructor() {
@@ -624,6 +628,7 @@ export class PcBrushConfig extends PcElement {
           <pc-brush-test
             .config=${draft}
             .tips=${this.app?.tips}
+            .createCanvas=${this.app?.createCanvas ?? createMemoryCanvas}
           ></pc-brush-test>
           ${this.renderShape(draft)}
           ${this.renderParam(draft, "width", this.t(PARAM_LABELS.width))}
