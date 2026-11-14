@@ -2,6 +2,23 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.11.0 (2026-11-14)
+
+Faster drawing on CPU canvases, and no document changes marked mid-stroke.
+
+### Fixed
+
+- Drawing was slow with the default `rendering: "cpu"`: brush tips were still made as GPU canvases, so every stamp into the CPU stroke buffer waited on the GPU. Brush tips (`canvas.tips`), the brush test area, brush shape images and screenshots now use the canvas's own `createCanvas`.
+
+### Added
+
+- `canvas.flushModified()` marks a change still waiting to be marked modified straight away, and `canvas.destroy()` stops the canvas's timers. `MODIFIED_DEBOUNCE_MS` (100 ms).
+
+### Changed
+
+- `documentInfo.updatedAt` and the `modified` event wait until the drawing has gone unchanged for `MODIFIED_DEBOUNCE_MS`; each change restarts the wait. `createDocument()`, `LayerAutosave` and `RemoteDocumentAutosave` (`save()`, `hasChanges`) mark a waiting change first, so none is missed. Opening or restoring a drawing drops a waiting change.
+- Breaking: `AutosaveCanvas` and `RemoteAutosaveCanvas` now need `flushModified()` (only apps that implement these interfaces themselves are affected).
+
 ## 0.10.0 (2026-11-13)
 
 When documents, assets and settings were last changed, saving to remote stores after a pause in drawing, and an optional document store in the browser.
