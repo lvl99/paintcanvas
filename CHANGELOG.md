@@ -2,6 +2,28 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.12.0 (2026-11-14)
+
+Clearer brush and background colours, pen pressure and tilt that apply to every preset, and no page scrolling or zooming while the app is used.
+
+### Fixed
+
+- The brushes panel opened at 240px; panels are now at least 290px wide (`--pc-panel-min-width`) unless they have less space.
+- `<pc-stats>` text could be selected.
+- The page could scroll or zoom while using `<paint-canvas>`. Touch drags, pinches, double taps, Cmd/Ctrl + scroll and Safari's gesture zoom now only scroll what scrolls inside it (e.g. panels). Keyboard zoom still works.
+
+### Added
+
+- `canvas.backgroundColour` and `otherColourSlot(slot)`.
+- `penPressure` (on by default) and `penTilt` (off by default) input settings, and `withPenInput(preset, settings)` from `lib/brushes/params`. App settings schema 2.2.0.
+- `lockPage(element)` from `ui/pageLock`.
+
+### Changed
+
+- The selected colour of the pair is the brush colour (`canvas.colour`) and the other is the background colour. The brush, `setColour` (by default), the fill shortcuts and alpha-locked erasing and Delete follow the selection. The colour pair's labels read "Brush colour" and "Background colour". Translation key `paintCanvas.colours.foreground` is now `paintCanvas.colours.brush`.
+- Pen pressure and tilt toggles change the user's input settings instead of the current brush settings, so they apply to every preset; off turns them off whatever the preset says. They moved from the size popover onto the tool settings bar: cog, opacity, pressure, tilt, focus pen mode, then Configure.
+- Removed `withSource` from `PcToolSettings`.
+
 ## 0.11.0 (2026-11-14)
 
 Faster drawing on CPU canvases, and no document changes marked mid-stroke.
