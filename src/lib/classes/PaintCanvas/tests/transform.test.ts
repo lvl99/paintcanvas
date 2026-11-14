@@ -206,6 +206,17 @@ describe("PaintCanvas clipboard", () => {
     app.setColour("#00ff00", "background");
     const changeImage = vi.spyOn(app.layers, "changeImage");
     app.deleteMasked();
+    // The colour painted, on the canvas made for it
+    const painted = () =>
+      created.flatMap(({ calls }) =>
+        calls.filter(([name]) => name === "set:fillStyle"),
+      );
+    expect(painted().at(-1)).toEqual(["set:fillStyle", "#00ff00"]);
+    // With the background slot selected (the brush colour), the foreground slot is the background colour
+    app.selectColour("background");
+    app.setColour("#0000ff", "foreground");
+    app.deleteMasked();
+    expect(painted().at(-1)).toEqual(["set:fillStyle", "#0000ff"]);
     expect(changeImage).toHaveBeenCalledWith(
       app.layers.active.id,
       { x: 2, y: 2, width: 1, height: 1 },

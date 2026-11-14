@@ -495,6 +495,22 @@ describe("pc-canvas", () => {
     });
   });
 
+  it("should paint with the selected colour, and erase with the other for alpha lock", async () => {
+    const { app, canvas } = await mountStage();
+    app.setColour("#ff0000", "foreground");
+    app.setColour("#00ff00", "background");
+    app.selectColour("background");
+    const begin = vi.spyOn(app.strokes, "begin");
+    canvas.dispatchEvent(pointer("pointerdown", 10, 20));
+    canvas.dispatchEvent(pointer("pointerup", 10, 20));
+    app.selectTool(Tool.Eraser);
+    canvas.dispatchEvent(pointer("pointerdown", 10, 20));
+    expect(begin.mock.calls.map(([options]) => options.colour)).toEqual([
+      "#00ff00",
+      "#ff0000",
+    ]);
+  });
+
   it("should use every coalesced pointer event, and pen pressure and tilt", async () => {
     const { app, canvas } = await mountStage();
     app.viewport.zoomAt({ x: 0, y: 0 }, 1);

@@ -42,19 +42,19 @@ canvas.ui.addEventListener("change", () =>
 
 `<paint-canvas settings-store="…">` does this for the canvas it makes.
 
-## Foreground and background colours
+## Brush and background colours
 
-The engine has two colours, read with `canvas.colours` (`canvas.colour` is the foreground colour):
+The engine has two colour slots, `foreground` (shown in front) and `background` (shown behind), read with `canvas.colours`. The selected slot (`canvas.selectedColour`, the foreground by default) is the brush colour, `canvas.colour`; the other is the background colour, `canvas.backgroundColour`:
 
-- The brush paints the foreground colour.
+- The brush paints the brush colour. The colour sample tool and colour pickers set it (`canvas.setColour(colour)` sets the selected slot unless given another).
 - The eraser removes paint. When the layer's alpha lock is on, it paints the background colour onto existing pixels instead, keeping their transparency. Delete and cut (`deleteMasked()`, `cut()`) do the same inside the mask.
-- `canvas.fill("foreground")` and `canvas.fill("background")` fill the selected layer with a colour, as one undoable action: only inside the mask when there is one, and only onto existing pixels when alpha lock is on. The keyboard shortcuts are `cmd backspace` and `alt backspace`; `x` swaps the colours.
+- `canvas.fill(slot)` fills the selected layer with a slot's colour, as one undoable action: only inside the mask when there is one, and only onto existing pixels when alpha lock is on. The keyboard shortcuts fill with the brush colour (`cmd backspace`) and the background colour (`alt backspace`); `x` swaps the colours.
 
-One of them is selected for configuration (`canvas.selectedColour`, the foreground by default): the colour sample tool sets it, and colour pickers can use it. Change it with `canvas.selectColour("background")`, and swap the colours with `canvas.swapColours()`.
+Select the other slot to make its colour the brush colour with `canvas.selectColour("background")`, and swap the slots' colours with `canvas.swapColours()` (the selected slot stays the same, so the brush and background colours swap). `otherColourSlot(slot)` gives the slot that isn't `slot`.
 
 ## Colour palettes
 
-`canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE`), each once as lowercase `#rrggbb`. Its ID is `DEFAULT_PALETTE_ID`. Users can't change it: picking one of its colours sets the selected foreground or background colour, and changing that colour afterwards doesn't change the palette. It isn't saved with the app settings; colours older versions saved in it are moved to a palette of the user's own named "My colours" (`keepOlderPalette` from `@lvl99dotcom/paintcanvas/lib/settings`). An implementer can give it other colours with `set`.
+`canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE`), each once as lowercase `#rrggbb`. Its ID is `DEFAULT_PALETTE_ID`. Users can't change it: picking one of its colours sets the brush colour, and changing that colour afterwards doesn't change the palette. It isn't saved with the app settings; colours older versions saved in it are moved to a palette of the user's own named "My colours" (`keepOlderPalette` from `@lvl99dotcom/paintcanvas/lib/settings`). An implementer can give it other colours with `set`.
 
 `canvas.palettes` (a `ColourPalettes`) holds the user's own palettes. Each is an asset (see [Schemas and asset files](./schemas.md#assets)) with an ID, a name, an author and its colours (`content.colours`):
 

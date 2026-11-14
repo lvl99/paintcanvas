@@ -6,6 +6,7 @@ import PaintCanvas, {
   MODIFIED_DEBOUNCE_MS,
   Panel,
   Tool,
+  otherColourSlot,
 } from "..";
 import {
   BEFORE_COMMIT_EVENT,
@@ -242,23 +243,35 @@ describe("PaintCanvas", () => {
     );
   });
 
-  it("should select which colour is configured and swap the colours, dispatching a change", () => {
+  it("should paint with the selected colour and swap the colours, dispatching a change", () => {
     const app = createApp();
     const listener = vi.fn();
     app.addEventListener("change", listener);
+    expect([app.colour, app.backgroundColour]).toEqual(["#000000", "#ffffff"]);
     app.selectColour("background");
     expect(app.selectedColour).toBe("background");
+    expect([app.colour, app.backgroundColour]).toEqual(["#ffffff", "#000000"]);
     app.selectColour("background");
     expect(listener).toHaveBeenCalledTimes(1);
+    // Sets the selected slot
     app.setColour("#123456");
-    app.swapColours();
     expect(app.colours).toEqual({
-      foreground: "#ffffff",
+      foreground: "#000000",
       background: "#123456",
     });
-    expect(app.colour).toBe("#ffffff");
+    app.swapColours();
+    expect(app.colours).toEqual({
+      foreground: "#123456",
+      background: "#000000",
+    });
+    expect([app.colour, app.backgroundColour]).toEqual(["#000000", "#123456"]);
     expect(app.selectedColour).toBe("background");
     expect(listener).toHaveBeenCalledTimes(3);
+  });
+
+  it("should give the other colour slot", () => {
+    expect(otherColourSlot("foreground")).toBe("background");
+    expect(otherColourSlot("background")).toBe("foreground");
   });
 
   it("should only select a tool from the toolbar, without opening or closing its panel", () => {

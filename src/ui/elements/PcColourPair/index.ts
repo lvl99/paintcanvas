@@ -14,10 +14,11 @@ export const COLOUR_CLICK_EVENT = "pc-colour-click";
 const SLOTS: readonly ColourSlot[] = ["foreground", "background"];
 
 /**
- * The foreground and background colours as two overlapping circles in a square (the foreground at the top left), the
- * one selected for configuration outlined and on top. Pressing either fires `pc-colour-click` with its `slot`; the
- * implementer decides what it does (e.g. select it and open a colour palette). `openPicker()` opens the browser's colour
- * picker for the selected colour, which sets it. Sized by `--pc-colour-pair-size` (50px by default).
+ * The two colours as overlapping circles in a square (the foreground slot at the top left). The selected one is the
+ * brush colour, outlined and on top, and named "Brush colour"; the other is named "Background colour". Pressing either
+ * fires `pc-colour-click` with its `slot`; the implementer decides what it does (e.g. select it and open a colour
+ * palette). `openPicker()` opens the browser's colour picker for the brush colour, which sets it. Sized by
+ * `--pc-colour-pair-size` (50px by default).
  *
  * @example
  * html`<pc-colour-pair .app=${app} @pc-colour-click=${(e) => app.selectColour(e.detail.slot)}></pc-colour-pair>`
@@ -90,7 +91,7 @@ export class PcColourPair extends PcElement {
   private changes = new ChangeController(this, () => [this.app]);
 
   /**
-   * Open the browser's colour picker for the selected colour (call it while handling a press, as browsers only open
+   * Open the browser's colour picker for the brush colour (call it while handling a press, as browsers only open
    * pickers for one).
    */
   openPicker(): void {
@@ -109,13 +110,9 @@ export class PcColourPair extends PcElement {
     emit(this, COLOUR_CLICK_EVENT, { slot });
   }
 
-  /** Set the selected colour from the browser's colour picker */
+  /** Set the brush colour from the browser's colour picker */
   private onPick(event: Event): void {
-    const app = this.app;
-    app?.setColour(
-      (event.target as HTMLInputElement).value,
-      app.selectedColour,
-    );
+    this.app?.setColour((event.target as HTMLInputElement).value);
   }
 
   override render() {
@@ -123,21 +120,28 @@ export class PcColourPair extends PcElement {
     if (!app) return html``;
     return html`${SLOTS.map((slot) => {
         const colour = app.colours[slot];
+        const selected = app.selectedColour === slot;
+        const label = this.t(
+          selected
+            ? "paintCanvas.colours.brush"
+            : "paintCanvas.colours.background",
+          { colour },
+        );
         return html`<button
           type="button"
           part=${slot}
           class=${slot}
           style="--colour: ${colour}"
-          title=${this.t(`paintCanvas.colours.${slot}`, { colour })}
-          aria-label=${this.t(`paintCanvas.colours.${slot}`, { colour })}
-          aria-pressed=${app.selectedColour === slot}
+          title=${label}
+          aria-label=${label}
+          aria-pressed=${selected}
           @click=${() => this.onClick(slot)}
         ></button>`;
       })}<input
         type="color"
         tabindex="-1"
         aria-hidden="true"
-        .value=${live(app.colours[app.selectedColour])}
+        .value=${live(app.colour)}
         @input=${this.onPick}
       />`;
   }

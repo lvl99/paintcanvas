@@ -832,7 +832,7 @@ export class PcCanvas extends PcElement {
         mode: erasing ? "erase" : "paint",
         preset: settings.preset,
         size: { width: settings.width, height: settings.height },
-        colour: app.colours[erasing ? "background" : "foreground"],
+        colour: erasing ? app.backgroundColour : app.colour,
         tip: app.tips.get(settings.preset),
         isPen: event.pointerType === "pen",
         mask: app.selection.mask,

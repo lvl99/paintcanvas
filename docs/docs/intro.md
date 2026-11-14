@@ -20,7 +20,7 @@ Open-source painting engine and renderer for the browser, with optional UI. Draw
 | Masking                   | Rectangle, circle, polygon and freehand masks                |
 | Manipulation              | Move, scale, rotate                                          |
 | Constructive, destructive | Cut, copy, paste, delete, fill, undo, redo                   |
-| Colours                   | Foreground and background colours, colour palette            |
+| Colours                   | Brush and background colours, colour palette                 |
 | Colour sampling           | Sample a point, sample an area                               |
 | Viewport                  | Zoom, pan                                                    |
 | Layers                    | Visibility, order, blending mode, opacity, alpha lock, merge |
