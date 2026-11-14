@@ -99,12 +99,7 @@ button img {
 .size-popover::part(popover) {
   padding: 15px;
 }
-/* The size settings: pressure, tilt and focus pen mode in a row above the width, constrain proportions and height */
-.size-toggles {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
+/* The size settings: the width, constrain proportions and height */
 .size-fields {
   display: flex;
   align-items: flex-end;

@@ -10,6 +10,9 @@
     "left bottom right" auto
     "footer footer footer" auto / auto 1fr auto;
   overflow: hidden;
+  /* Touches don't scroll or zoom the page (a pinch or double tap); panels inside still scroll (see lockPage) */
+  touch-action: none;
+  overscroll-behavior: none;
   background: var(--pc-bar);
   font-family: var(--pc-font);
   font-size: var(--pc-font-size);

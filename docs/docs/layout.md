@@ -63,6 +63,8 @@ Until the scripts load, `<paint-canvas>` and the content you put in its slots (e
 
 The demo does this with a thin bar across the top.
 
+While the layout is used, the page doesn't scroll or zoom: touches on it don't pan or zoom the page (`touch-action: none`), and the wheel, touch drags, pinches, Cmd/Ctrl + scroll and Safari's gesture events only scroll what scrolls inside it, such as a panel. Keyboard zoom (Cmd/Ctrl + plus and minus) isn't stopped. `lockPage(element)` from `@lvl99dotcom/paintcanvas/ui/pageLock` does the same for your own element.
+
 ## Panes, panels and menus
 
 The layout's areas are built from a few kinds of elements, each sharing its look and behaviour with the others of its kind:
@@ -135,7 +137,7 @@ Cut, copy and paste (Cmd/Ctrl + X, C, V), undo and redo (Cmd/Ctrl + Z, Shift + C
 
 Copying or cutting masked image data also puts it on the system clipboard as a PNG (pass `systemClipboard: null` to `PaintCanvas` to stop this), so it can be pasted into other apps, or as a brush shape with the brush configuration window's Paste button (which uses the canvas's copy if the browser won't let it read the clipboard). Pasting (Cmd/Ctrl + V, or the browser's own paste) pastes an image copied in another app in the middle of the view, to place with the Move tool, unless image data was copied on the canvas since the window last lost focus: that is pasted where it was copied from. Call `canvas.pasteImage(image)` to paste an image yourself.
 
-Cut, Copy and Paste are `<pc-clipboard-tools>`, at the end of the layout's top pane after the tool settings, for the brush, eraser, lassos and Move tool (`CLIPBOARD_TOOLS`); Paste is on only while there's copied image data. While the layout is narrow, they're one ⋮ menu. The tool settings bar (`<pc-tool-settings>`) has `start` and `end` slots for your own buttons; the brush and eraser's pressure, tilt and focus pen mode are in the size settings popover (the cog), above the width and height.
+Cut, Copy and Paste are `<pc-clipboard-tools>`, at the end of the layout's top pane after the tool settings, for the brush, eraser, lassos and Move tool (`CLIPBOARD_TOOLS`); Paste is on only while there's copied image data. While the layout is narrow, they're one ⋮ menu. The tool settings bar (`<pc-tool-settings>`) has `start` and `end` slots for your own buttons; the brush and eraser's width and height are in the size settings popover (the cog), followed on the bar by opacity, then pen pressure, pen tilt and focus pen mode before Configure.
 
 Key presses are matched on keyboards with any layout:
 
@@ -147,7 +149,7 @@ Key presses are matched on keyboards with any layout:
 
 ## Keeping the user's settings
 
-With a `settings-store` name, the layout keeps the user's app settings and assets in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the foreground and background colours, and the theme, language and rendering (`canvas.ui`, a `UiSettings`); and, each in a store of its own (see [Keeping the user's assets](engine.md#keeping-the-users-assets)), custom brush presets, the user's own colour palettes (`canvas.palettes`, a `ColourPalettes`) and profile graphs (`canvas.profiles`, a `ProfileGraphs`). Profile graphs kept in older saved settings move to their store. Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen. The rendering (CPU or GPU) is also kept in `localStorage`, so the canvas the layout makes draws where the user last chose; a change applies after reloading the page (see [Drawing on the CPU or the GPU](engine.md#drawing-on-the-cpu-or-the-gpu)).
+With a `settings-store` name, the layout keeps the user's app settings and assets in the browser (IndexedDB) under that name: input settings, keyboard shortcuts, the two colours, and the theme, language and rendering (`canvas.ui`, a `UiSettings`); and, each in a store of its own (see [Keeping the user's assets](engine.md#keeping-the-users-assets)), custom brush presets, the user's own colour palettes (`canvas.palettes`, a `ColourPalettes`) and profile graphs (`canvas.profiles`, a `ProfileGraphs`). Profile graphs kept in older saved settings move to their store. Saved settings are restored when the layout starts (`layout.settingsAutosave.ready` resolves once they are), and changes are saved soon after they happen. The rendering (CPU or GPU) is also kept in `localStorage`, so the canvas the layout makes draws where the user last chose; a change applies after reloading the page (see [Drawing on the CPU or the GPU](engine.md#drawing-on-the-cpu-or-the-gpu)).
 
 ```html
 <paint-canvas settings-store="default"></paint-canvas>

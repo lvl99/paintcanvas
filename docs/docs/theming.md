@@ -21,7 +21,7 @@ To let the user choose, add `<pc-theme-picker>`: three radios, light (sun), dark
 picker.settings = canvas.ui;
 ```
 
-`--pc-panel-width` sets how wide panels are (`<pc-panel>` and the panels made from it, e.g. `<pc-panel-layers>`): 290px by default, and 240px for `<pc-panel-brushes>`. In every layout (docked, opened from a rail or overlay, narrow or not), panels are never wider than `--pc-panel-max-width` (290px by default) or the space they have.
+`--pc-panel-width` sets how wide panels are (`<pc-panel>` and the panels made from it, e.g. `<pc-panel-layers>`): 290px by default. In every layout (docked, opened from a rail or overlay, narrow or not), panels are never narrower than `--pc-panel-min-width` or wider than `--pc-panel-max-width` (both 290px by default), unless they have less space.
 
 Pill buttons come in five sizes (least height, font size, padding): `pill-s` (24px, 14px, 2px 8px), `pill` (32px, 16px, 8px 16px, the usual size), `pill-l` (50px, 20px, 15px 25px), `pill-xl` (75px, 24px, 25px 37px) and `pill-xxl` (100px, 28px, 36px 50px). Give `<pc-button>` one as its `size` (`pill` by default), or use them as classes on `<button>`s in your own elements with the shared `pills` styles from `@lvl99dotcom/paintcanvas/ui/styles` (`PILL_SIZE_STYLES` lists them):
 

@@ -104,6 +104,54 @@ export const variationFactor = (
   return factor;
 };
 
+/** Whether the user wants pen pressure and tilt to vary strokes, whatever the preset says */
+export interface PenInputSettings {
+  /** Pressure varies the width and height */
+  penPressure: boolean;
+  /** Tilt turns the stamp to the pen's lean (and varies the width and height where the preset gives a tilt range) */
+  penTilt: boolean;
+}
+
+/** The size settings varied by pen pressure and tilt */
+const PEN_SIZE_PARAMS = ["widthConfig", "heightConfig"] as const;
+
+/**
+ * A preset with the user's pen pressure and tilt settings applied, which win over the preset's own:
+ *
+ * - Pressure on: the width and height vary with pressure, using the preset's range and graph where it varies them with
+ *   pressure, or the full range (0–1) otherwise. Off: they don't vary with pressure.
+ * - Tilt on: the rotation follows the pen's lean, and the width and height vary with tilt where the preset varies them
+ *   with tilt (a full range would leave nothing drawn with an upright pen). Off: nothing varies with tilt.
+ *
+ * Other settings (e.g. alpha) keep the preset's pressure and tilt.
+ *
+ * @example
+ * withPenInput({ widthConfig: {} }, { penPressure: true, penTilt: false }).widthConfig;
+ * // { usePressure: true, minPressure: 0, maxPressure: 1, useTilt: false }
+ */
+export const withPenInput = (
+  preset: BrushConfig,
+  { penPressure, penTilt }: PenInputSettings,
+): BrushConfig => {
+  const result: BrushConfig = {
+    ...preset,
+    rotationConfig: { ...preset.rotationConfig, useTilt: penTilt },
+  };
+  for (const param of PEN_SIZE_PARAMS) {
+    const config = preset[param];
+    result[param] = {
+      ...config,
+      usePressure: penPressure,
+      // The full range when the preset doesn't give one
+      ...(penPressure && !config?.usePressure
+        ? { minPressure: 0, maxPressure: 1 }
+        : {}),
+      useTilt: penTilt && Boolean(config?.useTilt),
+    };
+  }
+  return result;
+};
+
 /**
  * Work out one stamp's size, rotation, offset and alpha from the preset, the user's chosen size and the input at that point.
  *

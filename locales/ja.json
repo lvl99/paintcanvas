@@ -53,7 +53,7 @@
   "paintCanvas.tool.zoom": "ズーム",
   "paintCanvas.tool.colourSample": "スポイト",
   "paintCanvas.tool.withShortcut": "{tool}（{shortcut}）",
-  "paintCanvas.colours.foreground": "描画色（{colour}）",
+  "paintCanvas.colours.brush": "描画色（{colour}）",
   "paintCanvas.colours.background": "背景色（{colour}）",
   "paintCanvas.palette.label": "カラーパレット",
   "paintCanvas.palette.hex": "16進数カラー",

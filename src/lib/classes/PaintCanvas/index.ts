@@ -142,17 +142,27 @@ export const MODIFIED_DEBOUNCE_MS = 100;
 /** Largest canvas width or height allowed when the `maxCanvasSize` option isn't given */
 export const MAX_CANVAS_SIZE = 2000;
 
-/** Foreground colour to start with */
+/** Colour in the foreground slot to start with (the brush colour, as it starts selected) */
 export const DEFAULT_COLOUR = "#000000";
 
-/** Background colour to start with */
+/** Colour in the background slot to start with */
 export const DEFAULT_BACKGROUND_COLOUR = "#ffffff";
 
 /**
- * One of the two colours: the foreground colour (painted by the brush and foreground fills) or the background colour
+ * One of the two colours, by where it's shown: the foreground slot (in front) or the background slot (behind). The
+ * selected one is the brush colour (painted by the brush and brush colour fills); the other is the background colour
  * (painted by the eraser and Delete when the layer's alpha lock is on, and by background fills).
  */
 export type ColourSlot = "foreground" | "background";
+
+/**
+ * The other colour slot.
+ *
+ * @example
+ * otherColourSlot("foreground"); // "background"
+ */
+export const otherColourSlot = (slot: ColourSlot): ColourSlot =>
+  slot === "foreground" ? "background" : "foreground";
 
 /** Author name of presets made with `newPreset` when the `presetAuthor` option isn't given */
 export const DEFAULT_AUTHOR = UNKNOWN_AUTHOR;
@@ -298,7 +308,7 @@ export type SystemClipboardLike = Pick<Clipboard, "write">;
  * @example
  * const canvas = new PaintCanvas({ width: 1000, height: 800 });
  * canvas.selectTool(Tool.Brush, { fromToolbar: true });
- * canvas.setColour("#ff0000");
+ * canvas.setColour("#ff0000"); // the brush colour
  * canvas.setColour("#ffffff", "background");
  */
 export default class PaintCanvas extends EventTarget {
@@ -1536,7 +1546,8 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
-   * Fill the selected layer with the foreground or background colour as one undoable action: only the masked area when
+   * Fill the selected layer with a slot's colour as one undoable action (e.g. `fill(canvas.selectedColour)` for the
+   * brush colour): only the masked area when
    * there is a mask (partly where it is partly), and only existing pixels when the layer's alpha lock is on. Does
    * nothing during a stroke or while a transform is pending.
    *
@@ -1612,7 +1623,7 @@ export default class PaintCanvas extends EventTarget {
   private clearMasked(area: Rect): void {
     const layer = this.layerStack.active;
     if (layer.alphaLock) {
-      this.paintArea(area, this.currentColours.background);
+      this.paintArea(area, this.backgroundColour);
       return;
     }
     const mask = this.currentSelection.mask as OffscreenCanvas;
@@ -1785,29 +1796,41 @@ export default class PaintCanvas extends EventTarget {
     return this.layerStack;
   }
 
-  /** Current foreground colour as a hex string, e.g. `#000000` (the same as `colours.foreground`) */
+  /** The brush colour (the selected colour) as a hex string, e.g. `#000000` */
   get colour(): string {
-    return this.currentColours.foreground;
+    return this.currentColours[this.currentSelectedColour];
   }
 
-  /** Current foreground and background colours as hex strings, e.g. `{ foreground: "#000000", background: "#ffffff" }` */
+  /** The background colour (the colour that isn't selected) as a hex string, e.g. `#ffffff` */
+  get backgroundColour(): string {
+    return this.currentColours[otherColourSlot(this.currentSelectedColour)];
+  }
+
+  /** Both slots' colours as hex strings, e.g. `{ foreground: "#000000", background: "#ffffff" }` */
   get colours(): Readonly<Record<ColourSlot, string>> {
     return this.currentColours;
   }
 
-  /** Which colour is selected for configuration, e.g. by a colour picker or the colour sample tool ("foreground" by default) */
+  /**
+   * Which colour is selected ("foreground" by default): the brush colour, which colour pickers and the colour sample tool
+   * set. The other is the background colour.
+   */
   get selectedColour(): ColourSlot {
     return this.currentSelectedColour;
   }
 
   /**
-   * Set the foreground colour, or the background colour. Must be a 6-digit hex colour, e.g. `#ff0000`.
+   * Set a slot's colour: the selected one (the brush colour) unless another is given. Must be a 6-digit hex colour, e.g.
+   * `#ff0000`.
    *
    * @example
-   * canvas.setColour("#ff0000"); // foreground
+   * canvas.setColour("#ff0000"); // the brush colour
    * canvas.setColour("#ffffff", "background");
    */
-  setColour(colour: string, slot: ColourSlot = "foreground"): void {
+  setColour(
+    colour: string,
+    slot: ColourSlot = this.currentSelectedColour,
+  ): void {
     if (!isHexColour(colour)) throw new Error(`Invalid colour ${colour}`);
     this.currentColours = {
       ...this.currentColours,
@@ -1817,7 +1840,8 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
-   * Select which colour is configured, e.g. by a colour picker or the colour sample tool. One colour is always selected.
+   * Select which colour is the brush colour (and set by colour pickers and the colour sample tool); the other becomes
+   * the background colour. One colour is always selected.
    *
    * @example
    * canvas.selectColour("background");
@@ -1829,7 +1853,7 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
-   * Swap the foreground and background colours. The selected colour stays the same slot.
+   * Swap the two slots' colours, so the brush colour and background colour swap. The selected slot stays the same.
    */
   swapColours(): void {
     const { foreground, background } = this.currentColours;

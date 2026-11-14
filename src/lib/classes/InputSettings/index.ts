@@ -16,6 +16,10 @@ export interface InputSettingsData {
   gestures: GestureSettings;
   /** Focus pen mode: fingers and palms never draw, and touches are ignored while a pen is down or just lifted */
   focusPen: boolean;
+  /** Pen pressure varies the brush and eraser's width and height, whatever the preset says (see `withPenInput`) */
+  penPressure: boolean;
+  /** Pen tilt turns the brush and eraser to the pen's lean, whatever the preset says (see `withPenInput`) */
+  penTilt: boolean;
 }
 
 /** The on/off input settings */
@@ -24,13 +28,16 @@ const INPUT_TOGGLES = [
   "pinchZoom",
   "modifierScrollZoom",
   "focusPen",
+  "penPressure",
+  "penTilt",
 ] as const;
 
 /** Names of all input settings, e.g. to pick them out of a larger settings object */
 export const INPUT_SETTING_KEYS = [...INPUT_TOGGLES, "gestures"] as const;
 
 /**
- * Default input settings: all navigation on, the default touch gestures, focus pen mode off.
+ * Default input settings: all navigation on, the default touch gestures, focus pen mode off, pen pressure on and pen
+ * tilt off.
  *
  * @example
  * defaultInputSettings().focusPen; // false
@@ -41,6 +48,8 @@ export const defaultInputSettings = (): InputSettingsData => ({
   modifierScrollZoom: true,
   gestures: { ...DEFAULT_GESTURES },
   focusPen: false,
+  penPressure: true,
+  penTilt: false,
 });
 
 /**
@@ -104,7 +113,8 @@ export const zoomModifierName = (
 ): "Cmd" | "Ctrl" => (/Mac|iPhone|iPad|iPod/.test(platform) ? "Cmd" : "Ctrl");
 
 /**
- * How the user's input devices control the canvas: scrolling, pinching, touch gestures and focus pen mode. Kept in
+ * How the user's input devices control the canvas: scrolling, pinching, touch gestures, focus pen mode, and pen
+ * pressure and tilt. Kept in
  * memory; the implementer saves and restores them (see `update` and the `change` event).
  *
  * Dispatches a `change` event when a setting changes.

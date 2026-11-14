@@ -1,7 +1,3 @@
-/* Narrower than other panels by default (set --pc-panel-width to change it) */
-:host {
-  --pc-panel-default-width: 240px;
-}
 /* The current preset on one row: its shape, name and size */
 .current {
   display: flex;

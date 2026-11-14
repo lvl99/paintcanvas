@@ -262,6 +262,11 @@ describe("KeyboardShortcuts", () => {
     press(window, "Backspace", { altKey: true });
     expect(fill.mock.calls).toEqual([["foreground"], ["background"]]);
     expect(deleteMasked).not.toHaveBeenCalled();
+    // The brush colour is the selected one
+    app.selectColour("background");
+    press(window, "Backspace", { metaKey: true });
+    press(window, "Backspace", { altKey: true });
+    expect(fill.mock.calls.slice(2)).toEqual([["background"], ["foreground"]]);
     press(window, "x");
     expect(app.colours).toEqual({
       foreground: "#ffffff",

@@ -1,3 +1,4 @@
+import { lockPage } from "../../pageLock";
 import { html, nothing, unsafeCSS } from "lit";
 import styles from "./style.css?inline";
 import { PcElement, defineElement, emit } from "../../base";
@@ -97,6 +98,8 @@ const TAKE_OVER_CHOICE = "take-over";
  * column of buttons (one per panel) that open each panel over the canvas; `floating`, the pane over the canvas as a
  * box that collapses to a button; or `overlay`, a rail over the canvas without a background (the canvas fills the
  * width behind it). Give side content in a `<pc-pane>` to have it follow the side's mode.
+ *
+ * While it's used, the page doesn't scroll or zoom (see `lockPage`): only what scrolls inside it (e.g. panels) does.
  *
  * Reports its state for styling as attributes (`narrow`, `input="pen|touch|mouse"`, `ui-hidden`, `left-mode`,
  * `right-mode`) and as `pc-state-change` events (see `LayoutState`). Creates its own canvas unless given one, and
@@ -301,6 +304,9 @@ export class PaintCanvasElement extends PcElement {
     );
   }
 
+  /** Lets the page scroll and zoom again (see `lockPage`) */
+  private unlockPage?: () => void;
+
   override connectedCallback(): void {
     // Draw where the user chose last time; the choice can't change once the canvas is made
     this.app ??= new PaintCanvas({
@@ -314,6 +320,8 @@ export class PaintCanvasElement extends PcElement {
     this.addEventListener(PANE_COLLAPSE_EVENT, this.onPaneCollapse);
     document.addEventListener("pointerdown", this.onDocumentPointerDown, true);
     this.watchShortcuts();
+    // The page doesn't scroll or zoom while the app is used
+    this.unlockPage = lockPage(this);
   }
 
   override disconnectedCallback(): void {
@@ -327,6 +335,7 @@ export class PaintCanvasElement extends PcElement {
       true,
     );
     this.unwatchShortcuts();
+    this.unlockPage?.();
   }
 
   protected override willUpdate(changed: Map<PropertyKey, unknown>): void {

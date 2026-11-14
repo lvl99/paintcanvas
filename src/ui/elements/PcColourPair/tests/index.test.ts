@@ -32,7 +32,7 @@ describe("pc-colour-pair", () => {
       "#ffffff",
     );
     expect(button("foreground").getAttribute("aria-label")).toBe(
-      "Foreground color (#000000)",
+      "Brush color (#000000)",
     );
     expect(button("background").title).toBe("Background color (#ffffff)");
     expect(button("foreground").getAttribute("aria-pressed")).toBe("true");
@@ -40,6 +40,9 @@ describe("pc-colour-pair", () => {
     app.selectColour("background");
     app.setColour("#123456", "background");
     await element.updateComplete;
+    // The selected colour is the brush colour
+    expect(button("background").title).toBe("Brush color (#123456)");
+    expect(button("foreground").title).toBe("Background color (#000000)");
     expect(button("background").getAttribute("aria-pressed")).toBe("true");
     expect(button("background").style.getPropertyValue("--colour")).toBe(
       "#123456",

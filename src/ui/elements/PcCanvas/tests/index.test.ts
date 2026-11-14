@@ -27,6 +27,7 @@ import { mount } from "../../../../testing/elements";
 import { markDismissingPress } from "../../../dismiss";
 import { createApp } from "../../../../testing/app";
 import { SmoothingType } from "../../../../lib/brushes/types";
+import { withPenInput } from "../../../../lib/brushes/params";
 
 /** Give an element a fixed on-screen size (jsdom has no layout) */
 const setSize = (element: HTMLElement, width: number, height: number) => {
@@ -417,7 +418,8 @@ describe("pc-canvas", () => {
       expect.objectContaining({
         layer: app.layers.active,
         mode: "paint",
-        preset: app.brush.preset,
+        // With the user's pen pressure and tilt settings
+        preset: withPenInput(app.brush.preset, app.input.data),
         size: { width: app.brush.width, height: app.brush.height },
         colour: app.colour,
         isPen: false,
@@ -493,6 +495,22 @@ describe("pc-canvas", () => {
       preset: app.eraser.preset,
       colour: "#00ff00",
     });
+  });
+
+  it("should paint with the selected colour, and erase with the other for alpha lock", async () => {
+    const { app, canvas } = await mountStage();
+    app.setColour("#ff0000", "foreground");
+    app.setColour("#00ff00", "background");
+    app.selectColour("background");
+    const begin = vi.spyOn(app.strokes, "begin");
+    canvas.dispatchEvent(pointer("pointerdown", 10, 20));
+    canvas.dispatchEvent(pointer("pointerup", 10, 20));
+    app.selectTool(Tool.Eraser);
+    canvas.dispatchEvent(pointer("pointerdown", 10, 20));
+    expect(begin.mock.calls.map(([options]) => options.colour)).toEqual([
+      "#00ff00",
+      "#ff0000",
+    ]);
   });
 
   it("should use every coalesced pointer event, and pen pressure and tilt", async () => {

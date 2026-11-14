@@ -1,4 +1,8 @@
-import { Tool, type default as PaintCanvas } from "../PaintCanvas";
+import {
+  Tool,
+  otherColourSlot,
+  type default as PaintCanvas,
+} from "../PaintCanvas";
 import {
   comboFromEvent,
   isTypingTarget,
@@ -255,10 +259,10 @@ export default class KeyboardShortcuts {
         app.deleteMasked();
         break;
       case "fill-foreground":
-        app.fill("foreground");
+        app.fill(app.selectedColour);
         break;
       case "fill-background":
-        app.fill("background");
+        app.fill(otherColourSlot(app.selectedColour));
         break;
       case "swap-colours":
         app.swapColours();
