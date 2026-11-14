@@ -95,7 +95,7 @@ Version 2.1.0 of the asset, collection and app settings schemas, and version 1.1
 
 ### Pen pressure and tilt settings
 
-Version 2.2.0 of the app settings schema adds `penPressure` and `penTilt` to the input settings (see `InputSettings`).
+Version 2.2.0 of the app settings schema adds `penPressure` and `penTilt` to the input settings. PaintCanvas 0.12.0 used them; later versions ignore them (pen pressure and tilt are set per tool, from the tool settings bar), and they stay valid.
 
 ### Version 2.0.0
 

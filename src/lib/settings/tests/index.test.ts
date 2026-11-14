@@ -138,6 +138,7 @@ describe("isValidSettings", () => {
     expect(isValidSettings({ palette: [] }).valid).toBe(true);
     expect(isValidSettings({ shortcuts: { deselect: null } }).valid).toBe(true);
     expect(isValidSettings({}).valid).toBe(true);
+    // Pen settings saved by 0.12.0 stay valid, and are ignored
     expect(
       isValidSettings({ input: { penPressure: false, penTilt: true } }).valid,
     ).toBe(true);
@@ -286,7 +287,7 @@ describe("collectSettings and applySettings", () => {
 
   it("should use settings on another canvas", async () => {
     const source = createApp();
-    source.input.update({ focusPen: true, penPressure: false, penTilt: true });
+    source.input.update({ focusPen: true });
     source.shortcuts.set("tool-brush", { key: "p" });
     source.setColour("#ff0000");
     source.setColour("#00ff00", "background");

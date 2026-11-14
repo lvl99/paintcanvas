@@ -101,6 +101,7 @@ const settingsProperties = {
       pinchZoom: { type: "boolean" },
       modifierScrollZoom: { type: "boolean" },
       focusPen: { type: "boolean" },
+      // No longer used (0.12.0 only), kept so settings saved with them stay valid
       penPressure: { type: "boolean" },
       penTilt: { type: "boolean" },
       gestures: {

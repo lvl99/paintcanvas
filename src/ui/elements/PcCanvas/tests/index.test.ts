@@ -27,7 +27,6 @@ import { mount } from "../../../../testing/elements";
 import { markDismissingPress } from "../../../dismiss";
 import { createApp } from "../../../../testing/app";
 import { SmoothingType } from "../../../../lib/brushes/types";
-import { withPenInput } from "../../../../lib/brushes/params";
 
 /** Give an element a fixed on-screen size (jsdom has no layout) */
 const setSize = (element: HTMLElement, width: number, height: number) => {
@@ -418,8 +417,7 @@ describe("pc-canvas", () => {
       expect.objectContaining({
         layer: app.layers.active,
         mode: "paint",
-        // With the user's pen pressure and tilt settings
-        preset: withPenInput(app.brush.preset, app.input.data),
+        preset: app.brush.preset,
         size: { width: app.brush.width, height: app.brush.height },
         colour: app.colour,
         isPen: false,

@@ -52,15 +52,6 @@ The engine has two colour slots, `foreground` (shown in front) and `background` 
 
 Select the other slot to make its colour the brush colour with `canvas.selectColour("background")`, and swap the slots' colours with `canvas.swapColours()` (the selected slot stays the same, so the brush and background colours swap). `otherColourSlot(slot)` gives the slot that isn't `slot`.
 
-## Pen pressure and tilt
-
-Pen pressure and tilt are the user's input settings (`canvas.input.data.penPressure`, on by default, and `penTilt`, off by default), so they apply to every preset. `withPenInput(preset, canvas.input.data)` from `@lvl99dotcom/paintcanvas/lib/brushes/params` gives the preset a stroke draws with:
-
-- Pressure on: the width and height vary with pressure, using the preset's range and profile graph where the preset varies them with pressure, or the full range (0–1) otherwise. Off: they don't vary with pressure.
-- Tilt on: the stamp turns to the pen's lean, and the width and height vary with tilt where the preset varies them with tilt. Off: nothing varies with tilt.
-
-Other settings, e.g. alpha, keep the preset's pressure and tilt. `<pc-canvas>` applies them to each stroke.
-
 ## Colour palettes
 
 `canvas.palette` holds the colours of the palette PaintCanvas comes with (`DEFAULT_PALETTE`), each once as lowercase `#rrggbb`. Its ID is `DEFAULT_PALETTE_ID`. Users can't change it: picking one of its colours sets the brush colour, and changing that colour afterwards doesn't change the palette. It isn't saved with the app settings; colours older versions saved in it are moved to a palette of the user's own named "My colours" (`keepOlderPalette` from `@lvl99dotcom/paintcanvas/lib/settings`). An implementer can give it other colours with `set`.
