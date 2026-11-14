@@ -19,6 +19,25 @@
 .current pc-colour-pair {
   --pc-colour-pair-size: 76px;
 }
+/* Opens the browser's colour picker for the brush colour */
+.pick {
+  min-height: var(--pc-control-size);
+  padding: var(--pc-space-1);
+  border: 0;
+  border-top: 1px solid var(--pc-border);
+  background: var(--pc-surface);
+  color: var(--pc-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pick:hover {
+  background: var(--pc-surface-hover);
+}
+.pick:focus-visible {
+  outline: var(--pc-focus-width) solid var(--pc-focus);
+  outline-offset: -3px;
+}
 .hex {
   box-sizing: border-box;
   width: 100%;

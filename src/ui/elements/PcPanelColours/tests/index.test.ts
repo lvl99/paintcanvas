@@ -130,6 +130,26 @@ describe("channelGradient", () => {
 });
 
 describe("pc-panel-colours", () => {
+  it("should open the browser's colour picker for the brush colour with Pick…, between the colours and the hex value", async () => {
+    const { app, element } = await setup();
+    const pick = get<HTMLButtonElement>(element, "button.pick");
+    expect(pick.textContent?.trim()).toBe("Pick…");
+    expect(pick.previousElementSibling?.localName).toBe("pc-colour-pair");
+    expect(pick.nextElementSibling?.classList.contains("hex")).toBe(true);
+    const pair = get<PcColourPair>(element, "pc-colour-pair");
+    const openPicker = vi.spyOn(pair, "openPicker");
+    pick.click();
+    expect(openPicker).toHaveBeenCalledTimes(1);
+    // The picked colour is the brush colour, and the sliders follow it
+    app.selectColour("background");
+    const input = pair.shadowRoot!.querySelector("input")!;
+    input.value = "#336699";
+    input.dispatchEvent(new Event("input"));
+    await element.updateComplete;
+    expect(app.colours.background).toBe("#336699");
+    expect(get<HTMLInputElement>(element, "input.hex").value).toBe("#336699");
+  });
+
   it("should render nothing without an app", async () => {
     const element = await mount<PcPanelColours>("pc-panel-colours");
     expect(element.shadowRoot!.querySelector(".palette")).toBeNull();

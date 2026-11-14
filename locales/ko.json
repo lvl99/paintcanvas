@@ -56,6 +56,7 @@
   "paintCanvas.colours.brush": "브러시 색 ({colour})",
   "paintCanvas.colours.background": "배경색 ({colour})",
   "paintCanvas.palette.label": "색상 팔레트",
+  "paintCanvas.palette.pick": "선택…",
   "paintCanvas.palette.hex": "16진수 색상",
   "paintCanvas.palette.model": "색상 모델",
   "paintCanvas.palette.rgb": "RGB",

@@ -10,6 +10,7 @@ import { defineElement, emit } from "../../base";
 import { PcPanel } from "../PcPanel";
 import ChangeController from "../../ChangeController";
 import "../PcColourPair";
+import type { PcColourPair } from "../PcColourPair";
 import "../PcMenu";
 import "../PcContextMenu";
 import "../PcDialog";
@@ -155,7 +156,8 @@ const clampWhole = (value: number, max: number): number =>
   Math.round(Math.min(max, Math.max(0, value)));
 
 /**
- * The colour palette menu: the foreground and background colours (the selected one is configured), its hex value, RGB
+ * The colour palette menu: the foreground and background colours (the selected one is configured), "Pick…" (opens the
+ * browser's colour picker for it), its hex value, RGB
  * and HSL sliders, the colour palettes (the user's own above the one PaintCanvas comes with), and buttons to make a
  * palette and to import and export the user's palettes as a JSON file.
  *
@@ -867,6 +869,16 @@ export class PcPanelColours extends PcPanel {
               .app=${app}
               @pc-colour-click=${this.onColourClick}
             ></pc-colour-pair>
+            <button
+              type="button"
+              class="pick"
+              @click=${() =>
+                this.renderRoot
+                  .querySelector<PcColourPair>("pc-colour-pair")
+                  ?.openPicker()}
+            >
+              ${this.t("paintCanvas.palette.pick")}
+            </button>
             <input
               class="hex"
               spellcheck="false"

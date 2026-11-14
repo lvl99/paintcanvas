@@ -56,6 +56,7 @@
   "paintCanvas.colours.brush": "画笔颜色（{colour}）",
   "paintCanvas.colours.background": "背景色（{colour}）",
   "paintCanvas.palette.label": "调色板",
+  "paintCanvas.palette.pick": "选取…",
   "paintCanvas.palette.hex": "十六进制颜色",
   "paintCanvas.palette.model": "颜色模式",
   "paintCanvas.palette.rgb": "RGB",

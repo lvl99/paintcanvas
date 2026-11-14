@@ -56,6 +56,7 @@
   "paintCanvas.colours.brush": "Brush colour ({colour})",
   "paintCanvas.colours.background": "Background colour ({colour})",
   "paintCanvas.palette.label": "Colour palette",
+  "paintCanvas.palette.pick": "Pick…",
   "paintCanvas.palette.hex": "Hex colour",
   "paintCanvas.palette.model": "Colour model",
   "paintCanvas.palette.rgb": "RGB",
