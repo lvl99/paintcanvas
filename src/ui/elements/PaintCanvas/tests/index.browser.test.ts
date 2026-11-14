@@ -23,6 +23,36 @@ describe("paint-canvas menu in a real browser", () => {
   });
 });
 
+describe("paint-canvas panels in a real browser", () => {
+  it("should open every panel over the canvas at least 290px wide", async () => {
+    const layout = document.createElement("paint-canvas") as PaintCanvasElement;
+    layout.app = new PaintCanvas({ width: 20, height: 10 });
+    layout.style.cssText = "display: grid; width: 1000px; height: 600px";
+    document.body.append(layout);
+    await layout.updateComplete;
+    for (const panel of [Panel.Brush, Panel.Eraser, Panel.Palette]) {
+      layout.app.togglePanel(panel);
+      await layout.updateComplete;
+      const element = layout.shadowRoot!.querySelector(".panel")!;
+      expect(element.getBoundingClientRect().width).toBe(290);
+    }
+    layout.remove();
+  });
+
+  it("should keep a panel within a layout narrower than 290px", async () => {
+    const layout = document.createElement("paint-canvas") as PaintCanvasElement;
+    layout.app = new PaintCanvas({ width: 20, height: 10 });
+    layout.style.cssText = "display: grid; width: 200px; height: 600px";
+    document.body.append(layout);
+    await layout.updateComplete;
+    layout.app.togglePanel(Panel.Brush);
+    await layout.updateComplete;
+    const element = layout.shadowRoot!.querySelector(".panel")!;
+    expect(element.getBoundingClientRect().width).toBeLessThan(290);
+    layout.remove();
+  });
+});
+
 describe("paint-canvas tool settings in a real browser", () => {
   it("should scroll the tool settings bar sideways when it's wider than the layout", async () => {
     const layout = document.createElement("paint-canvas") as PaintCanvasElement;

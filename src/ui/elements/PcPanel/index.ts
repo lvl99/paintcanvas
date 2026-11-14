@@ -8,7 +8,8 @@ import { PcElement, defineElement } from "../../base";
  *
  * Its `icon`, `label` and `badge` are what a pane shows for it when the pane narrows to a rail of buttons; the badge is
  * a dot meaning something new (e.g. unread messages). It's 290px wide (`--pc-panel-width`), and in every layout it's
- * never wider than 290px (`--pc-panel-max-width`) or the space it has.
+ * never narrower than 290px (`--pc-panel-min-width`) or wider than 290px (`--pc-panel-max-width`), unless it has less
+ * space.
  *
  * Panels made for one purpose extend `PcPanel`, so they share its look: e.g. `<pc-panel-layers>`,
  * `<pc-panel-brushes>` and `<pc-panel-colours>`. They put their own content in the body (see `renderBody`), and give
@@ -31,8 +32,9 @@ export class PcPanel extends PcElement {
       :host {
         display: flex;
         box-sizing: border-box;
-        width: var(--pc-panel-width, var(--pc-panel-default-width, 290px));
-        min-width: 0;
+        width: var(--pc-panel-width, 290px);
+        /* At least 290px (--pc-panel-min-width), unless it has less space */
+        min-width: min(100%, var(--pc-panel-min-width, 290px));
         max-width: min(100%, var(--pc-panel-max-width, 290px));
         min-height: 0;
         max-height: 100%;
@@ -54,6 +56,7 @@ export class PcPanel extends PcElement {
         z-index: 5;
         top: 0;
         /* Its usual width, kept within the window (the pane it opens from is narrower than it) */
+        min-width: min(var(--pc-panel-min-width, 290px), 85vw);
         max-width: min(var(--pc-panel-max-width, 290px), 85vw);
         max-height: min(90vh, 100%);
       }
