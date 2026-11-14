@@ -14,6 +14,7 @@ import StrokeEngine, {
   type StrokeCommitDetail,
 } from "../../brushes/StrokeEngine";
 import BrushTipCache from "../../brushes/BrushTipCache";
+import { decodeImage } from "../../rendering/BrushTip";
 import Selection from "../../selection/Selection";
 import Lasso, { type LassoResult } from "../../selection/Lasso";
 import Transformer, {
@@ -130,9 +131,13 @@ export const DEFAULT_CANVAS_SIZE = 2000;
 
 /**
  * Event dispatched when the drawing is changed: its layers, size or details (and its `documentInfo.updatedAt` is set).
+ * It waits until the drawing has gone unchanged for `MODIFIED_DEBOUNCE_MS`, so nothing is marked while the user draws.
  * Opening or restoring a drawing doesn't dispatch it.
  */
 export const DOCUMENT_MODIFIED_EVENT = "modified";
+
+/** How long the drawing must go unchanged before it's marked modified (milliseconds); each change restarts the wait */
+export const MODIFIED_DEBOUNCE_MS = 100;
 
 /** Largest canvas width or height allowed when the `maxCanvasSize` option isn't given */
 export const MAX_CANVAS_SIZE = 2000;
@@ -309,8 +314,8 @@ export default class PaintCanvas extends EventTarget {
   /** Lasso shape in progress */
   readonly lasso = new Lasso();
 
-  /** Brush shapes, loaded per preset */
-  readonly tips = new BrushTipCache();
+  /** Brush shapes, loaded per preset, on canvases made by `createCanvas` */
+  readonly tips: BrushTipCache;
 
   /** Log of strokes started, ended, cancelled and ignored, with timings, for debugging */
   readonly strokeLog = new StrokeLog();
@@ -344,6 +349,9 @@ export default class PaintCanvas extends EventTarget {
 
   /** Whether a drawing is being restored or opened, which doesn't count as changing it */
   private restoring = false;
+
+  /** Marks the drawing modified once it has gone unchanged for `MODIFIED_DEBOUNCE_MS` (see `markModified`) */
+  private modifiedTimer?: ReturnType<typeof setTimeout>;
 
   /** Settings wrapper apps add to the app settings (see `SettingsExtension`) */
   readonly settingsExtensions = new SettingsExtensions();
@@ -524,6 +532,13 @@ export default class PaintCanvas extends EventTarget {
     this.presetAuthor =
       options.presetAuthor ?? (() => ({ name: DEFAULT_AUTHOR }));
     this.info = newDocumentInfo(this.author);
+    this.rendering = options.rendering ?? DEFAULT_UI_SETTINGS.rendering;
+    this.ui = new UiSettings({ rendering: this.rendering });
+    this.createCanvas =
+      options.createCanvas ??
+      (this.rendering === "gpu" ? createOffscreenCanvas : createMemoryCanvas);
+    // Tips must be the same kind of canvas as the stroke buffer they're drawn into, or every stamp waits on the GPU
+    this.tips = new BrushTipCache(decodeImage, this.createCanvas);
     this.tips.preload(this.brush.presets);
     this.tips.preload(this.eraser.presets);
     this.customPresets = new CustomPresets(undefined, () => this.author);
@@ -531,11 +546,6 @@ export default class PaintCanvas extends EventTarget {
       this.listCustomPresets(),
     );
     this.useAssetStores(options.stores ?? {});
-    this.rendering = options.rendering ?? DEFAULT_UI_SETTINGS.rendering;
-    this.ui = new UiSettings({ rendering: this.rendering });
-    this.createCanvas =
-      options.createCanvas ??
-      (this.rendering === "gpu" ? createOffscreenCanvas : createMemoryCanvas);
     this.systemClipboard =
       options.systemClipboard === null
         ? undefined
@@ -773,6 +783,7 @@ export default class PaintCanvas extends EventTarget {
    * (one without, from before documents had it, gets its `dateCreated`).
    */
   restoreDocumentInfo(info: DocumentInfo): void {
+    this.cancelModified();
     this.setDocumentInfo({
       ...info,
       dateOpened: new Date().toISOString(),
@@ -804,6 +815,7 @@ export default class PaintCanvas extends EventTarget {
   async createDocument({
     thumbnail = true,
   }: CreateDocumentOptions = {}): Promise<DrawingDocument> {
+    this.flushModified();
     const author = withAuthor(this.info.author, this.author);
     if (author.length !== this.info.author.length)
       this.setDocumentInfo({ ...this.info, author });
@@ -973,6 +985,8 @@ export default class PaintCanvas extends EventTarget {
    * Run a change that restores or opens a drawing, which doesn't count as changing it (see `DocumentInfo.updatedAt`).
    */
   private whileRestoring(change: () => void): void {
+    // A change waiting to be marked belonged to the drawing being replaced
+    this.cancelModified();
     const restoring = this.restoring;
     this.restoring = true;
     try {
@@ -998,13 +1012,48 @@ export default class PaintCanvas extends EventTarget {
   }
 
   /**
-   * Mark the drawing changed now (its `updatedAt`, see `DocumentInfo`) and dispatch `modified`, unless it's being
-   * restored or opened.
+   * Mark the drawing changed (its `updatedAt`, see `DocumentInfo`) and dispatch `modified` once it has gone unchanged
+   * for `MODIFIED_DEBOUNCE_MS`, unless it's being restored or opened. Each change restarts the wait.
    */
   private markModified(): void {
     if (this.restoring) return;
+    clearTimeout(this.modifiedTimer);
+    this.modifiedTimer = setTimeout(
+      () => this.flushModified(),
+      MODIFIED_DEBOUNCE_MS,
+    );
+  }
+
+  /**
+   * Mark a change still waiting (see `DOCUMENT_MODIFIED_EVENT`) now: set `documentInfo.updatedAt` and dispatch
+   * `modified`. Does nothing if no change is waiting. `createDocument` and remote saving call it so no change is missed.
+   *
+   * @example
+   * canvas.flushModified();
+   * console.log(canvas.documentInfo.updatedAt); // the latest change
+   */
+  flushModified(): void {
+    if (this.modifiedTimer === undefined) return;
+    this.cancelModified();
     this.info = { ...this.info, updatedAt: new Date().toISOString() };
     this.dispatchEvent(new Event(DOCUMENT_MODIFIED_EVENT));
+  }
+
+  /** Forget a change waiting to be marked modified */
+  private cancelModified(): void {
+    clearTimeout(this.modifiedTimer);
+    this.modifiedTimer = undefined;
+  }
+
+  /**
+   * Stop timers the canvas keeps (a change waiting to be marked modified isn't marked). Call it when the canvas is no
+   * longer used.
+   *
+   * @example
+   * canvas.destroy();
+   */
+  destroy(): void {
+    this.cancelModified();
   }
 
   /** Where the user's assets are kept (see `useAssetStores`) */

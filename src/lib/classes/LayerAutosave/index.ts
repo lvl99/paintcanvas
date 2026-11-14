@@ -42,6 +42,8 @@ export interface AutosaveCanvas extends EventTarget {
   readonly background: BackgroundWork;
   /** The drawing's details (changes are followed by a `change` event) */
   readonly documentInfo: Readonly<DocumentInfo>;
+  /** Marks a change still waiting to be marked modified now, so its `updatedAt` is saved (`PaintCanvas.flushModified`) */
+  flushModified(): void;
   /** Use the details of the drawing being restored */
   restoreDocumentInfo(info: DocumentInfo): void;
   /** Replace the canvas size and layers with saved ones, drawing each layer's image, and select one */
@@ -398,6 +400,7 @@ export default class LayerAutosave extends EventTarget {
           this.encode(layer.canvas).then((image) => [layer.id, image] as const),
         );
       }
+      this.canvas.flushModified();
       const info = structuredClone(this.canvas.documentInfo) as DocumentInfo;
       const drawing: SavedDrawing = {
         version: SAVED_DRAWING_VERSION,

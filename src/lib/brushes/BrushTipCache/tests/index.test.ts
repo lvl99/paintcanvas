@@ -37,6 +37,19 @@ describe("BrushTipCache", () => {
     expect(decode).toHaveBeenCalledOnce();
   });
 
+  it("should make tip canvases with the factory it was given", async () => {
+    const factory = vi.fn(createRecordingCanvasFactory().factory);
+    const decode = vi.fn(async () => ({ width: 3, height: 2 }) as never);
+    const cache = new BrushTipCache(decode, factory);
+    const loaded = new Promise((resolve) =>
+      cache.addEventListener("change", resolve, { once: true }),
+    );
+    cache.get({ image: "data:shape" });
+    await loaded;
+    expect(cache.get({ image: "data:shape" }).isRound).toBe(false);
+    expect(factory).toHaveBeenCalledWith(3, 2);
+  });
+
   it("should preload every preset's tip", () => {
     const decode = vi.fn(async () => ({ width: 2, height: 2 }) as never);
     const cache = new BrushTipCache(

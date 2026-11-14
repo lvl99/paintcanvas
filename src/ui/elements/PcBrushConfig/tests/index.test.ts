@@ -619,6 +619,9 @@ describe("pc-brush-config", () => {
     await expect(element.readClipboard()).rejects.toThrow(
       "Couldn't read the brush shape image",
     );
+    await expect(
+      element.readShape(new File([], "shape.jpg", { type: "image/jpeg" })),
+    ).rejects.toThrow(SHAPE_ERRORS.type);
     vi.restoreAllMocks();
   });
 

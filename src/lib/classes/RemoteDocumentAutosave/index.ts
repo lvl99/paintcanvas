@@ -24,6 +24,8 @@ export type RemoteAutosaveMode = "interval" | "idle";
 export interface RemoteAutosaveCanvas extends EventTarget {
   /** The drawing as a document */
   createDocument(): Promise<DrawingDocument>;
+  /** Marks a change still waiting to be marked modified now, so it's seen (`PaintCanvas.flushModified`) */
+  flushModified(): void;
 }
 
 /** Options for `RemoteDocumentAutosave` */
@@ -138,6 +140,7 @@ export default class RemoteDocumentAutosave extends EventTarget {
 
   /** Whether there are changes not saved yet */
   get hasChanges(): boolean {
+    this.canvas.flushModified();
     return this.dirty;
   }
 
@@ -175,6 +178,7 @@ export default class RemoteDocumentAutosave extends EventTarget {
    */
   save(): Promise<void> {
     if (this.current) return this.current;
+    this.canvas.flushModified();
     // Changes made while saving are saved next time
     this.dirty = false;
     this.progress = undefined;
@@ -194,7 +198,7 @@ export default class RemoteDocumentAutosave extends EventTarget {
   private saveChanges(): void {
     clearTimeout(this.idle);
     this.idle = undefined;
-    if (this.dirty) void this.save();
+    if (this.hasChanges) void this.save();
   }
 
   /** Save the whole drawing */
