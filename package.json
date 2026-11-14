@@ -1,6 +1,6 @@
 {
   "name": "@lvl99dotcom/paintcanvas",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Open-source painting engine and renderer for the browser, with optional UI.",
   "keywords": [
     "drawing",
