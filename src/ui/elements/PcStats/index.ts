@@ -1,7 +1,8 @@
-import { css, html, nothing, type PropertyValues } from "lit";
+import { css, html, nothing, unsafeCSS, type PropertyValues } from "lit";
 import { styleMap } from "lit/directives/style-map.js";
 import { PcElement, defineElement } from "../../base";
 import ChangeController from "../../ChangeController";
+import { NO_TEXT_SELECTION_CSS as noTextSelection } from "../../styles";
 import type PaintCanvas from "../../../lib/classes/PaintCanvas";
 import { zoomPercent } from "../PcToolSettings";
 
@@ -41,7 +42,7 @@ export const formatBytes = (bytes: number, locale?: string): string => {
  * `PaintCanvas.useRemoteDocumentStore`), a progress bar, or that saving there failed. The colour follows the pointer
  * at most every `COLOUR_INTERVAL_MS`, and isn't read while a stroke is drawn (the next pointer move after it reads it).
  * It's not announced to screen readers as it changes, as it changes with every pointer move; saving to the remote store
- * is.
+ * is. Its text can't be selected.
  *
  * @example
  * html`<pc-stats .app=${app}></pc-stats>`
@@ -55,6 +56,8 @@ export class PcStats extends PcElement {
 
   static override styles = [
     PcElement.styles,
+    // Its text isn't selected by pressing or dragging on it (e.g. while drawing)
+    unsafeCSS(noTextSelection),
     css`
       :host {
         display: block;

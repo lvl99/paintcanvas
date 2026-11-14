@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import "..";
-import { COLOUR_INTERVAL_MS, formatBytes, type PcStats } from "..";
+import { COLOUR_INTERVAL_MS, formatBytes, PcStats } from "..";
+import { NO_TEXT_SELECTION_CSS } from "../../../styles";
 import { mount, query, queryAll } from "../../../../testing/elements";
 import { createApp } from "../../../../testing/app";
 import { MemoryLayerStore } from "../../../../testing/layerStore";
@@ -27,6 +28,15 @@ describe("formatBytes", () => {
 });
 
 describe("pc-stats", () => {
+  it("should keep its text from being selected", () => {
+    const styles = (PcStats.styles as unknown[]).flat(2) as {
+      cssText: string;
+    }[];
+    expect(styles.map((style) => style.cssText)).toContain(
+      NO_TEXT_SELECTION_CSS,
+    );
+  });
+
   it("should show nothing without a canvas", async () => {
     const element = await mount<PcStats>("pc-stats");
     expect(queryAll(element, "li")).toHaveLength(0);
