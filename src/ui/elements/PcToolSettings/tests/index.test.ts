@@ -306,17 +306,22 @@ describe("pc-tool-settings", () => {
   });
 
   it.each([Tool.Brush, Tool.Eraser])(
-    "should show pressure, tilt and focus pen mode on the bar after the size settings button, for tool %s",
+    "should show opacity after the size settings button, then pressure, tilt and focus pen mode before Configure, for tool %s",
     async (tool) => {
       const { app, element } = await setup(tool);
       const cog = query(element, ".start > button.size-settings");
-      const pressure = cog.nextElementSibling!;
+      const opacity = cog.nextElementSibling!;
+      expect(opacity.querySelector("pc-number-slider.opacity")).not.toBeNull();
+      const pressure = opacity.nextElementSibling!;
       const tilt = pressure.nextElementSibling!;
       const toggle = tilt.nextElementSibling as HTMLButtonElement;
       expect(pressure.querySelector("input.pressure")).not.toBeNull();
       expect(pressure.getAttribute("title")).toBe("Pressure");
       expect(tilt.querySelector("input.tilt")).not.toBeNull();
       expect(toggle.classList.contains("focus-pen")).toBe(true);
+      expect(toggle.nextElementSibling!.classList.contains("configure")).toBe(
+        true,
+      );
       expect(toggle.getAttribute("aria-label")).toBe("Focus pen mode");
       expect(toggle.getAttribute("aria-pressed")).toBe("false");
       expect(toggle.querySelector("img")!.getAttribute("src")).toMatch(

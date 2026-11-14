@@ -131,7 +131,7 @@ export const zoomPercent = (zoom: number): string => {
  *
  * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`), the
  *   size settings (a cog button that shows or hides a popover under it with the width, constrain proportions and
- *   height), pen pressure, pen tilt and focus pen mode, opacity and "Configure" (fires `pc-configure-brush` with the
+ *   height), opacity, pen pressure, pen tilt and focus pen mode, and "Configure" (fires `pc-configure-brush` with the
  *   tool, "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right
  *   or up to raise them, left or down to lower them, or tapped to type a value. Pen pressure, pen tilt and focus pen
  *   mode are the user's input settings (`app.input`), so they apply to every preset (see `withPenInput`). Focus pen
@@ -401,7 +401,6 @@ export class PcToolSettings extends PcElement {
         >
           <img src=${this.iconUrl("cog")} alt="" />
         </button>
-        ${this.renderPenToggles(app)}
         ${this.renderNumberField(
           "opacity",
           this.t("paintCanvas.common.opacity"),
@@ -409,6 +408,7 @@ export class PcToolSettings extends PcElement {
           (value) => settings.update({ alpha: value / 100 }),
           { min: 0, max: 100, unit: "%" },
         )}
+        ${this.renderPenToggles(app)}
         <button
           type="button"
           class="configure pill-s"
