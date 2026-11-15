@@ -37,7 +37,7 @@ const POINT_RADIUS = 8;
  * white background at double resolution (800 × 320 pixels shown in the window's width). "Clear" (a red pill) empties it.
  * "Show stroke points" draws the stroke's sampled points (pink circles) and where it placed stamps (blue dots) over it,
  * like the canvas's debug overlay, to see how sampling and smoothing work. They go 3 seconds after the stroke ends, or
- * on "Clear".
+ * on "Clear". Under it: "Show stroke points", the `actions` slot (your own controls), and "Clear" on the right.
  *
  * @example
  * html`<pc-brush-test .config=${config} .tips=${app.tips}></pc-brush-test>`
@@ -241,18 +241,18 @@ export class PcBrushTest extends PcElement {
         @pointerup=${this.onPointerUp}
         @pointercancel=${this.onPointerUp}
       ></canvas>
-      <div class="actions">
-        <button type="button" class="pill clear" @click=${() => this.clear()}>
-          ${this.t("paintCanvas.common.clear")}
-        </button>
+      <div class="actions" part="actions">
         <pc-toggle-checkbox
           class="show-points"
-          size="s"
           .checked=${this.showPoints}
           @change=${(e: CustomEvent<{ checked: boolean }>) => this.setShowPoints(e.detail.checked)}
         >
           ${this.t("paintCanvas.brushConfig.showStrokePoints")}
         </pc-toggle-checkbox>
+        <slot name="actions"></slot>
+        <button type="button" class="pill clear" @click=${() => this.clear()}>
+          ${this.t("paintCanvas.common.clear")}
+        </button>
       </div>
     `;
   }

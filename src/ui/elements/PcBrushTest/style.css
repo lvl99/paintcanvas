@@ -8,13 +8,16 @@ canvas {
   border: 1px solid var(--pc-border);
   touch-action: none;
 }
-/* "Clear", then "Show stroke points" */
+/* "Show stroke points", the implementer's controls (the `actions` slot), then "Clear" on the right */
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-top: 6px;
+  gap: 12px 24px;
+  margin-top: 10px;
+}
+button.pill.clear {
+  margin-left: auto;
 }
 .show-points {
   display: inline-flex;

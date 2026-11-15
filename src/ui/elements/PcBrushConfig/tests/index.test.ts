@@ -9,6 +9,7 @@ import { OK_CHOICE } from "../../../ask";
 import type { PcBrushConfig } from "..";
 import type { PcToggleCheckbox } from "../../PcToggleCheckbox";
 import type { PcContextMenu } from "../../PcContextMenu";
+import type { PcNumberSlider } from "../../PcNumberSlider";
 import { SmoothingType, type BrushConfig } from "../../../../lib/brushes/types";
 import {
   SHAPE_ERRORS,
@@ -72,13 +73,12 @@ const enter = async (
   await element.updateComplete;
 };
 
-/** Set a single slider's value, as dragging it does, and wait for the window to update */
+/** Set a single slider's (or number slider's) value, as dragging it does, and wait for the window to update */
 const slide = async (element: PcBrushConfig, name: string, value: number) => {
-  query<PcSliderRange>(element, `pc-slider-range.${name}`).setEnd(
-    "high",
-    value,
-    "pc-input",
-  );
+  const field = query<PcSliderRange | PcNumberSlider>(element, `.${name}`);
+  if (field.localName === "pc-number-slider")
+    (field as PcNumberSlider).change(value);
+  else (field as PcSliderRange).setEnd("high", value, "pc-input");
   await element.updateComplete;
 };
 
@@ -105,10 +105,25 @@ describe("pc-brush-config", () => {
       dialogWindow.closable,
       dialogWindow.dismissible,
       dialogWindow.label,
-    ]).toEqual([true, true, true, false, "Brush configuration"]);
-    expect(query(element, ".name-field").slot).toBe("header-start");
+    ]).toEqual([true, true, true, false, "Configure brush"]);
+    expect(query(element, "h2.title").slot).toBe("header-middle");
+    expect(query(element, "h2.title").textContent?.trim()).toBe(
+      "Configure brush",
+    );
     expect(query(element, ".settings").slot).toBe("body");
-    expect(query(element, ".actions").slot).toBe("footer-end");
+    // The name, then "Add to presets" and Save, at the top
+    expect(
+      [...query(element, ".settings > .top").children].map(
+        (child) => child.className,
+      ),
+    ).toEqual(["name-field", "actions"]);
+    expect(
+      queryAll(element, ".top .actions button").map((button) =>
+        button.textContent?.trim(),
+      ),
+    ).toEqual(["Add to presets", "Save"]);
+    // Snapping beside the test area's controls
+    expect(query(element, "pc-brush-test > .snap").slot).toBe("actions");
     expect(query<HTMLInputElement>(element, "input.name").value).toBe(
       "Round 20px",
     );
@@ -180,7 +195,7 @@ describe("pc-brush-config", () => {
   it("should name the eraser's window", async () => {
     const { element } = await setup({ kind: "eraser" });
     expect(query<PcDialogWindow>(element, "pc-dialog-window").label).toBe(
-      "Eraser configuration",
+      "Configure eraser",
     );
   });
 
@@ -229,18 +244,21 @@ describe("pc-brush-config", () => {
     expect(
       query<PcSliderRange>(element, "pc-slider-range.height").disabled,
     ).toBe(true);
-    const constrain = query<HTMLInputElement>(element, "input.constrain");
-    // A link toggle: linked while constrained, unlinked otherwise
-    const icon = () =>
-      query(element, "label.icon-toggle[title='Constrain proportions'] img")
-        .getAttribute("src")
-        ?.split("/")
-        .pop();
-    expect(icon()).toBe("icon-linked@2x.png");
-    constrain.checked = false;
-    constrain.dispatchEvent(new Event("change"));
+    // A switch between the width and height
+    const constrain = query<PcToggleCheckbox>(element, ".params > .constrain");
+    expect(constrain.textContent?.trim()).toBe("Constrain proportions");
+    expect(constrain.previousElementSibling?.getAttribute("data-param")).toBe(
+      "width",
+    );
+    expect(constrain.checked).toBe(true);
+    constrain.dispatchEvent(
+      new CustomEvent("change", { detail: { checked: false } }),
+    );
     await element.updateComplete;
-    expect(icon()).toBe("icon-unlinked@2x.png");
+    expect(draft(element).constrainProportions).toBe(false);
+    expect(
+      query<PcSliderRange>(element, "pc-slider-range.height").disabled,
+    ).toBe(false);
     await slide(element, "width", 10);
     await slide(element, "height", 30);
     expect([draft(element).width, draft(element).height]).toEqual([10, 30]);
@@ -273,7 +291,7 @@ describe("pc-brush-config", () => {
     expect(draft(element).widthConfig?.min).toBeCloseTo(6 / 30);
     // A row for each source turned on, with its range (0–100)
     const rows = () =>
-      queryAll(element, '[data-param="width"] .row.source').map(
+      queryAll(element, '[data-param="width"] .param-row.source').map(
         (row) => row.dataset.source,
       );
     expect(rows()).toEqual(["pressure"]);
@@ -554,7 +572,8 @@ describe("pc-brush-config", () => {
         selected: shape.id === "round",
       })),
     );
-    expect(menu().querySelector(".shape-preview")?.slot).toBe("icon");
+    expect(menu().querySelector(".shape-box")?.slot).toBe("icon");
+    expect(menu().querySelector(".shape-box .shape-preview")).not.toBeNull();
     const pick = async (value: string) => {
       menu().dispatchEvent(new CustomEvent("pc-select", { detail: { value } }));
       await element.updateComplete;
@@ -817,6 +836,24 @@ describe("pc-brush-config", () => {
     await slide(element, "sample-rate", 40);
     await slide(element, "spacing", 12);
     expect(draft(element)).toMatchObject({ sampleRate: 40, spacing: 12 });
+    // Each named, with a tip explaining it
+    expect(
+      queryAll(element, ".stroke-column .named").map((name) => [
+        [...name.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent)
+          .join("")
+          .trim(),
+        name.querySelector("pc-info-tip")?.textContent?.trim().split(":")[0],
+      ]),
+    ).toEqual([
+      ["Smoothing", "How the stroke curves between the points it samples"],
+      [
+        "Sample rate",
+        "How many times a second the pen's position is sampled while drawing",
+      ],
+      ["Spacing", "How far apart stamps are along the stroke, in pixels"],
+    ]);
     element.save();
     element.draft = undefined;
     element.save();

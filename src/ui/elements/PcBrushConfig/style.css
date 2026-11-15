@@ -2,47 +2,103 @@
   display: contents;
 }
 pc-dialog-window {
-  --pc-dialog-width: 560px;
+  --pc-dialog-width: 600px;
+  /* Room for the source toggles and graph buttons, which line up in columns */
+  --column-size: var(--pc-control-size);
+}
+.title {
+  margin: 0;
+  font-size: var(--pc-font-size);
+  font-weight: 600;
+  text-align: center;
 }
 .settings {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 14px;
 }
-.name-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.actions {
-  display: flex;
-  gap: 6px;
-}
-.row {
+/* The name (with an asterisk while there are unsaved changes), "Add to presets" and Save */
+.top {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 10px;
+}
+.name-field {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 160px;
+}
+.name {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--pc-control-size);
+  padding: 4px 28px 4px 12px;
+  border: 1px solid var(--pc-border);
+  border-radius: var(--pc-radius-small);
+  background: var(--pc-surface);
+  color: var(--pc-text);
+  font: inherit;
+}
+.unsaved {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  font-size: 1.3em;
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.actions .pill {
+  min-width: 8em;
+}
+/* Settings' names, in bold */
+.label {
+  font-weight: 600;
+}
+/* A setting's name with an ⓘ tip beside it */
+.named {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
 }
-.row > .label {
-  width: 6em;
+/* The shape on the left, smoothing, sample rate and spacing on the right */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px 24px;
 }
-input[type="number"] {
-  width: 4.5em;
+.shape-column,
+.stroke-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-input[type="range"] {
-  flex: 1;
-  min-width: 60px;
+.shape-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-pc-slider-range {
-  flex: 1;
-  min-width: 200px;
+/* The shape's preview: a white box that opens the menu of built-in shapes */
+.shape-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--pc-radius-small);
+  background: #ffffff;
 }
 .shape-preview {
   display: inline-block;
-  width: 40px;
-  height: 40px;
-  background: var(--pc-text);
+  width: 36px;
+  height: 36px;
+  background: #000000;
   border-radius: 50%;
 }
 .shape-preview.image {
@@ -51,52 +107,69 @@ pc-slider-range {
   mask-size: contain;
   mask-position: center;
 }
-/* The shape (preview, Upload and Paste) and the smoothing icons on one row */
-.shape-row {
-  flex-wrap: nowrap;
-}
-/* The shape, with an invisible list over it: pressing the shape opens the device's own list of shapes */
-.shape-picker {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-  border-radius: var(--pc-radius-small);
-}
-.shape-picker:hover {
-  background: var(--pc-surface-hover);
-}
-.shape-picker:focus-within {
-  outline: var(--pc-focus-width) solid var(--pc-focus);
-}
-.shape-select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-fieldset.smoothing {
+fieldset.smoothing,
+.stroke-setting {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin: 0 0 0 auto;
-  padding: 0;
-  border: 0;
-}
-fieldset.smoothing legend {
-  float: left;
-  margin-right: 4px;
-  padding: 0;
-}
-/* Pressure, tilt and randomise: one at a time, side by side */
-fieldset.sources {
-  display: flex;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0;
   padding: 0;
   border: 0;
+}
+.choices {
+  display: flex;
+  gap: 4px;
+}
+.stroke-setting pc-number-slider {
+  width: calc(3 * var(--column-size) + 8px);
+}
+/* Each setting: its name, then its value or range beside its sources, then a row for each source turned on */
+.params {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.param {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.param-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, var(--column-size));
+  align-items: center;
+  gap: 4px;
+}
+.param-row > pc-slider-range {
+  margin-right: 8px;
+}
+/* The toggles each take a column, so a source's graph button can sit under its toggle */
+fieldset.sources {
+  display: contents;
+}
+.source-range-cell {
+  display: flex;
+  grid-column: 1;
+  align-items: center;
+  gap: 8px;
+  margin-right: 8px;
+  padding-left: 24px;
+}
+.source-range-cell .label {
+  flex: none;
+  min-width: 7em;
+  font-weight: normal;
+  text-align: right;
+}
+.source-range-cell pc-slider-range {
+  flex: 1;
+}
+.source .profile {
+  grid-column: var(--column);
+}
+pc-slider-range {
+  min-width: 0;
 }
 /* A setting with a profile graph: its button is purple */
 button.icon-button.profile.configured {

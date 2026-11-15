@@ -15,6 +15,8 @@ import {
 } from "../../ask";
 import { CANCEL_CHOICE } from "../PcDialog";
 import "../PcContextMenu";
+import "../PcNumberSlider";
+import "../PcInfoTip";
 import type { MenuItem } from "../PcMenu";
 import { live } from "lit/directives/live.js";
 import { styleMap } from "lit/directives/style-map.js";
@@ -542,8 +544,8 @@ export class PcBrushConfig extends PcElement {
           disabled,
         );
     return html`<div class="param" data-param=${param}>
-      <div class="row">
-        <span class="label">${label}</span>
+      <span class="label">${label}</span>
+      <div class="param-row">
         ${values}
         <fieldset class="sources" ?disabled=${off}>
           <legend class="visually-hidden">
@@ -604,19 +606,27 @@ export class PcBrushConfig extends PcElement {
       param: paramLabel,
       source: label,
     });
-    return html`<div class="row source" data-source=${source}>
-      <span class="label">${label}</span>
-      <pc-slider-range
-        class=${`${param} ${source} source-range`}
-        label=${`${paramLabel}: ${label}`}
-        min="0"
-        max="100"
-        .low=${live(Math.round(min * 100))}
-        .high=${live(Math.round(max * 100))}
-        ?disabled=${disabled}
-        @pc-input=${writeEnds}
-        @pc-change=${writeEnds}
-      ></pc-slider-range>
+    // The graph button sits under its source's toggle
+    const column = VARIATION_SOURCES.indexOf(source) + 2;
+    return html`<div
+      class="param-row source"
+      data-source=${source}
+      style=${styleMap({ "--column": String(column) })}
+    >
+      <div class="source-range-cell">
+        <span class="label">${label}</span>
+        <pc-slider-range
+          class=${`${param} ${source} source-range`}
+          label=${`${paramLabel}: ${label}`}
+          min="0"
+          max="100"
+          .low=${live(Math.round(min * 100))}
+          .high=${live(Math.round(max * 100))}
+          ?disabled=${disabled}
+          @pc-input=${writeEnds}
+          @pc-change=${writeEnds}
+        ></pc-slider-range>
+      </div>
       <button
         type="button"
         class=${`icon-button profile ${param} ${source} ${profile ? "configured" : ""}`}
@@ -640,7 +650,17 @@ export class PcBrushConfig extends PcElement {
     this.change({ image: shape.image, height: width });
   }
 
-  /** Render the shape and smoothing row */
+  /** Render a setting's name with an ⓘ tip explaining it */
+  private renderNamed(name: string, hint: string) {
+    return html`<span class="label named">
+      ${name}<pc-info-tip>${hint}</pc-info-tip>
+    </span>`;
+  }
+
+  /**
+   * Render the shape (on the left: a menu of the built-in shapes on its preview, Upload and Paste) beside smoothing,
+   * sample rate and spacing (on the right)
+   */
   private renderShape(draft: BrushConfig) {
     const shapeId = builtInShapeId(draft.image);
     const smoothing =
@@ -648,87 +668,127 @@ export class PcBrushConfig extends PcElement {
       draft.smoothingType === undefined
         ? SmoothingType.Linear
         : draft.smoothingType;
-    return html`<div class="row shape-row">
-      <span class="label">${this.t("paintCanvas.brushConfig.shape")}</span>
-      <pc-context-menu
-        class="shape-menu"
-        label=${this.t("paintCanvas.brushConfig.chooseShape")}
-        .items=${BUILT_IN_SHAPES.map((shape): MenuItem => ({
-          value: shape.id,
-          label: shape.name,
-          image: shape.image,
-          selected: shape.id === shapeId,
-        }))}
+    const number = (
+      className: string,
+      label: string,
+      value: number,
+      limits: { min: number; max: number },
+      change: (value: number) => void,
+    ) =>
+      html`<pc-number-slider
+        class=${className}
+        label=${label}
+        min=${limits.min}
+        max=${limits.max}
+        .value=${live(value)}
         ?disabled=${this.busy}
-        @pc-select=${(e: CustomEvent<{ value: string }>) =>
-          this.useBuiltInShape(e.detail.value)}
-      >
-        <span
-          slot="icon"
-          class=${draft.image ? "shape-preview image" : "shape-preview"}
-          title=${this.t("paintCanvas.brushConfig.chooseShape")}
-          style=${styleMap({
-            maskImage:
-              typeof draft.image === "string"
-                ? `url("${draft.image}")`
-                : undefined,
-          })}
-        ></span>
-      </pc-context-menu>
-      <button
-        type="button"
-        class="pill upload"
-        ?disabled=${this.busy}
-        @click=${() =>
-          this.renderRoot
-            .querySelector<HTMLInputElement>("input.shape")
-            ?.click()}
-      >
-        ${this.t("paintCanvas.brushConfig.upload")}
-      </button>
-      <!-- Chosen through "Upload" -->
-      <label class="visually-hidden">
-        Upload a shape (PNG)
-        <input
-          type="file"
-          class="shape"
-          tabindex="-1"
-          accept="image/png"
-          ?disabled=${this.busy}
-          @change=${(e: Event) => {
-            const input = e.target as HTMLInputElement;
-            const file = input.files?.[0];
-            input.value = "";
-            if (file) void this.useShape(() => this.readShape(file));
-          }}
-        />
-      </label>
-      <button
-        type="button"
-        class="icon-button paste"
-        title=${this.t("paintCanvas.brushConfig.paste")}
-        ?disabled=${this.busy}
-        @click=${() => void this.useShape(this.readClipboard)}
-      >
-        ${iconLabel(this.iconUrl("clipboard"), this.t("paintCanvas.brushConfig.paste"))}
-      </button>
-      <fieldset class="smoothing">
-        <legend>${this.t("paintCanvas.brushConfig.smoothing")}</legend>
-        ${SMOOTHING_CHOICES.map(
-          (choice) =>
-            html`<label class="icon-toggle" title=${this.t(choice.label)}>
-              <input
-                type="radio"
-                name="smoothing"
-                .value=${String(choice.value)}
-                .checked=${smoothing === choice.value}
-                ?disabled=${this.busy}
-                @change=${() => this.change({ smoothingType: choice.value })}
-              />
-              ${iconLabel(this.iconUrl(choice.icon), this.t(choice.label))}
-            </label>`,
-        )}
-      </fieldset>
+        @pc-change=${(e: CustomEvent<{ value: number }>) =>
+          change(e.detail.value)}
+      ></pc-number-slider>`;
+    const sampleRate = this.t("paintCanvas.brushConfig.sampleRate");
+    const spacing = this.t("paintCanvas.brushConfig.spacing");
+    return html`<div class="columns">
+      <div class="shape-column">
+        <span class="label">${this.t("paintCanvas.brushConfig.shape")}</span>
+        <div class="shape-row">
+          <pc-context-menu
+            class="shape-menu"
+            label=${this.t("paintCanvas.brushConfig.chooseShape")}
+            .items=${BUILT_IN_SHAPES.map((shape): MenuItem => ({
+              value: shape.id,
+              label: shape.name,
+              image: shape.image,
+              selected: shape.id === shapeId,
+            }))}
+            ?disabled=${this.busy}
+            @pc-select=${(e: CustomEvent<{ value: string }>) =>
+              this.useBuiltInShape(e.detail.value)}
+          >
+            <span slot="icon" class="shape-box">
+              <span
+                class=${draft.image ? "shape-preview image" : "shape-preview"}
+                title=${this.t("paintCanvas.brushConfig.chooseShape")}
+                style=${styleMap({
+                  maskImage:
+                    typeof draft.image === "string"
+                      ? `url("${draft.image}")`
+                      : undefined,
+                })}
+              ></span>
+            </span>
+          </pc-context-menu>
+          <button
+            type="button"
+            class="pill upload"
+            ?disabled=${this.busy}
+            @click=${() =>
+              this.renderRoot
+                .querySelector<HTMLInputElement>("input.shape")
+                ?.click()}
+          >
+            ${this.t("paintCanvas.brushConfig.upload")}
+          </button>
+          <!-- Chosen through "Upload" -->
+          <label class="visually-hidden">
+            Upload a shape (PNG)
+            <input
+              type="file"
+              class="shape"
+              tabindex="-1"
+              accept="image/png"
+              ?disabled=${this.busy}
+              @change=${(e: Event) => {
+                const input = e.target as HTMLInputElement;
+                const file = input.files?.[0];
+                input.value = "";
+                if (file) void this.useShape(() => this.readShape(file));
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            class="icon-button paste"
+            title=${this.t("paintCanvas.brushConfig.paste")}
+            ?disabled=${this.busy}
+            @click=${() => void this.useShape(this.readClipboard)}
+          >
+            ${iconLabel(this.iconUrl("clipboard"), this.t("paintCanvas.brushConfig.paste"))}
+          </button>
+        </div>
+      </div>
+      <div class="stroke-column">
+        <fieldset class="smoothing">
+          <legend class="visually-hidden">
+            ${this.t("paintCanvas.brushConfig.smoothing")}
+          </legend>
+          ${this.renderNamed(this.t("paintCanvas.brushConfig.smoothing"), this.t("paintCanvas.brushConfig.smoothingHint"))}
+          <span class="choices">
+            ${SMOOTHING_CHOICES.map(
+              (choice) =>
+                html`<label class="icon-toggle" title=${this.t(choice.label)}>
+                  <input
+                    type="radio"
+                    name="smoothing"
+                    .value=${String(choice.value)}
+                    .checked=${smoothing === choice.value}
+                    ?disabled=${this.busy}
+                    @change=${() =>
+                      this.change({ smoothingType: choice.value })}
+                  />
+                  ${iconLabel(this.iconUrl(choice.icon), this.t(choice.label))}
+                </label>`,
+            )}
+          </span>
+        </fieldset>
+        <div class="stroke-setting">
+          ${this.renderNamed(sampleRate, this.t("paintCanvas.brushConfig.sampleRateHint"))}
+          ${number("sample-rate", sampleRate, draft.sampleRate ?? MIN_SAMPLE_RATE, { min: MIN_SAMPLE_RATE, max: MAX_SAMPLE_RATE }, (sampleRate) => this.change({ sampleRate }))}
+        </div>
+        <div class="stroke-setting">
+          ${this.renderNamed(spacing, this.t("paintCanvas.brushConfig.spacingHint"))}
+          ${number("spacing", spacing, draft.spacing ?? 5, { min: 0, max: MAX_SPACING }, (spacing) => this.change({ spacing }))}
+        </div>
+      </div>
     </div>`;
   }
 
@@ -736,8 +796,6 @@ export class PcBrushConfig extends PcElement {
     const draft = this.draft;
     if (!draft) return nothing;
     const constrained = draft.constrainProportions ?? false;
-    const sampleLimits = { min: MIN_SAMPLE_RATE, max: MAX_SAMPLE_RATE };
-    const spacingLimits = { min: 0, max: MAX_SPACING };
     // Not closed by a press outside it, which would lose the changes
     return html`<pc-dialog-window
         open
@@ -749,62 +807,85 @@ export class PcBrushConfig extends PcElement {
           void this.requestClose();
         }}
       >
-        <label slot="header-start" class="name-field">
-          ${this.t("paintCanvas.brushConfig.name")}
-          <span class="name-input">
-            <input
-              class="name"
-              .value=${this.draftName}
-              ?disabled=${this.busy}
-              @input=${(e: Event) =>
-                (this.draftName = (e.target as HTMLInputElement).value)}
-            />
-            ${
-              this.unsaved
-                ? html`<span
-                    class="unsaved"
-                    role="img"
-                    aria-label=${this.t("paintCanvas.brushConfig.unsaved")}
-                    title=${this.t("paintCanvas.brushConfig.unsaved")}
-                    >*</span
-                  >`
-                : nothing
-            }
-          </span>
-        </label>
+        <h2 slot="header-middle" class="title">
+          ${this.t(this.kind === "eraser" ? "paintCanvas.brushConfig.eraserTitle" : "paintCanvas.brushConfig.brushTitle")}
+        </h2>
         <div slot="body" class="settings">
+          <div class="top">
+            <label class="name-field">
+              <span class="visually-hidden"
+                >${this.t("paintCanvas.brushConfig.name")}</span
+              >
+              <input
+                class="name"
+                .value=${this.draftName}
+                ?disabled=${this.busy}
+                @input=${(e: Event) =>
+                  (this.draftName = (e.target as HTMLInputElement).value)}
+              />
+              ${
+                this.unsaved
+                  ? html`<span
+                      class="unsaved"
+                      role="img"
+                      aria-label=${this.t("paintCanvas.brushConfig.unsaved")}
+                      title=${this.t("paintCanvas.brushConfig.unsaved")}
+                      >*</span
+                    >`
+                  : nothing
+              }
+            </label>
+            <div class="actions">
+              <button
+                type="button"
+                class="pill add"
+                ?disabled=${this.busy}
+                @click=${() => void this.addToPresets()}
+              >
+                ${this.t("paintCanvas.brushConfig.addToPresets")}
+              </button>
+              <button
+                type="button"
+                class="pill save"
+                title=${this.editingId ? nothing : this.t("paintCanvas.brushConfig.saveBuiltIn")}
+                ?disabled=${this.busy || !this.editingId}
+                @click=${() => void this.save()}
+              >
+                ${this.t("paintCanvas.common.save")}
+              </button>
+            </div>
+          </div>
           <pc-brush-test
             .config=${draft}
             .tips=${this.app?.tips}
             .createCanvas=${this.app?.createCanvas ?? createMemoryCanvas}
-          ></pc-brush-test>
-          ${this.renderShape(draft)}
-          ${this.renderParam(draft, "width", this.t(PARAM_LABELS.width))}
-          <div class="row">
-            <span class="label"></span>
-            <label
-              class="icon-toggle"
-              title=${this.t("paintCanvas.toolSettings.constrainProportions")}
+          >
+            <pc-toggle-checkbox
+              slot="actions"
+              class="snap"
+              .checked=${draft.snapToPixelGrid ?? false}
+              ?disabled=${this.busy}
+              @change=${(e: CustomEvent<{ checked: boolean }>) =>
+                this.change({ snapToPixelGrid: e.detail.checked })}
             >
-              <input
-                type="checkbox"
-                class="constrain"
-                .checked=${constrained}
-                ?disabled=${this.busy}
-                @change=${(e: Event) =>
-                  this.change({
-                    constrainProportions: (e.target as HTMLInputElement)
-                      .checked,
-                  })}
-              />
-              ${iconLabel(this.iconUrl(constrained ? "linked" : "unlinked"), this.t("paintCanvas.toolSettings.constrainProportions"))}
-            </label>
-          </div>
-          ${this.renderParam(draft, "height", this.t(PARAM_LABELS.height), constrained)}
-          ${this.renderParam(draft, "alpha", this.t(PARAM_LABELS.alpha))}
-          ${this.renderParam(draft, "rotation", this.t(PARAM_LABELS.rotation))}
-          <div class="row">
-            <span class="label"></span>
+              ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
+            </pc-toggle-checkbox>
+          </pc-brush-test>
+          ${this.renderShape(draft)}
+          <div class="params">
+            ${this.renderParam(draft, "width", this.t(PARAM_LABELS.width))}
+            <pc-toggle-checkbox
+              class="constrain"
+              .checked=${live(constrained)}
+              ?disabled=${this.busy}
+              @change=${(e: CustomEvent<{ checked: boolean }>) =>
+                this.change({ constrainProportions: e.detail.checked })}
+            >
+              ${this.t("paintCanvas.toolSettings.constrainProportions")}
+            </pc-toggle-checkbox>
+            ${this.renderParam(draft, "height", this.t(PARAM_LABELS.height), constrained)}
+            ${this.renderParam(draft, "alpha", this.t(PARAM_LABELS.alpha))}
+            ${this.renderParam(draft, "rotation", this.t(PARAM_LABELS.rotation))}
             <pc-toggle-checkbox
               class="follow-lean"
               .checked=${live(followsLean(draft))}
@@ -814,30 +895,9 @@ export class PcBrushConfig extends PcElement {
             >
               ${this.t("paintCanvas.brushConfig.followLean")}
             </pc-toggle-checkbox>
+            ${this.renderParam(draft, "offsetX", this.t(PARAM_LABELS.offsetX))}
+            ${this.renderParam(draft, "offsetY", this.t(PARAM_LABELS.offsetY))}
           </div>
-          ${this.renderParam(draft, "offsetX", this.t(PARAM_LABELS.offsetX))}
-          ${this.renderParam(draft, "offsetY", this.t(PARAM_LABELS.offsetY))}
-          <div class="row">
-            <span class="label"
-              >${this.t("paintCanvas.brushConfig.sampleRate")}</span
-            >
-            ${this.single("sample-rate", this.t("paintCanvas.brushConfig.sampleRate"), draft.sampleRate ?? MIN_SAMPLE_RATE, sampleLimits, (sampleRate) => this.change({ sampleRate }))}
-          </div>
-          <div class="row">
-            <span class="label"
-              >${this.t("paintCanvas.brushConfig.spacing")}</span
-            >
-            ${this.single("spacing", this.t("paintCanvas.brushConfig.spacing"), draft.spacing ?? 5, spacingLimits, (spacing) => this.change({ spacing }))}
-          </div>
-          <pc-toggle-checkbox
-            class="snap"
-            .checked=${draft.snapToPixelGrid ?? false}
-            ?disabled=${this.busy}
-            @change=${(e: CustomEvent<{ checked: boolean }>) =>
-              this.change({ snapToPixelGrid: e.detail.checked })}
-          >
-            ${this.t("paintCanvas.brushConfig.snapToPixelGrid")}
-          </pc-toggle-checkbox>
         </div>
         ${
           this.editingId
@@ -852,25 +912,6 @@ export class PcBrushConfig extends PcElement {
               </button>`
             : nothing
         }
-        <div slot="footer-end" class="actions">
-          <button
-            type="button"
-            class="add affirmative"
-            ?disabled=${this.busy}
-            @click=${() => void this.addToPresets()}
-          >
-            ${this.t("paintCanvas.brushConfig.addToPresets")}
-          </button>
-          <button
-            type="button"
-            class="save affirmative"
-            title=${this.editingId ? nothing : this.t("paintCanvas.brushConfig.saveBuiltIn")}
-            ?disabled=${this.busy || !this.editingId}
-            @click=${() => void this.save()}
-          >
-            ${this.t("paintCanvas.common.save")}
-          </button>
-        </div>
       </pc-dialog-window>
       ${this.renderProfileEditor(draft)}`;
   }
