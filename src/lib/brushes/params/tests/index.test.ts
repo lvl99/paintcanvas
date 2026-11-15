@@ -328,3 +328,121 @@ describe("pointInput", () => {
     });
   });
 });
+
+describe("ranges and per-source profile graphs", () => {
+  const overweight = PROFILE_PRESETS[1]!.content.points;
+  const size = { width: 40, height: 20 };
+
+  it("should give each source its own profile graph, falling back to the parameter's", () => {
+    const shared = { usePressure: true, profile: overweight };
+    expect(variationFactor(shared, pen(0.3))).toBeCloseTo(0.7);
+    expect(
+      variationFactor(
+        { ...shared, pressureProfile: PROFILE_PRESETS[0]!.content.points },
+        pen(0.3),
+      ),
+    ).toBeCloseTo(0.3);
+    expect(
+      variationFactor(
+        { useTilt: true, tiltProfile: overweight },
+        pen(1, 27, 0),
+      ),
+    ).toBeCloseTo(0.7);
+    expect(
+      variationFactor(
+        { useRandomise: true, minRandomise: 0, randomiseProfile: overweight },
+        mouse,
+        fixed(0.3),
+      ),
+    ).toBeCloseTo(0.7);
+  });
+
+  it("should multiply several sources, and count pressure and tilt as full for other devices", () => {
+    const config = { usePressure: true, useTilt: true };
+    expect(variationFactor(config, pen(0.5, 45, 0))).toBeCloseTo(0.25);
+    expect(variationFactor(config, mouse)).toBe(1);
+  });
+
+  it("should set a scale parameter between min × the value and the value", () => {
+    const preset: BrushConfig = {
+      widthConfig: { min: 0.5, usePressure: true },
+      heightConfig: { min: 0.25 },
+      alpha: 0.8,
+      alphaConfig: { min: 0, usePressure: true },
+    };
+    const params = stampParams(preset, size, pen(0.5), fixed(0));
+    expect(params.width).toBeCloseTo(30);
+    // Not varied: the value
+    expect(params.height).toBe(20);
+    expect(params.alpha).toBeCloseTo(0.4);
+  });
+
+  it("should turn within the rotation's range, with tilt too, and add the pen's lean when following it", () => {
+    const preset: BrushConfig = {
+      rotation: 10,
+      rotationConfig: { min: 0, max: 90, useTilt: true },
+    };
+    // Tilted halfway along X: half of the range
+    expect(stampParams(preset, size, pen(1, 45, 0)).rotation).toBeCloseTo(55);
+    // Only a high end: from the angle
+    expect(
+      stampParams(
+        { rotationConfig: { max: 90, usePressure: true } },
+        size,
+        pen(0.5),
+      ).rotation,
+    ).toBeCloseTo(45);
+    // Only a low end: up to 360°
+    expect(
+      stampParams(
+        { rotationConfig: { min: 180, usePressure: true } },
+        size,
+        pen(0.5),
+      ).rotation,
+    ).toBeCloseTo(270);
+    // Not varied: the angle
+    expect(
+      stampParams(
+        { rotation: 10, rotationConfig: { min: 0, max: 90 } },
+        size,
+        pen(1),
+      ).rotation,
+    ).toBe(10);
+    // Following the lean (along Y: 90°), with the range on top
+    const following = { ...preset, rotationFollowsLean: true };
+    expect(stampParams(following, size, pen(1, 0, 45)).rotation).toBeCloseTo(
+      10 + 90 + 45,
+    );
+    // An upright pen leans nowhere
+    expect(
+      stampParams({ rotationFollowsLean: true }, size, pen(1, 0, 0)).rotation,
+    ).toBe(0);
+    // Settings saved before ranges that follow the lean too don't add it twice
+    expect(
+      stampParams(
+        { rotationFollowsLean: true, rotationConfig: { useTilt: true } },
+        size,
+        pen(1, 0, 45),
+      ).rotation,
+    ).toBeCloseTo(90);
+  });
+
+  it("should set an offset within its range of the size, without a random direction", () => {
+    const preset: BrushConfig = {
+      offsetX: 2,
+      offsetXConfig: { min: -1, max: 1, usePressure: true },
+      offsetYConfig: { max: 0.5, usePressure: true },
+    };
+    const params = stampParams(preset, size, pen(0.25), fixed(0.9));
+    expect(params.offsetX).toBeCloseTo(2 + -0.5 * 40);
+    expect(params.offsetY).toBeCloseTo(0.125 * 20);
+    // Only a low end: up to no offset
+    expect(
+      stampParams(
+        { offsetXConfig: { min: -1, usePressure: true } },
+        size,
+        pen(0.5),
+      ).offsetX,
+    ).toBeCloseTo(-20);
+  });
+});

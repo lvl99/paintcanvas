@@ -202,6 +202,160 @@
                   ]
                 }
               ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
             }
           }
         },
@@ -293,6 +447,160 @@
               }
             },
             "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
               "anyOf": [
                 {
                   "type": "string",
@@ -410,6 +718,160 @@
                   ]
                 }
               ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
             }
           }
         },
@@ -501,6 +963,160 @@
               }
             },
             "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
               "anyOf": [
                 {
                   "type": "string",
@@ -618,6 +1234,160 @@
                   ]
                 }
               ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
             }
           }
         },
@@ -709,6 +1479,160 @@
               }
             },
             "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
               "anyOf": [
                 {
                   "type": "string",
@@ -820,6 +1744,160 @@
                   ]
                 }
               ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
             }
           }
         },
@@ -918,6 +1996,160 @@
                   ]
                 }
               ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
             }
           }
         },
@@ -1003,6 +2235,160 @@
               }
             },
             "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
               "anyOf": [
                 {
                   "type": "string",
@@ -1117,8 +2503,165 @@
                   ]
                 }
               ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
             }
           }
+        },
+        "rotationFollowsLean": {
+          "type": "boolean"
         },
         "offsetX": {
           "type": "number",
@@ -1202,6 +2745,160 @@
               }
             },
             "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
               "anyOf": [
                 {
                   "type": "string",
@@ -1300,6 +2997,160 @@
               }
             },
             "profileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "min": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "max": {
+              "type": "number",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "pressureProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "pressureProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "tiltProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "tiltProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "enum": [
+                    "linear",
+                    "overweight",
+                    "underweight"
+                  ]
+                }
+              ]
+            },
+            "randomiseProfile": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "i"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -10,
+                    "maximum": 0
+                  },
+                  "i": {
+                    "enum": [
+                      "linear",
+                      "bezier-quad",
+                      "bezier-cubic"
+                    ]
+                  }
+                }
+              }
+            },
+            "randomiseProfileId": {
               "anyOf": [
                 {
                   "type": "string",

@@ -54,6 +54,15 @@ const paramConfig = {
     maxTilt: factor,
     profile: profilePointsSchema,
     profileId: profileIdSchema,
+    // The range's ends: fractions of the value or size, or degrees for angles
+    min: { type: "number", minimum: -360, maximum: 360 },
+    max: { type: "number", minimum: -360, maximum: 360 },
+    pressureProfile: profilePointsSchema,
+    pressureProfileId: profileIdSchema,
+    tiltProfile: profilePointsSchema,
+    tiltProfileId: profileIdSchema,
+    randomiseProfile: profilePointsSchema,
+    randomiseProfileId: profileIdSchema,
   },
 } as const;
 
@@ -94,6 +103,7 @@ export const brushConfigSchema = {
     constrainProportions: { type: "boolean" },
     rotation: { type: "number", minimum: -360, maximum: 360 },
     rotationConfig: paramConfig,
+    rotationFollowsLean: { type: "boolean" },
     offsetX: { type: "number", minimum: -256, maximum: 256 },
     offsetXConfig: paramConfig,
     offsetY: { type: "number", minimum: -256, maximum: 256 },
