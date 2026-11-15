@@ -1,13 +1,36 @@
-import { css, html, nothing } from "lit";
+import { css, html, nothing, type PropertyValues } from "lit";
 import { PcElement, defineElement } from "../../base";
 
 /**
  * A small ⓘ button that shows a short explanation (the element's content) beside it, and hides it again when pressed
- * again, when focus or a press goes elsewhere, or with Escape.
+ * again, when focus or a press goes elsewhere, or with Escape. The tip moves left as far as it needs to stay inside what
+ * clips or scrolls around it (e.g. a window's body), and the page.
  *
  * @example
  * html`<pc-info-tip>Focus pen mode stops fingers and palms from drawing.</pc-info-tip>`
  */
+/** Room kept between a tip and the edge it would go past, in pixels */
+const TIP_MARGIN = 8;
+
+/**
+ * The right edge of the nearest ancestor as shown (through slots and shadow roots) that clips or scrolls its content
+ * sideways, or Infinity if there's none.
+ */
+export const clippingRight = (element: Element): number => {
+  /** The next node up as shown: the slot it's shown in, or its parent (or a shadow root's host) */
+  const up = (node: Node): Node | null =>
+    (node instanceof Element && node.assignedSlot) ||
+    (node instanceof ShadowRoot ? node.host : node.parentNode);
+  for (let node = up(element); node; node = up(node)) {
+    if (
+      node instanceof Element &&
+      /auto|scroll|hidden|clip/.test(getComputedStyle(node).overflowX)
+    )
+      return node.getBoundingClientRect().right;
+  }
+  return Infinity;
+};
+
 export class PcInfoTip extends PcElement {
   static override properties = {
     ...PcElement.properties,
@@ -78,6 +101,27 @@ export class PcInfoTip extends PcElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     document.removeEventListener("pointerdown", this.onPointerDown, true);
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (changed.has("open") && this.open) this.keepInside();
+  }
+
+  /**
+   * Move the shown tip left as far as it needs to stay inside what clips or scrolls around it (e.g. a window's body),
+   * or the page, so it doesn't make it scroll sideways.
+   */
+  private keepInside(): void {
+    // Shown while open
+    const tip = this.renderRoot.querySelector("[role=tooltip]") as HTMLElement;
+    tip.style.left = "";
+    const right = Math.min(
+      clippingRight(this),
+      document.documentElement.clientWidth,
+    );
+    const overflow = tip.getBoundingClientRect().right - (right - TIP_MARGIN);
+    if (overflow > 0) tip.style.left = `${-overflow}px`;
   }
 
   /** Escape hides the tip */
