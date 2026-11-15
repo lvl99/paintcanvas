@@ -1,4 +1,5 @@
 import { css, html, nothing, type PropertyValues } from "lit";
+import { styleMap } from "lit/directives/style-map.js";
 import { PcElement, defineElement, emit } from "../../base";
 import { markDismissingPress } from "../../dismiss";
 import {
@@ -25,6 +26,11 @@ export interface MenuItem {
   checked?: boolean;
   /** Name of an icon to show on its left (see `icons`), when it isn't a toggle */
   icon?: string;
+  /**
+   * An image whose shape (its alpha) shows on its left in the text's colour, when it isn't a toggle and has no icon,
+   * e.g. a brush shape (a URL or data URL)
+   */
+  image?: string;
   /** The action's keyboard shortcut, shown on its right as symbols (e.g. ⌘S) when 3 characters or fewer */
   shortcut?: KeyCombo;
   /** Marks the current choice (e.g. the selected tool) with the `selected` class and a purple background */
@@ -64,13 +70,15 @@ export const isMenuItem = (entry: MenuEntry): entry is MenuItem =>
   entry.type === undefined || entry.type === "item";
 
 /**
- * Whether a menu item has something to show on its left: a checkmark or an icon.
+ * Whether a menu item has something to show on its left: a checkmark, an icon or an image.
  *
  * @example
  * hasStart({ value: "grid", label: "Grid", checked: false }); // true
  */
 const hasStart = (item: MenuItem): boolean =>
-  item.checked !== undefined || item.icon !== undefined;
+  item.checked !== undefined ||
+  item.icon !== undefined ||
+  item.image !== undefined;
 
 /**
  * A menu item's classes: `danger` and `selected`, when it is.
@@ -198,6 +206,15 @@ export class PcMenu extends PcElement {
         align-self: center;
         justify-content: center;
       }
+      /* An image's shape, in the text's colour */
+      .image {
+        width: var(--pc-icon-size);
+        height: var(--pc-icon-size);
+        background: currentColor;
+        mask-repeat: no-repeat;
+        mask-size: contain;
+        mask-position: center;
+      }
       .label {
         flex: 1;
         overflow-wrap: anywhere;
@@ -324,7 +341,7 @@ export class PcMenu extends PcElement {
     }
   }
 
-  /** An item's left side: a checkmark while a toggle is on, its icon, or empty space */
+  /** An item's left side: a checkmark while a toggle is on, its icon or image, or empty space */
   private renderStart(item: MenuItem) {
     const content =
       item.checked !== undefined
@@ -333,7 +350,12 @@ export class PcMenu extends PcElement {
           : nothing
         : item.icon
           ? html`<pc-icon name=${item.icon}></pc-icon>`
-          : nothing;
+          : item.image
+            ? html`<span
+                class="image"
+                style=${styleMap({ maskImage: `url("${item.image}")` })}
+              ></span>`
+            : nothing;
     return html`<span part="item-start" class="start" aria-hidden="true"
       >${content}</span
     >`;

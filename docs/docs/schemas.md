@@ -4,18 +4,18 @@ sidebar_position: 9
 
 # Schemas and asset files
 
-PaintCanvas describes its assets with JSON schemas (draft 2020-12), published at `https://lvl99.github.io/paintcanvas/schemas/`. Each schema's `$id` is its URL and names its version, e.g. `brush-preset-2.1.0.json`. Its `@type` names the kind of thing it describes.
+PaintCanvas describes its assets with JSON schemas (draft 2020-12), published at `https://lvl99.github.io/paintcanvas/schemas/`. Each schema's `$id` is its URL and names its version, e.g. `brush-preset-2.2.0.json`. Its `@type` names the kind of thing it describes.
 
 | Schema                                 | `@type`                               | What it is                                                                                                                 |
 | -------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `brush-preset-2.1.0.json`              | `PaintCanvas/BrushPreset`             | A brush preset                                                                                                             |
-| `brush-preset-collection-2.1.0.json`   | `PaintCanvas/BrushPresetCollection`   | A file of brush presets                                                                                                    |
+| `brush-preset-2.2.0.json`              | `PaintCanvas/BrushPreset`             | A brush preset                                                                                                             |
+| `brush-preset-collection-2.2.0.json`   | `PaintCanvas/BrushPresetCollection`   | A file of brush presets                                                                                                    |
 | `colour-palette-2.1.0.json`            | `PaintCanvas/ColourPalette`           | A named list of colours                                                                                                    |
 | `colour-palette-collection-2.1.0.json` | `PaintCanvas/ColourPaletteCollection` | A file of colour palettes                                                                                                  |
-| `profile-graph-2.1.0.json`             | `PaintCanvas/ProfileGraph`            | A profile graph                                                                                                            |
-| `profile-graph-collection-2.1.0.json`  | `PaintCanvas/ProfileGraphCollection`  | A file of profile graphs                                                                                                   |
+| `profile-graph-2.2.0.json`             | `PaintCanvas/ProfileGraph`            | A profile graph                                                                                                            |
+| `profile-graph-collection-2.2.0.json`  | `PaintCanvas/ProfileGraphCollection`  | A file of profile graphs                                                                                                   |
 | `document-1.1.0.json`                  | `PaintCanvas/Document`                | A drawing (see [Saving and opening drawings](./documents.md))                                                              |
-| `app-settings-2.2.0.json`              | `PaintCanvas/AppSettings`             | A file of app settings, with the user's assets (see [Keeping the user's settings](./layout.md#keeping-the-users-settings)) |
+| `app-settings-2.3.0.json`              | `PaintCanvas/AppSettings`             | A file of app settings, with the user's assets (see [Keeping the user's settings](./layout.md#keeping-the-users-settings)) |
 
 ## Assets
 
@@ -48,7 +48,7 @@ Users export and import assets in collection files:
 
 ```json
 {
-  "$schema": "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.1.0.json",
+  "$schema": "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.2.0.json",
   "@type": "PaintCanvas/BrushPresetCollection",
   "items": [
     {
@@ -95,7 +95,11 @@ Version 2.1.0 of the asset, collection and app settings schemas, and version 1.1
 
 ### Pen pressure and tilt settings
 
-Version 2.2.0 of the app settings schema adds `penPressure` and `penTilt` to the input settings (see `InputSettings`).
+Version 2.2.0 of the app settings schema adds `penPressure` and `penTilt` to the input settings. PaintCanvas 0.12.0 used them; later versions ignore them (pen pressure and tilt are set per tool, from the tool settings bar), and they stay valid.
+
+### Profile graph curves (`bezier-quad`)
+
+Version 2.2.0 of the profile graph, brush preset and their collection schemas, and version 2.3.0 of the app settings schema, add a third way the curve runs through a profile graph point (`i`): `bezier-quad`, besides `linear` and `bezier-cubic`. The curve bends towards a `bezier-quad` point between the midpoints either side, without reaching it, as strokes with `SmoothingType.BezierQuad` are smoothed.
 
 ### Version 2.0.0
 

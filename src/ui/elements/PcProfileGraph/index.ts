@@ -69,8 +69,9 @@ export const movePoint = (
  *
  * - Pressing the line adds a point there (smooth), selected.
  * - Pressing a point selects it; dragging moves it (between its neighbours; the first and last stay at the edges).
- * - With a point selected, the arrow keys move it a grid unit, and the buttons below make it a sharp corner (linear)
- *   or smooth (bezier cubic), or remove it (−; not the first or last).
+ * - With a point selected, the arrow keys move it a grid unit, and the buttons below make it a sharp corner
+ *   (linear), softened (bezier quad: the curve bends towards it between the midpoints either side, without reaching
+ *   it) or smooth (bezier cubic), or remove it (−; not the first or last). The curve is drawn as strokes are smoothed.
  *
  * Points are focusable buttons (Tab moves between them; focusing one selects it). Fires `pc-change` (detail:
  * `{ points }`) whenever the points change, after changing `points` itself.
@@ -350,6 +351,16 @@ export class PcProfileGraph extends PcElement {
           @click=${() => this.setInterpolation(Interpolation.Linear)}
         >
           ${iconLabel(this.iconUrl("smoothingLinear"), this.t("paintCanvas.profileGraph.linear"))}
+        </button>
+        <button
+          type="button"
+          class="icon-button bezier-quad"
+          title=${this.t("paintCanvas.profileGraph.bezierQuad")}
+          aria-pressed=${selected?.i === Interpolation.BezierQuad ? "true" : "false"}
+          ?disabled=${!selected}
+          @click=${() => this.setInterpolation(Interpolation.BezierQuad)}
+        >
+          ${iconLabel(this.iconUrl("smoothingBezierQuad"), this.t("paintCanvas.profileGraph.bezierQuad"))}
         </button>
         <button
           type="button"

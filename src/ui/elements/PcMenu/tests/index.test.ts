@@ -176,6 +176,23 @@ describe("pc-menu item extras", () => {
     );
   });
 
+  it("should show an item's image as a shape in the text's colour on its left", async () => {
+    const image = "data:image/png;base64,AAAA";
+    const menu = await mount<PcMenu>("pc-menu", {
+      items: [
+        { value: "round", label: "Round", image },
+        { value: "none", label: "None" },
+      ],
+    });
+    const shape = menu.shadowRoot!.querySelector<HTMLElement>(
+      '[data-value="round"] .start .image',
+    )!;
+    expect(shape.style.maskImage).toBe(`url("${image}")`);
+    expect(
+      menu.shadowRoot!.querySelector('[data-value="none"] .start .image'),
+    ).toBeNull();
+  });
+
   it("should mark toggles and shortcuts for screen readers", async () => {
     const menu = await mount<PcMenu>("pc-menu", {
       items: extras,

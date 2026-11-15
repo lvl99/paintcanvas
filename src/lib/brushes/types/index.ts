@@ -23,27 +23,28 @@ export enum SmoothingType {
 }
 
 /**
- * Controls how a brush parameter varies for each stamp along a stroke. All ranges are fractions from 0 to 1.
+ * Controls how a brush parameter varies for each stamp along a stroke: its range (`min` to `max`), and the sources
+ * that pick a value in it. All source ranges are fractions from 0 to 1.
  *
- * Each enabled source produces a factor:
+ * Each source turned on gives a share, from its input (0–1) through its profile graph (see `applyProfile`):
  *
- * - Randomise: `minRandomise + (maxRandomise - minRandomise) * Math.random()`
- * - Pressure: `minPressure + (maxPressure - minPressure) * pressure` (pressure 0–1 from the pen)
- * - Tilt: `minTilt + (maxTilt - minTilt) * tilt` (tilt 0 = pen upright, 1 = pen flat)
+ * - Randomise: between `minRandomise` and `maxRandomise`, from a random number
+ * - Pressure: between `minPressure` and `maxPressure`, from the pen's pressure (full for other devices)
+ * - Tilt: between `minTilt` and `maxTilt`, from the pen's tilt (0 = upright, 1 = flat; full for other devices)
  *
- * The factors are multiplied together and applied according to the kind of parameter:
+ * The shares multiply into one (1 when no source is on), which sets the value between the range's ends:
  *
- * - Scale parameters (width, height, alpha, saturation, lightness, red, green, blue): `value * factor`
- * - Angle parameters (rotation, hue): `value + factor * 360` degrees. For rotation, tilt instead sets the
- *   angle from the direction the pen leans (like a calligraphy nib).
- * - Offset parameters (offsetX, offsetY): `value ± factor * brush size`, in a random direction (scatter)
+ * - Scale parameters (width, height, alpha, …): from `value × min` to the value.
+ * - Angle parameters (rotation, hue): from `value + min` to `value + max` degrees.
+ * - Offset parameters (offsetX, offsetY): from `value + min` to `value + max` pixels.
+ *
+ * Settings saved without `min` and `max` work as before ranges: scale from 0, angle from 0 to 360°; with tilt on, the
+ * rotation follows the direction the pen leans (like a calligraphy nib); offsets scatter up to the share × size in a
+ * random direction.
  *
  * @example
- * // Width varies randomly between 50% and 100% and follows pen pressure from 20% to 100%
- * const widthConfig: BrushParamConfig = {
- *   useRandomise: true, minRandomise: 0.5, maxRandomise: 1,
- *   usePressure: true, minPressure: 0.2, maxPressure: 1,
- * };
+ * // Width from half to full size, larger the harder the pen presses
+ * const widthConfig: BrushParamConfig = { min: 0.5, usePressure: true, minPressure: 0, maxPressure: 1 };
  */
 export interface BrushParamConfig {
   /**
@@ -98,6 +99,25 @@ export interface BrushParamConfig {
   profile?: ProfilePoint[];
   /** The ID of the profile graph `profile` came from (a preset's or one of the user's), to show its name */
   profileId?: string;
+  /**
+   * The range's low end: a fraction of the value for scale parameters (0–1), degrees added to it for angle parameters,
+   * or pixels for offset parameters
+   */
+  min?: number;
+  /** The range's high end, for angle (degrees added to the value) and offset (pixels) parameters */
+  max?: number;
+  /** Pressure's own profile graph (instead of `profile`) */
+  pressureProfile?: ProfilePoint[];
+  /** The ID of the profile graph `pressureProfile` came from */
+  pressureProfileId?: string;
+  /** Tilt's own profile graph (instead of `profile`) */
+  tiltProfile?: ProfilePoint[];
+  /** The ID of the profile graph `tiltProfile` came from */
+  tiltProfileId?: string;
+  /** Randomise's own profile graph (instead of `profile`) */
+  randomiseProfile?: ProfilePoint[];
+  /** The ID of the profile graph `randomiseProfile` came from */
+  randomiseProfileId?: string;
 }
 
 /** A brush's settings: what a brush preset holds (its content), and what the brush engine draws with */
@@ -182,8 +202,13 @@ export interface BrushConfig {
    * @default 0
    */
   rotation?: number;
-  /** How rotation varies per stamp (angle: adds up to 360°; tilt sets the angle from the pen's lean direction; see {@link BrushParamConfig}) */
+  /** How rotation varies per stamp (angle; see {@link BrushParamConfig}) */
   rotationConfig?: BrushParamConfig;
+  /**
+   * Turn each stamp to the direction the pen leans (like a calligraphy nib), adding any variation from `rotationConfig`
+   * @default false
+   */
+  rotationFollowsLean?: boolean;
   /**
    * Horizontal offset of each stamp from the pointer, in pixels
    * @default 0

@@ -23,7 +23,15 @@ import "../PcBrushSize";
 import "../PcToggleCheckbox";
 import "../PcNumberSlider";
 import "../PcPopover";
+import "../PcPenSettings";
+import {
+  differsFromPreset,
+  type PenSource,
+} from "../../../lib/brushes/configRanges";
 import type { PcPopover } from "../PcPopover";
+
+/** The brush and eraser's popovers: the size settings, and the pen pressure and tilt settings */
+type SettingsPopover = "size" | PenSource;
 
 /** The lasso tools, which share the mask settings */
 const MASK_TOOLS: readonly Tool[] = [
@@ -131,11 +139,12 @@ export const zoomPercent = (zoom: number): string => {
  *
  * - Brush and eraser: the preset (its name and shape; shows or hides the preset menu), the size (`pc-brush-size`), the
  *   size settings (a cog button that shows or hides a popover under it with the width, constrain proportions and
- *   height), opacity, pen pressure, pen tilt and focus pen mode, and "Configure" (fires `pc-configure-brush` with the
- *   tool, "brush" or "eraser"). The size, width, height and opacity are `pc-number-slider`s: pressed and dragged right
- *   or up to raise them, left or down to lower them, or tapped to type a value. Pen pressure, pen tilt and focus pen
- *   mode are the user's input settings (`app.input`), so they apply to every preset (see `withPenInput`). Focus pen
- *   mode: only pens draw, and touches are ignored while a pen is down or just lifted.
+ *   height), opacity, pen pressure and pen tilt (buttons that show or hide `<pc-pen-settings>` in a popover, purple
+ *   while the current settings vary with them differently from the preset), focus pen mode, and "Configure" (fires
+ *   `pc-configure-brush` with the tool, "brush" or "eraser"). The size, width, height and opacity are
+ *   `pc-number-slider`s: pressed and dragged right or up to raise them, left or down to lower them, or tapped to type a
+ *   value. Focus pen mode (the user's input setting `app.input.data.focusPen`): only pens draw, and touches are ignored
+ *   while a pen is down or just lifted.
  * - Lassos: select all, and invert selection and deselect (only while there is a mask).
  * - Move, scale and rotate: width and height (in pixels or percent), constrain proportions, flip horizontal and vertical,
  *   angle (to 2 decimal places), rotate 90° left and right, and reset (undoes the whole transform). The width, height
@@ -156,7 +165,7 @@ export class PcToolSettings extends PcElement {
     ...PcElement.properties,
     app: { attribute: false },
     percent: { state: true },
-    sizeOpen: { state: true },
+    openSettings: { state: true },
   };
 
   static override styles = [
@@ -172,11 +181,14 @@ export class PcToolSettings extends PcElement {
   /** Whether the move tool's width and height are in percent (of the original size) instead of pixels */
   declare percent: boolean;
 
-  /** Whether the brush or eraser's size settings (width, height, constrain proportions) are shown */
-  declare sizeOpen: boolean;
+  /**
+   * Which of the brush or eraser's popovers is shown, if any: the size settings (width, height, constrain proportions),
+   * or the pen pressure or tilt settings
+   */
+  declare openSettings?: SettingsPopover;
 
-  // The size settings follow their button when the bar or page scrolls, or the window resizes
-  private readonly placeSizeSettings = () => this.sizePopover?.placeBelow();
+  // The open popover follows its button when the bar or page scrolls, or the window resizes
+  private readonly placeSettings = () => this.openPopover?.placeBelow();
 
   private changes = new ChangeController(this, () => {
     const app = this.app;
@@ -196,56 +208,69 @@ export class PcToolSettings extends PcElement {
   constructor() {
     super();
     this.percent = false;
-    this.sizeOpen = false;
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.listenWhileSizeOpen(false);
+    this.listenWhileOpen(false);
   }
 
-  /** The size settings' popover, while a brush or eraser's settings are shown */
-  private get sizePopover(): PcPopover | null {
-    return this.renderRoot.querySelector<PcPopover>("pc-popover.size-popover");
+  /** The open popover, if any */
+  private get openPopover(): PcPopover | null {
+    const open = this.openSettings;
+    return open
+      ? this.renderRoot.querySelector<PcPopover>(`pc-popover.${open}-popover`)
+      : null;
+  }
+
+  /** A popover's button */
+  private settingsButton(name: SettingsPopover): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>(
+      `button.${name}-settings`,
+    );
   }
 
   /** Follow the window's scrolling and resizing (or stop) */
-  private listenWhileSizeOpen(open: boolean): void {
+  private listenWhileOpen(open: boolean): void {
     const method = open ? "addEventListener" : "removeEventListener";
-    window[method]("scroll", this.placeSizeSettings, true);
-    window[method]("resize", this.placeSizeSettings);
+    window[method]("scroll", this.placeSettings, true);
+    window[method]("resize", this.placeSettings);
+  }
+
+  /** Show a popover, or hide it if it's shown (its button's press) */
+  private toggleSettings(name: SettingsPopover): void {
+    this.openSettings = this.openSettings === name ? undefined : name;
   }
 
   /**
-   * Hide the size settings (e.g. on Escape or a press outside them), returning focus to their button if it was in them.
+   * Hide a popover (e.g. on Escape or a press outside it), returning focus to its button if it was in it.
    */
-  private closeSizeSettings(): void {
-    const popover = this.sizePopover as PcPopover;
+  private closeSettings(name: SettingsPopover, popover: PcPopover): void {
     const focusWasInside = popover.matches(":focus-within");
-    this.sizeOpen = false;
-    if (focusWasInside)
-      this.renderRoot.querySelector<HTMLElement>(".size-settings")?.focus();
+    if (this.openSettings === name) this.openSettings = undefined;
+    if (focusWasInside) this.settingsButton(name)?.focus();
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     const tool = this.app?.tool;
-    // Only the brush and eraser have size settings
-    if (tool !== Tool.Brush && tool !== Tool.Eraser) this.sizeOpen = false;
+    // Only the brush and eraser have popovers
+    if (tool !== Tool.Brush && tool !== Tool.Eraser)
+      this.openSettings = undefined;
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (!changed.has("sizeOpen")) return;
-    this.listenWhileSizeOpen(this.sizeOpen);
-    if (this.sizeOpen) void this.showSizeSettings();
+    if (!changed.has("openSettings")) return;
+    this.listenWhileOpen(Boolean(this.openSettings));
+    if (this.openSettings) void this.showSettings(this.openSettings);
   }
 
-  /** Put the opened size settings under their button, once they can be measured */
-  private async showSizeSettings(): Promise<void> {
-    const popover = this.sizePopover as PcPopover;
+  /** Put an opened popover under its button, once it can be measured */
+  private async showSettings(name: SettingsPopover): Promise<void> {
+    const popover = this.openPopover as PcPopover;
     // Pressing the button isn't pressing outside the popover
-    popover.anchor = this.renderRoot.querySelector(".size-settings") as Element;
+    popover.anchor = this.settingsButton(name) as Element;
     await popover.updateComplete;
     popover.placeBelow();
   }
@@ -269,34 +294,31 @@ export class PcToolSettings extends PcElement {
   }
 
   /**
-   * Render the pen toggles, for the brush and eraser: pressure and tilt (which apply to every preset, see
-   * `withPenInput`), and focus pen mode (while on, only pens draw, and touches are ignored while a pen is down or just
-   * lifted).
+   * Render the pen buttons, for the brush and eraser: pen pressure and tilt (each showing or hiding its popover, purple
+   * while the current settings vary with it differently from the preset), and focus pen mode (while on, only pens draw,
+   * and touches are ignored while a pen is down or just lifted).
    */
-  private renderPenToggles(app: PaintCanvas) {
-    const { focusPen, penPressure, penTilt } = app.input.data;
-    const toggle = (
-      setting: "penPressure" | "penTilt",
-      className: string,
-      icon: "pressure" | "tilt",
-      on: boolean,
-    ) => {
-      const label = this.t(`paintCanvas.toolSettings.${icon}`);
-      return html`<label class="icon-toggle" title=${label}>
-        <input
-          type="checkbox"
-          class=${className}
-          .checked=${live(on)}
-          @change=${(e: Event) =>
-            app.input.update({
-              [setting]: (e.target as HTMLInputElement).checked,
-            })}
-        />
-        ${iconLabel(this.iconUrl(icon), label)}
-      </label>`;
+  private renderPenButtons(app: PaintCanvas, settings: BrushSettings) {
+    const { focusPen } = app.input.data;
+    const preset = settings.selectedPreset?.content;
+    const button = (source: PenSource) => {
+      const label = this.t(`paintCanvas.toolSettings.${source}Settings`);
+      const changed =
+        preset !== undefined &&
+        differsFromPreset(settings.preset, preset, source);
+      return html`<button
+        type="button"
+        class=${`${source}-settings icon-button ${changed ? "changed" : ""}`}
+        title=${label}
+        aria-label=${label}
+        aria-haspopup="dialog"
+        aria-expanded=${this.openSettings === source ? "true" : "false"}
+        @click=${() => this.toggleSettings(source)}
+      >
+        <img src=${this.iconUrl(source)} alt="" />
+      </button>`;
     };
-    return html`${toggle("penPressure", "pressure", "pressure", penPressure)}
-      ${toggle("penTilt", "tilt", "tilt", penTilt)}
+    return html`${button("pressure")} ${button("tilt")}
       <button
         type="button"
         class="focus-pen icon-button"
@@ -307,6 +329,24 @@ export class PcToolSettings extends PcElement {
       >
         <img src=${this.iconUrl("focusPen")} alt="" />
       </button>`;
+  }
+
+  /** Render one of the brush or eraser's popovers, under its button */
+  private renderPopover(
+    name: SettingsPopover,
+    label: string,
+    content: unknown,
+  ) {
+    return html`<pc-popover
+      class=${`${name}-popover`}
+      arrow
+      label=${label}
+      ?open=${this.openSettings === name}
+      @pc-close=${(event: Event) =>
+        this.closeSettings(name, event.currentTarget as PcPopover)}
+    >
+      ${content}
+    </pc-popover>`;
   }
 
   /**
@@ -396,8 +436,8 @@ export class PcToolSettings extends PcElement {
           title=${sizeSettings}
           aria-label=${sizeSettings}
           aria-haspopup="dialog"
-          aria-expanded=${this.sizeOpen ? "true" : "false"}
-          @click=${() => (this.sizeOpen = !this.sizeOpen)}
+          aria-expanded=${this.openSettings === "size" ? "true" : "false"}
+          @click=${() => this.toggleSettings("size")}
         >
           <img src=${this.iconUrl("cog")} alt="" />
         </button>
@@ -408,7 +448,7 @@ export class PcToolSettings extends PcElement {
           (value) => settings.update({ alpha: value / 100 }),
           { min: 0, max: 100, unit: "%" },
         )}
-        ${this.renderPenToggles(app)}
+        ${this.renderPenButtons(app, settings)}
         <button
           type="button"
           class="configure pill-s"
@@ -416,14 +456,10 @@ export class PcToolSettings extends PcElement {
         >
           ${this.t("paintCanvas.toolSettings.configure")}
         </button>`,
-      after: html`<pc-popover
-        class="size-popover"
-        arrow
-        label=${sizeSettings}
-        ?open=${this.sizeOpen}
-        @pc-close=${this.closeSizeSettings}
-      >
-        <div class="size-fields">
+      after: html`${this.renderPopover(
+        "size",
+        sizeSettings,
+        html`<div class="size-fields">
           ${this.renderNumberField(
             "width",
             this.t("paintCanvas.common.width"),
@@ -451,8 +487,19 @@ export class PcToolSettings extends PcElement {
             settings.height,
             (value) => settings.setHeight(value),
           )}
-        </div>
-      </pc-popover>`,
+        </div>`,
+      )}
+      ${(["pressure", "tilt"] as const).map((source) =>
+        this.renderPopover(
+          source,
+          this.t(`paintCanvas.toolSettings.${source}Settings`),
+          html`<pc-pen-settings
+            .app=${app}
+            .settings=${settings}
+            source=${source}
+          ></pc-pen-settings>`,
+        ),
+      )}`,
     };
   }
 
@@ -756,7 +803,7 @@ export class PcToolSettings extends PcElement {
     return html`<div
         role="toolbar"
         aria-label=${view.label}
-        @scroll=${this.placeSizeSettings}
+        @scroll=${this.placeSettings}
       >
         <div class="start" part="start">
           ${view.start}<slot name="start"></slot>

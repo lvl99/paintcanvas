@@ -9,7 +9,6 @@ import {
   tiltAmount,
   tiltDirection,
   variationFactor,
-  withPenInput,
 } from "..";
 import type { BrushConfig } from "../../types";
 
@@ -223,12 +222,22 @@ describe("stampParams", () => {
     ).toBe(1);
   });
 
-  it("should never produce a negative size", () => {
+  it("should never draw a stamp smaller than 1 pixel", () => {
     const preset: BrushConfig = {
       ...base,
       widthConfig: { useRandomise: true, minRandomise: -1, maxRandomise: -1 },
+      heightConfig: { min: 0, usePressure: true },
     };
-    expect(stampParams(preset, { width: 10, height: 10 }, mouse).width).toBe(0);
+    const params = stampParams(preset, { width: 10, height: 10 }, pen(0));
+    expect([params.width, params.height]).toEqual([1, 1]);
+    // Constrained to a very thin width, the height too
+    expect(
+      stampParams(
+        { constrainProportions: true, widthConfig: { usePressure: true } },
+        { width: 10, height: 2 },
+        pen(0.01),
+      ).height,
+    ).toBe(1);
   });
 
   it("should use Math.random by default", () => {
@@ -330,68 +339,120 @@ describe("pointInput", () => {
   });
 });
 
-describe("withPenInput", () => {
-  const on = { penPressure: true, penTilt: true };
-  const off = { penPressure: false, penTilt: false };
+describe("ranges and per-source profile graphs", () => {
+  const overweight = PROFILE_PRESETS[1]!.content.points;
+  const size = { width: 40, height: 20 };
 
-  it("should vary the size with pressure over the full range when the preset doesn't, and keep the preset's range when it does", () => {
+  it("should give each source its own profile graph, falling back to the parameter's", () => {
+    const shared = { usePressure: true, profile: overweight };
+    expect(variationFactor(shared, pen(0.3))).toBeCloseTo(0.7);
+    expect(
+      variationFactor(
+        { ...shared, pressureProfile: PROFILE_PRESETS[0]!.content.points },
+        pen(0.3),
+      ),
+    ).toBeCloseTo(0.3);
+    expect(
+      variationFactor(
+        { useTilt: true, tiltProfile: overweight },
+        pen(1, 27, 0),
+      ),
+    ).toBeCloseTo(0.7);
+    expect(
+      variationFactor(
+        { useRandomise: true, minRandomise: 0, randomiseProfile: overweight },
+        mouse,
+        fixed(0.3),
+      ),
+    ).toBeCloseTo(0.7);
+  });
+
+  it("should multiply several sources, and count pressure and tilt as full for other devices", () => {
+    const config = { usePressure: true, useTilt: true };
+    expect(variationFactor(config, pen(0.5, 45, 0))).toBeCloseTo(0.25);
+    expect(variationFactor(config, mouse)).toBe(1);
+  });
+
+  it("should set a scale parameter between min × the value and the value", () => {
     const preset: BrushConfig = {
-      alpha: 0.5,
-      widthConfig: { usePressure: true, minPressure: 0.4, maxPressure: 0.9 },
-      // A range kept while off isn't used
-      heightConfig: { minPressure: 0.2 },
+      widthConfig: { min: 0.5, usePressure: true },
+      heightConfig: { min: 0.25 },
+      alpha: 0.8,
+      alphaConfig: { min: 0, usePressure: true },
     };
-    const result = withPenInput(preset, { penPressure: true, penTilt: false });
-    expect(result.alpha).toBe(0.5);
-    expect(result.widthConfig).toEqual({
-      usePressure: true,
-      minPressure: 0.4,
-      maxPressure: 0.9,
-      useTilt: false,
-    });
-    expect(result.heightConfig).toEqual({
-      usePressure: true,
-      minPressure: 0,
-      maxPressure: 1,
-      useTilt: false,
-    });
-    // The preset is unchanged
-    expect(preset.heightConfig).toEqual({ minPressure: 0.2 });
+    const params = stampParams(preset, size, pen(0.5), fixed(0));
+    expect(params.width).toBeCloseTo(30);
+    // Not varied: the value
+    expect(params.height).toBe(20);
+    expect(params.alpha).toBeCloseTo(0.4);
+  });
+
+  it("should turn within the rotation's range, with tilt too, and add the pen's lean when following it", () => {
+    const preset: BrushConfig = {
+      rotation: 10,
+      rotationConfig: { min: 0, max: 90, useTilt: true },
+    };
+    // Tilted halfway along X: half of the range
+    expect(stampParams(preset, size, pen(1, 45, 0)).rotation).toBeCloseTo(55);
+    // Only a high end: from the angle
     expect(
-      stampParams(result, { width: 20, height: 20 }, pen(0.5), fixed(0)).height,
+      stampParams(
+        { rotationConfig: { max: 90, usePressure: true } },
+        size,
+        pen(0.5),
+      ).rotation,
+    ).toBeCloseTo(45);
+    // Only a low end: up to 360°
+    expect(
+      stampParams(
+        { rotationConfig: { min: 180, usePressure: true } },
+        size,
+        pen(0.5),
+      ).rotation,
+    ).toBeCloseTo(270);
+    // Not varied: the angle
+    expect(
+      stampParams(
+        { rotation: 10, rotationConfig: { min: 0, max: 90 } },
+        size,
+        pen(1),
+      ).rotation,
     ).toBe(10);
-  });
-
-  it("should turn the rotation to the pen's lean with tilt, and vary the size with tilt only where the preset does", () => {
-    const result = withPenInput(
-      { widthConfig: { useTilt: true, minTilt: 0.5 }, heightConfig: {} },
-      on,
+    // Following the lean (along Y: 90°), with the range on top
+    const following = { ...preset, rotationFollowsLean: true };
+    expect(stampParams(following, size, pen(1, 0, 45)).rotation).toBeCloseTo(
+      10 + 90 + 45,
     );
-    expect(result.rotationConfig).toEqual({ useTilt: true });
-    expect(result.widthConfig?.useTilt).toBe(true);
-    expect(result.heightConfig?.useTilt).toBe(false);
-    expect(withPenInput(base, on).widthConfig?.useTilt).toBe(false);
-  });
-
-  it("should leave out pressure and tilt when off, whatever the preset says", () => {
-    const result = withPenInput(
-      {
-        widthConfig: { usePressure: true, useTilt: true },
-        rotationConfig: { useTilt: true, useRandomise: true },
-        alphaConfig: { usePressure: true },
-      },
-      off,
-    );
-    expect(result.widthConfig).toEqual({ usePressure: false, useTilt: false });
-    expect(result.heightConfig).toEqual({ usePressure: false, useTilt: false });
-    expect(result.rotationConfig).toEqual({
-      useTilt: false,
-      useRandomise: true,
-    });
-    // Other settings keep the preset's
-    expect(result.alphaConfig).toEqual({ usePressure: true });
+    // An upright pen leans nowhere
     expect(
-      stampParams(result, { width: 20, height: 20 }, pen(0.1), fixed(0)).width,
-    ).toBe(20);
+      stampParams({ rotationFollowsLean: true }, size, pen(1, 0, 0)).rotation,
+    ).toBe(0);
+    // Settings saved before ranges that follow the lean too don't add it twice
+    expect(
+      stampParams(
+        { rotationFollowsLean: true, rotationConfig: { useTilt: true } },
+        size,
+        pen(1, 0, 45),
+      ).rotation,
+    ).toBeCloseTo(90);
+  });
+
+  it("should set an offset within its range in pixels, without a random direction", () => {
+    const preset: BrushConfig = {
+      offsetX: 2,
+      offsetXConfig: { min: -40, max: 40, usePressure: true },
+      offsetYConfig: { max: 10, usePressure: true },
+    };
+    const params = stampParams(preset, size, pen(0.25), fixed(0.9));
+    expect(params.offsetX).toBeCloseTo(2 - 20);
+    expect(params.offsetY).toBeCloseTo(2.5);
+    // Only a low end: up to no offset
+    expect(
+      stampParams(
+        { offsetXConfig: { min: -40, usePressure: true } },
+        size,
+        pen(0.5),
+      ).offsetX,
+    ).toBeCloseTo(-20);
   });
 });

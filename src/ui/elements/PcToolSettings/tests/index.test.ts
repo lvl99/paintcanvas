@@ -268,41 +268,58 @@ describe("pc-tool-settings", () => {
     expect(height.value).toBe(85);
   });
 
-  it("should turn pen pressure and tilt on and off for every preset, without changing the preset", async () => {
+  it("should show and hide the pen pressure and tilt settings in popovers, one popover at a time", async () => {
     const { app, element } = await setup();
-    const toggle = async (selector: string, checked: boolean) => {
-      const box = query<HTMLInputElement>(element, selector);
-      box.checked = checked;
-      box.dispatchEvent(new Event("change"));
-      await element.updateComplete;
-      return box;
-    };
-    const before = app.brush.preset;
-    // Pressure is on and tilt off to start with
-    expect(query<HTMLInputElement>(element, "input.pressure").checked).toBe(
-      true,
+    const button = (source: string) =>
+      query<HTMLButtonElement>(element, `button.${source}-settings`);
+    const popover = (name: string) =>
+      query<PcPopover>(element, `pc-popover.${name}-popover`);
+    expect(button("pressure").getAttribute("aria-label")).toBe(
+      "Pen pressure settings",
     );
-    expect(query<HTMLInputElement>(element, "input.tilt").checked).toBe(false);
-    const pressure = await toggle("input.pressure", false);
-    expect(app.input.data.penPressure).toBe(false);
-    expect(pressure.checked).toBe(false);
-    await toggle("input.tilt", true);
-    expect(app.input.data.penTilt).toBe(true);
-    // The brush's settings are unchanged
-    expect(app.brush.preset).toBe(before);
-    // Another preset keeps them
+    expect(button("tilt").getAttribute("aria-haspopup")).toBe("dialog");
+    const pen = popover("pressure").querySelector("pc-pen-settings")!;
+    expect(pen.getAttribute("source")).toBe("pressure");
+    expect((pen as unknown as { settings: unknown }).settings).toBe(app.brush);
+    expect(popover("tilt").label).toBe("Pen tilt settings");
+
+    button("pressure").click();
+    await element.updateComplete;
+    expect(popover("pressure").open).toBe(true);
+    expect(button("pressure").getAttribute("aria-expanded")).toBe("true");
+    // Another popover's button shows it instead
+    button("size").click();
+    await element.updateComplete;
+    expect(popover("pressure").open).toBe(false);
+    expect(popover("size").open).toBe(true);
+    button("tilt").click();
+    await element.updateComplete;
+    expect([popover("size").open, popover("tilt").open]).toEqual([false, true]);
+    // Closing another popover leaves the open one
+    popover("pressure").dispatchEvent(new CustomEvent("pc-close"));
+    await element.updateComplete;
+    expect(popover("tilt").open).toBe(true);
+    button("tilt").click();
+    await element.updateComplete;
+    expect(popover("tilt").open).toBe(false);
+  });
+
+  it("should mark the pressure or tilt button while the current settings vary with it differently from the preset", async () => {
+    const { app, element } = await setup();
     app.brush.select("round20");
     await element.updateComplete;
-    expect(query<HTMLInputElement>(element, "input.pressure").checked).toBe(
-      false,
-    );
-    expect(query<HTMLInputElement>(element, "input.tilt").checked).toBe(true);
-    // Changed elsewhere (e.g. restored settings)
-    app.input.update({ penPressure: true });
+    const changed = (source: string) =>
+      query(element, `button.${source}-settings`).classList.contains("changed");
+    expect([changed("pressure"), changed("tilt")]).toEqual([false, false]);
+    app.brush.update({ alphaConfig: { useTilt: true } });
     await element.updateComplete;
-    expect(query<HTMLInputElement>(element, "input.pressure").checked).toBe(
-      true,
-    );
+    expect([changed("pressure"), changed("tilt")]).toEqual([false, true]);
+    // Not without a preset to compare with
+    app.brush.setPresets({ other: app.brush.presets.round20! });
+    app.brush.presetId = "gone";
+    app.brush.update({});
+    await element.updateComplete;
+    expect(changed("tilt")).toBe(false);
   });
 
   it.each([Tool.Brush, Tool.Eraser])(
@@ -315,9 +332,11 @@ describe("pc-tool-settings", () => {
       const pressure = opacity.nextElementSibling!;
       const tilt = pressure.nextElementSibling!;
       const toggle = tilt.nextElementSibling as HTMLButtonElement;
-      expect(pressure.querySelector("input.pressure")).not.toBeNull();
-      expect(pressure.getAttribute("title")).toBe("Pressure");
-      expect(tilt.querySelector("input.tilt")).not.toBeNull();
+      expect(pressure.classList.contains("pressure-settings")).toBe(true);
+      expect(pressure.querySelector("img")!.getAttribute("src")).toBe(
+        icons.get("pressure"),
+      );
+      expect(tilt.classList.contains("tilt-settings")).toBe(true);
       expect(toggle.classList.contains("focus-pen")).toBe(true);
       expect(toggle.nextElementSibling!.classList.contains("configure")).toBe(
         true,

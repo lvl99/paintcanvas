@@ -174,11 +174,17 @@ describe("pc-brush-test stroke points", () => {
       configurable: true,
     });
     const toggle = query<PcToggleCheckbox>(element, ".show-points");
-    expect(toggle.size).toBe("s");
+    expect(toggle.size).toBe("m");
     expect(toggle.checked).toBe(false);
     expect(query(element, ".show-points").textContent!.trim()).toBe(
-      "Show stroke points",
+      "Show stroke and sample points",
     );
+    // "Show stroke points", the actions slot, then "Clear"
+    expect(
+      [...query(element, ".actions").children].map(
+        (child) => child.className || child.getAttribute("name"),
+      ),
+    ).toEqual(["show-points", "actions", "pill clear"]);
     const draw = () => {
       canvas.dispatchEvent(pointer("pointerdown", 10, 10));
       canvas.dispatchEvent(pointer("pointermove", 40, 20));

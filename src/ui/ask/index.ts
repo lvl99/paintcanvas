@@ -4,6 +4,7 @@ import "../elements/PcDialog";
 import type Translations from "../../lib/i18n";
 import {
   CANCEL_CHOICE,
+  type DialogChoice,
   type DialogChoiceDetail,
   type DialogField,
   type PcDialog,
@@ -43,20 +44,21 @@ const ask = (
   parent: Node,
   options: AskOptions,
   field?: DialogField,
+  choices: DialogChoice[] = [
+    {
+      value: OK_CHOICE,
+      label: options.confirm,
+      cancelling: options.cancelling,
+    },
+    { value: CANCEL_CHOICE, label: options.cancel, variant: "dismiss" },
+  ],
 ): Promise<DialogChoiceDetail> =>
   new Promise((resolve) => {
     const dialog = document.createElement("pc-dialog") as PcDialog;
     dialog.heading = options.heading;
     dialog.message = options.message ?? "";
     dialog.field = field;
-    dialog.choices = [
-      {
-        value: OK_CHOICE,
-        label: options.confirm,
-        cancelling: options.cancelling,
-      },
-      { value: CANCEL_CHOICE, label: options.cancel, variant: "dismiss" },
-    ];
+    dialog.choices = choices;
     dialog.addEventListener(
       "pc-choose",
       (event) => {
@@ -81,6 +83,37 @@ export const askConfirm = async (
   parent: Node,
   options: AskOptions,
 ): Promise<boolean> => (await ask(parent, options)).value === OK_CHOICE;
+
+/** What `askChoice` asks: a heading, a message, and choices before the cancel button */
+export interface AskChoiceOptions {
+  heading: string;
+  message?: string;
+  choices: DialogChoice[];
+  /** The cancel button's label */
+  cancel: string;
+}
+
+/** Asks the user to choose, resolving the chosen value (`CANCEL_CHOICE` for cancel) */
+export type ChooseFn = (options: AskChoiceOptions) => string | Promise<string>;
+
+/**
+ * Ask the user to choose one of several choices in a dialog shown in `parent`, resolving its value, or `CANCEL_CHOICE`
+ * for the cancel button, Escape or a press outside it.
+ *
+ * @example
+ * const choice = await askChoice(this.renderRoot, { heading: "Save changes?", cancel: "Cancel",
+ *   choices: [{ value: "save", label: "Save" }, { value: "discard", label: "Don't save", cancelling: true }] });
+ */
+export const askChoice = async (
+  parent: Node,
+  { choices, cancel, ...options }: AskChoiceOptions,
+): Promise<string> =>
+  (
+    await ask(parent, { ...options, confirm: "", cancel }, undefined, [
+      ...choices,
+      { value: CANCEL_CHOICE, label: cancel, variant: "dismiss" },
+    ])
+  ).value;
 
 /**
  * Ask the user for text in a dialog shown in `parent`, resolving with what they typed when they agree (or press Enter),

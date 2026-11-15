@@ -69,11 +69,11 @@ describe("brush preset schemas", () => {
 
   it("should be published with a versioned URL and a type", () => {
     expect(brushPresetSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-2.1.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-2.2.0.json",
     );
     expect(brushPresetSchema["@type"]).toBe("PaintCanvas/BrushPreset");
     expect(brushPresetCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.1.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/brush-preset-collection-2.2.0.json",
     );
     expect(brushPresetCollectionSchema["@type"]).toBe(
       "PaintCanvas/BrushPresetCollection",
@@ -217,6 +217,37 @@ describe("isValidBrushPreset", () => {
 });
 
 describe("isValidBrushPreset profile graphs", () => {
+  it("should take a setting's range, each source's own profile graph, and following the pen's lean", () => {
+    const points = [
+      { x: 0, y: 0, i: "bezier-quad" },
+      { x: 10, y: -10, i: "linear" },
+    ];
+    const valid = (changes: Record<string, unknown>) =>
+      isValidBrushPreset(withChanges(changes)).valid;
+    expect(
+      valid({
+        widthConfig: {
+          min: 0.5,
+          usePressure: true,
+          pressureProfile: points,
+          pressureProfileId: "overweight",
+          useTilt: true,
+          tiltProfile: points,
+          tiltProfileId: "underweight",
+          useRandomise: true,
+          randomiseProfile: points,
+          randomiseProfileId: "linear",
+        },
+        rotationConfig: { min: -90, max: 270 },
+        offsetXConfig: { min: -1, max: 1 },
+        rotationFollowsLean: true,
+      }),
+    ).toBe(true);
+    expect(valid({ rotationConfig: { max: 720 } })).toBe(false);
+    expect(valid({ rotationFollowsLean: "yes" })).toBe(false);
+    expect(valid({ widthConfig: { tiltProfile: [] } })).toBe(false);
+  });
+
   it("should check a setting's profile graph", () => {
     const profile = (points: unknown, profileId: unknown = "overweight") =>
       isValidBrushPreset(

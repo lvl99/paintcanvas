@@ -171,7 +171,9 @@ export class PcContextMenu extends PcElement {
   }
 
   /** Close the menu when it asks to, and return focus to the button */
-  private onClose(): void {
+  private onClose(event: Event): void {
+    // The menu's request is handled here, so it doesn't reach the page (e.g. closing a window the menu is in)
+    event.stopPropagation();
     // Only a menu asks to close, so there is one
     const focusWasInside = (this.menu as PcMenu).matches(":focus-within");
     this.setOpen(false);

@@ -63,7 +63,7 @@ Until the scripts load, `<paint-canvas>` and the content you put in its slots (e
 
 The demo does this with a thin bar across the top.
 
-While the layout is used, the page doesn't scroll or zoom: touches on it don't pan or zoom the page (`touch-action: none`), and the wheel, touch drags, pinches, Cmd/Ctrl + scroll and Safari's gesture events only scroll what scrolls inside it, such as a panel. Keyboard zoom (Cmd/Ctrl + plus and minus) isn't stopped. `lockPage(element)` from `@lvl99dotcom/paintcanvas/ui/pageLock` does the same for your own element.
+While the layout is used, the page doesn't scroll or zoom: touches on it don't pan or zoom the page (`touch-action: none`), and the wheel, touch drags, pinches, Cmd/Ctrl + scroll and Safari's gesture events only scroll what scrolls inside it, such as a panel. A pen's touches are left to the browser, so its taps press buttons. Keyboard zoom (Cmd/Ctrl + plus and minus) isn't stopped. `lockPage(element)` from `@lvl99dotcom/paintcanvas/ui/pageLock` does the same for your own element.
 
 ## Panes, panels and menus
 
@@ -137,7 +137,7 @@ Cut, copy and paste (Cmd/Ctrl + X, C, V), undo and redo (Cmd/Ctrl + Z, Shift + C
 
 Copying or cutting masked image data also puts it on the system clipboard as a PNG (pass `systemClipboard: null` to `PaintCanvas` to stop this), so it can be pasted into other apps, or as a brush shape with the brush configuration window's Paste button (which uses the canvas's copy if the browser won't let it read the clipboard). Pasting (Cmd/Ctrl + V, or the browser's own paste) pastes an image copied in another app in the middle of the view, to place with the Move tool, unless image data was copied on the canvas since the window last lost focus: that is pasted where it was copied from. Call `canvas.pasteImage(image)` to paste an image yourself.
 
-Cut, Copy and Paste are `<pc-clipboard-tools>`, at the end of the layout's top pane after the tool settings, for the brush, eraser, lassos and Move tool (`CLIPBOARD_TOOLS`); Paste is on only while there's copied image data. While the layout is narrow, they're one ⋮ menu. The tool settings bar (`<pc-tool-settings>`) has `start` and `end` slots for your own buttons; the brush and eraser's width and height are in the size settings popover (the cog), followed on the bar by opacity, then pen pressure, pen tilt and focus pen mode before Configure.
+Cut, Copy and Paste are `<pc-clipboard-tools>`, at the end of the layout's top pane after the tool settings, for the brush, eraser, lassos and Move tool (`CLIPBOARD_TOOLS`); Paste is on only while there's copied image data. While the layout is narrow, they're one ⋮ menu. The tool settings bar (`<pc-tool-settings>`) has `start` and `end` slots for your own buttons; the brush and eraser's width and height are in the size settings popover (the cog), followed on the bar by opacity, then pen pressure and pen tilt (each opening a popover to vary the current brush with it, without changing the preset) and focus pen mode before Configure.
 
 Key presses are matched on keyboards with any layout:
 

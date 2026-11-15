@@ -7,11 +7,16 @@ import { BUILT_IN_AUTHOR, type Asset } from "../assets/schema.ts";
 export const Interpolation = {
   /** A sharp corner: straight towards the points either side */
   Linear: "linear",
-  /** A smooth curve through the point */
+  /**
+   * A quadratic curve between the midpoints either side, bending towards the point without reaching it (as strokes
+   * with `SmoothingType.BezierQuad`)
+   */
+  BezierQuad: "bezier-quad",
+  /** A smooth curve through the point (as strokes with `SmoothingType.BezierCubic`) */
   BezierCubic: "bezier-cubic",
 } as const;
 
-/** How the curve runs through a point: `Interpolation.Linear` or `Interpolation.BezierCubic` */
+/** How the curve runs through a point: `Interpolation.Linear`, `Interpolation.BezierQuad` or `Interpolation.BezierCubic` */
 export type Interpolation = (typeof Interpolation)[keyof typeof Interpolation];
 
 /**
@@ -129,9 +134,61 @@ const slopeAt = (
   return (after.y - before.y) / (after.x - before.x);
 };
 
+/** A point on the curve, in grid units */
+interface CurvePoint {
+  x: number;
+  y: number;
+}
+
+/** The point halfway between two points */
+const midpoint = (a: CurvePoint, b: CurvePoint): CurvePoint => ({
+  x: (a.x + b.x) / 2,
+  y: (a.y + b.y) / 2,
+});
+
 /**
- * Where the curve is (in grid units, -10 to 0) at an x in grid units (0 to 10). Between two points it's a cubic curve
- * that leaves and reaches each with its slope (see `slopeAt`), so it's a straight line between two sharp corners.
+ * Where a quadratic curve from `start` to `end`, bending towards `control`, is at an x between theirs. The control's x
+ * is between the ends' (it's a point between two midpoints), so there's one such place.
+ */
+const quadraticY = (
+  start: CurvePoint,
+  control: CurvePoint,
+  end: CurvePoint,
+  x: number,
+): number => {
+  // x(t) = q t² + 2(b − a) t + a; solved for t
+  const [a, b, c] = [start.x, control.x, end.x];
+  const q = a - 2 * b + c;
+  const t = Math.min(
+    1,
+    Math.max(
+      0,
+      // Evenly spaced (the control halfway): x changes evenly with t. The ends are never at the same x here
+      Math.abs(q) < 1e-9
+        ? (x - a) / (2 * (b - a))
+        : (a - b + Math.sqrt(Math.max(0, (b - a) ** 2 + q * (x - a)))) / q,
+    ),
+  );
+  const u = 1 - t;
+  return u * u * start.y + 2 * u * t * control.y + t * t * end.y;
+};
+
+/**
+ * Whether the curve bends towards a point without reaching it: a bezier quad point that isn't the first or last (which
+ * the curve always runs through).
+ */
+const bendsTowards = (points: readonly ProfilePoint[], index: number) =>
+  index > 0 &&
+  index < points.length - 1 &&
+  (points[index] as ProfilePoint).i === Interpolation.BezierQuad;
+
+/**
+ * Where the curve is (in grid units, -10 to 0) at an x in grid units (0 to 10), drawn as strokes are smoothed:
+ *
+ * - Around a bezier quad point, a quadratic curve between the midpoints either side, bending towards the point.
+ * - Elsewhere, between two points (or a point and a bezier quad point's midpoint), a cubic curve that leaves and
+ *   reaches each with its slope (see `slopeAt`; a midpoint's is the slope between its points), so it's a straight line
+ *   between two sharp corners and smooth through bezier cubic points.
  */
 export const profileY = (
   points: readonly ProfilePoint[],
@@ -142,18 +199,42 @@ export const profileY = (
   while (index < last - 1 && (points[index + 1] as ProfilePoint).x < x) index++;
   const a = points[index] as ProfilePoint;
   const b = (points[index + 1] ?? a) as ProfilePoint;
-  const width = b.x - a.x;
-  if (width <= 0) return x < a.x ? a.y : b.y;
-  const segmentSlope = (b.y - a.y) / width;
-  const startSlope = slopeAt(points, index, segmentSlope) * width;
-  const endSlope = slopeAt(points, index + 1, segmentSlope) * width;
-  const t = Math.min(1, Math.max(0, (x - a.x) / width));
+  if (b.x - a.x <= 0) return x < a.x ? a.y : b.y;
+  const segmentSlope = (b.y - a.y) / (b.x - a.x);
+  const middle = midpoint(a, b);
+  const startBends = bendsTowards(points, index);
+  const endBends = bendsTowards(points, index + 1);
+  // Around a bezier quad point, between the midpoints either side of it
+  if (startBends && x <= middle.x)
+    return quadraticY(
+      midpoint(points[index - 1] as ProfilePoint, a),
+      a,
+      middle,
+      x,
+    );
+  if (endBends && x >= middle.x)
+    return quadraticY(
+      middle,
+      b,
+      midpoint(b, points[index + 2] as ProfilePoint),
+      x,
+    );
+  // Between the points, or a bezier quad point's midpoint, which the curve leaves along the segment
+  const start = startBends ? middle : a;
+  const end = endBends ? middle : b;
+  const width = end.x - start.x;
+  const startSlope =
+    (startBends ? segmentSlope : slopeAt(points, index, segmentSlope)) * width;
+  const endSlope =
+    (endBends ? segmentSlope : slopeAt(points, index + 1, segmentSlope)) *
+    width;
+  const t = Math.min(1, Math.max(0, (x - start.x) / width));
   const t2 = t * t;
   const t3 = t2 * t;
   return (
-    (2 * t3 - 3 * t2 + 1) * a.y +
+    (2 * t3 - 3 * t2 + 1) * start.y +
     (t3 - 2 * t2 + t) * startSlope +
-    (-2 * t3 + 3 * t2) * b.y +
+    (-2 * t3 + 3 * t2) * end.y +
     (t3 - t2) * endSlope
   );
 };

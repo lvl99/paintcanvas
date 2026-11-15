@@ -131,6 +131,20 @@ describe("lockPage", () => {
     );
   });
 
+  it("should leave a pen's touches alone, so its taps press buttons", () => {
+    const { bar } = setup();
+    const pen = (type: string, y: number) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "touches", {
+        value: [{ clientX: 0, clientY: y, touchType: "stylus" }],
+      });
+      bar.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    pen("touchstart", 50);
+    expect(pen("touchmove", 48)).toBe(false);
+  });
+
   it("should leave form fields' own drags alone", () => {
     const { layout } = setup();
     const range = document.createElement("input");

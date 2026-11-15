@@ -215,7 +215,7 @@ describe("strokes snapped to the pixel grid in a real browser", () => {
     expect(pixel(layer, 10, 21)[3]).toBe(0);
   });
 
-  it("should paint a whole pixel for a stamp smaller than a pixel, which is faint without snapping", () => {
+  it("should paint at least a whole pixel for a stamp asked to be smaller than one, snapped or not", () => {
     const snapped = setup({
       preset: { spacing: 1, snapToPixelGrid: true },
       size: { width: 0.6, height: 0.6 },
@@ -229,7 +229,8 @@ describe("strokes snapped to the pixel grid in a real browser", () => {
       tip: squareTip(),
     });
     stroke(loose.engine, loose.options, [[10.2, 20.2]]);
-    expect(pixel(loose.layer, 10, 20)[3]).toBeLessThan(255);
+    // Stamps are at least 1 pixel (MIN_STAMP_SIZE), so it isn't lost
+    expect(pixel(loose.layer, 10, 20)[3]).toBeGreaterThan(0);
   });
 
   it("should erase whole pixels with a square that snaps to the pixel grid", () => {

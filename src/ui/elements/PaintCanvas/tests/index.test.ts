@@ -409,7 +409,7 @@ describe("paint-canvas", () => {
     layout.remove();
   });
 
-  it("should open the brush configuration for the current or a new preset, and apply or close it", async () => {
+  it("should open the brush configuration for the current or a new preset, applying what it saves until closed", async () => {
     const { layout, app } = await setup();
     layout.configure("brush");
     await layout.updateComplete;
@@ -426,6 +426,18 @@ describe("paint-canvas", () => {
     await layout.updateComplete;
     expect(app.brush.preset.alpha).toBe(0.5);
     expect(app.brush.name).toBe("Half");
+    // Saved to a preset: the window stays open until closed
+    expect(config()).not.toBeNull();
+    // Not closed by something in it closing (e.g. a menu)
+    const inside = document.createElement("span");
+    config()!.shadowRoot!.append(inside);
+    inside.dispatchEvent(
+      new CustomEvent("pc-close", { bubbles: true, composed: true }),
+    );
+    await layout.updateComplete;
+    expect(config()).not.toBeNull();
+    config()!.dispatchEvent(new CustomEvent("pc-close"));
+    await layout.updateComplete;
     expect(config()).toBeNull();
     // The user's own preset can be deleted from the window
     const own = app.newPreset(app.eraser.preset, "Mine");

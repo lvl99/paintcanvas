@@ -24,7 +24,7 @@ import {
   profilePointsSchema,
 } from "../schema";
 
-const { Linear, BezierCubic } = Interpolation;
+const { Linear, BezierQuad, BezierCubic } = Interpolation;
 
 /** A preset's points */
 const preset = (id: string): ProfilePoint[] =>
@@ -109,6 +109,61 @@ describe("profileY", () => {
   });
 });
 
+describe("profileY with bezier quad points", () => {
+  it("should bend towards a bezier quad point between the midpoints either side, without reaching it", () => {
+    const points: ProfilePoint[] = [
+      { x: 0, y: -10, i: Linear },
+      { x: 5, y: 0, i: BezierQuad },
+      { x: 10, y: 0, i: Linear },
+    ];
+    // Straight to the first midpoint (2.5, -5), and from the second (7.5, 0) on
+    expect(profileY(points, 1.25)).toBeCloseTo(-7.5);
+    expect(profileY(points, 2.5)).toBeCloseTo(-5);
+    expect(profileY(points, 8.75)).toBeCloseTo(0);
+    // The quadratic curve from (2.5, -5) to (7.5, 0) bending towards (5, 0): at its middle, t = 0.5
+    expect(profileY(points, 5)).toBeCloseTo(-1.25);
+    expect(profileY(points, 5)).toBeLessThan(0);
+    // Smooth where the curve meets the straight piece
+    const slope = (x: number) =>
+      (profileY(points, x + 0.001) - profileY(points, x - 0.001)) / 0.002;
+    expect(slope(2.5)).toBeCloseTo(2, 2);
+  });
+
+  it("should meet at the midpoint between two bezier quad points, and run through the first and last points", () => {
+    const points: ProfilePoint[] = [
+      { x: 0, y: -10, i: BezierQuad },
+      { x: 4, y: -2, i: BezierQuad },
+      { x: 6, y: -8, i: BezierQuad },
+      { x: 10, y: 0, i: BezierQuad },
+    ];
+    expect(profileY(points, 0)).toBeCloseTo(-10);
+    expect(profileY(points, 10)).toBeCloseTo(0);
+    expect(profileY(points, 5)).toBeCloseTo(-5);
+    // Bends towards the points without reaching them
+    expect(profileY(points, 4)).toBeLessThan(-2);
+    expect(profileY(points, 6)).toBeGreaterThan(-8);
+  });
+
+  it("should handle a bezier quad point with a neighbour at the same x", () => {
+    const points: ProfilePoint[] = [
+      { x: 0, y: -10, i: Linear },
+      { x: 0, y: -4, i: BezierQuad },
+      { x: 10, y: 0, i: Linear },
+    ];
+    // The curve's control is at its start's x, so it's solved with a square root
+    expect(profileY(points, 2.5)).toBeGreaterThan(-4);
+    expect(profileY(points, 5)).toBeCloseTo(-2);
+    const flat: ProfilePoint[] = [
+      { x: 0, y: -10, i: Linear },
+      { x: 2, y: -4, i: Linear },
+      { x: 2, y: -4, i: BezierQuad },
+      { x: 2, y: -4, i: Linear },
+      { x: 10, y: 0, i: Linear },
+    ];
+    expect(profileY(flat, 6)).toBeCloseTo(-2);
+  });
+});
+
 describe("applyProfile", () => {
   it("should use the input as it is without a graph or with a straight line", () => {
     expect(applyProfile(undefined, 0.3)).toBe(0.3);
@@ -142,15 +197,31 @@ describe("profile graph schemas", () => {
 
   it("should be published with versioned URLs and types", () => {
     expect(profileGraphSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-2.1.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-2.2.0.json",
     );
     expect(profileGraphSchema["@type"]).toBe("PaintCanvas/ProfileGraph");
     expect(profileGraphCollectionSchema.$id).toBe(
-      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.1.0.json",
+      "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.2.0.json",
     );
     expect(profileGraphCollectionSchema["@type"]).toBe(
       "PaintCanvas/ProfileGraphCollection",
     );
+  });
+
+  it("should take all three interpolations", () => {
+    for (const i of [Linear, BezierQuad, BezierCubic])
+      expect(
+        validatePoints([
+          { x: 0, y: -10, i },
+          { x: 10, y: 0, i },
+        ]),
+      ).toBe(true);
+    expect(
+      validatePoints([
+        { x: 0, y: -10, i: "spline" },
+        { x: 10, y: 0, i: Linear },
+      ]),
+    ).toBe(false);
   });
 
   it("should take a UUID or a built-in graph's ID, and an author", () => {

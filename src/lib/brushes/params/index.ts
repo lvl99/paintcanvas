@@ -18,6 +18,9 @@ export interface StampParams {
   alpha: number;
 }
 
+/** The smallest width or height a stamp is drawn at, in pixels */
+export const MIN_STAMP_SIZE = 1;
+
 /** What the input device reports for a point */
 export interface PointInput {
   /** Pressure (0–1), only meaningful for pens */
@@ -62,10 +65,31 @@ export const tiltAmount = (tiltX = 0, tiltY = 0): number =>
 export const tiltDirection = (tiltX = 0, tiltY = 0): number =>
   (Math.atan2(tiltY, tiltX) * 180) / Math.PI;
 
+/** Each source's switch, range keys and range when not set (see `BrushParamConfig`) */
+const SOURCES = [
+  ["useRandomise", "minRandomise", "maxRandomise", "randomiseProfile", 1, 1],
+  ["usePressure", "minPressure", "maxPressure", "pressureProfile", 0, 1],
+  ["useTilt", "minTilt", "maxTilt", "tiltProfile", 0, 1],
+] as const;
+
+/** A source's input: a random number, or the pen's pressure or tilt (full for other devices) */
+const sourceInput = (
+  useKey: (typeof SOURCES)[number][0],
+  input: PointInput,
+  random: RandomFn,
+): number => {
+  if (useKey === "useRandomise") return random();
+  if (!input.isPen) return 1;
+  return useKey === "usePressure"
+    ? clamp01(input.pressure ?? 1)
+    : tiltAmount(input.tiltX, input.tiltY);
+};
+
 /**
- * Combine a parameter's randomise, pressure and tilt factors into one factor (they multiply). Returns 1 when nothing is enabled.
- * Pressure and tilt only apply to pens; for other devices they count as full (`maxPressure`/`maxTilt`). Each input goes
- * through the parameter's profile graph (see `applyProfile`) before it sets the factor between its min and max.
+ * Combine a parameter's randomise, pressure and tilt shares into one (they multiply). Returns 1 when nothing is
+ * enabled. Each input goes through the source's own profile graph (or the parameter's, see `applyProfile`) before it
+ * sets the share between the source's min and max. Pressure and tilt only apply to pens; for other devices they count
+ * as full.
  *
  * @example
  * variationFactor({ useRandomise: true, minRandomise: 0.5, maxRandomise: 1 }, { isPen: false }, () => 0); // 0.5
@@ -76,88 +100,38 @@ export const variationFactor = (
   random: RandomFn = Math.random,
 ): number => {
   if (!config) return 1;
-  const { profile } = config;
   let factor = 1;
-  if (config.useRandomise) {
+  for (const [useKey, minKey, maxKey, profileKey, low, high] of SOURCES) {
+    if (!config[useKey]) continue;
     factor *= lerp(
-      config.minRandomise ?? 1,
-      config.maxRandomise ?? 1,
-      applyProfile(profile, random()),
-    );
-  }
-  if (config.usePressure) {
-    const pressure = input.isPen ? clamp01(input.pressure ?? 1) : 1;
-    factor *= lerp(
-      config.minPressure ?? 0,
-      config.maxPressure ?? 1,
-      applyProfile(profile, pressure),
-    );
-  }
-  if (config.useTilt) {
-    const tilt = input.isPen ? tiltAmount(input.tiltX, input.tiltY) : 1;
-    factor *= lerp(
-      config.minTilt ?? 0,
-      config.maxTilt ?? 1,
-      applyProfile(profile, tilt),
+      config[minKey] ?? low,
+      config[maxKey] ?? high,
+      applyProfile(
+        config[profileKey] ?? config.profile,
+        sourceInput(useKey, input, random),
+      ),
     );
   }
   return factor;
 };
 
-/** Whether the user wants pen pressure and tilt to vary strokes, whatever the preset says */
-export interface PenInputSettings {
-  /** Pressure varies the width and height */
-  penPressure: boolean;
-  /** Tilt turns the stamp to the pen's lean (and varies the width and height where the preset gives a tilt range) */
-  penTilt: boolean;
-}
+/** Whether any source varies a parameter */
+const varies = (config: BrushParamConfig | undefined): boolean =>
+  Boolean(config?.useRandomise || config?.usePressure || config?.useTilt);
 
-/** The size settings varied by pen pressure and tilt */
-const PEN_SIZE_PARAMS = ["widthConfig", "heightConfig"] as const;
+/** Whether a parameter has a range (`min` or `max`), rather than working as before ranges */
+const hasRange = (config: BrushParamConfig): boolean =>
+  config?.min !== undefined || config?.max !== undefined;
 
 /**
- * A preset with the user's pen pressure and tilt settings applied, which win over the preset's own:
+ * Work out one stamp's size, rotation, offset and alpha from the preset, the user's chosen size and the input at that point
+ * (see `BrushParamConfig`): each varied parameter's value is as far between its range's ends as its sources' share.
  *
- * - Pressure on: the width and height vary with pressure, using the preset's range and graph where it varies them with
- *   pressure, or the full range (0–1) otherwise. Off: they don't vary with pressure.
- * - Tilt on: the rotation follows the pen's lean, and the width and height vary with tilt where the preset varies them
- *   with tilt (a full range would leave nothing drawn with an upright pen). Off: nothing varies with tilt.
- *
- * Other settings (e.g. alpha) keep the preset's pressure and tilt.
- *
- * @example
- * withPenInput({ widthConfig: {} }, { penPressure: true, penTilt: false }).widthConfig;
- * // { usePressure: true, minPressure: 0, maxPressure: 1, useTilt: false }
- */
-export const withPenInput = (
-  preset: BrushConfig,
-  { penPressure, penTilt }: PenInputSettings,
-): BrushConfig => {
-  const result: BrushConfig = {
-    ...preset,
-    rotationConfig: { ...preset.rotationConfig, useTilt: penTilt },
-  };
-  for (const param of PEN_SIZE_PARAMS) {
-    const config = preset[param];
-    result[param] = {
-      ...config,
-      usePressure: penPressure,
-      // The full range when the preset doesn't give one
-      ...(penPressure && !config?.usePressure
-        ? { minPressure: 0, maxPressure: 1 }
-        : {}),
-      useTilt: penTilt && Boolean(config?.useTilt),
-    };
-  }
-  return result;
-};
-
-/**
- * Work out one stamp's size, rotation, offset and alpha from the preset, the user's chosen size and the input at that point.
- *
- * - Size and alpha are scaled by their factor.
- * - Rotation adds `factor × 360°`; with `useTilt`, it follows the pen's lean direction instead.
- * - Offsets scatter up to `factor × size` in a random direction.
+ * - Size and alpha go from `min` × the value to the value (sizes at least `MIN_STAMP_SIZE`).
+ * - Rotation goes from the angle + `min` to the angle + `max` degrees (0 to 360 without a range). With
+ *   `rotationFollowsLean`, the direction the pen leans is added; without a range, tilt sets that direction instead.
+ * - Offsets go from `min` to `max` pixels, added to the offset. Without a range, they scatter up to the share × the
+ *   size in a random direction.
  *
  * @example
  * stampParams(preset, { width: 20, height: 20 }, { isPen: true, pressure: 0.5 });
@@ -168,39 +142,62 @@ export const stampParams = (
   input: PointInput,
   random: RandomFn = Math.random,
 ): StampParams => {
+  /** A scale parameter's factor: from its `min` to 1 */
+  const scale = (config: BrushParamConfig | undefined) =>
+    lerp(config?.min ?? 0, 1, variationFactor(config, input, random));
+  // At least 1 pixel, however light the pressure or upright the pen
   const width = Math.max(
-    0,
-    size.width * variationFactor(preset.widthConfig, input, random),
+    MIN_STAMP_SIZE,
+    size.width * scale(preset.widthConfig),
   );
-  const height = preset.constrainProportions
-    ? (width * size.height) / size.width
-    : Math.max(
-        0,
-        size.height * variationFactor(preset.heightConfig, input, random),
-      );
+  const height = Math.max(
+    MIN_STAMP_SIZE,
+    preset.constrainProportions
+      ? (width * size.height) / size.width
+      : size.height * scale(preset.heightConfig),
+  );
 
   let rotation = preset.rotation ?? 0;
-  const rotationConfig = preset.rotationConfig;
-  if (
-    rotationConfig?.useTilt &&
-    input.isPen &&
-    tiltAmount(input.tiltX, input.tiltY) > 0
-  ) {
+  const rotationConfig = preset.rotationConfig ?? {};
+  const leaning = input.isPen && tiltAmount(input.tiltX, input.tiltY) > 0;
+  if (preset.rotationFollowsLean && leaning)
     rotation += tiltDirection(input.tiltX, input.tiltY);
-  } else if (rotationConfig?.useRandomise || rotationConfig?.usePressure) {
+  if (hasRange(rotationConfig)) {
+    if (varies(rotationConfig))
+      rotation += lerp(
+        rotationConfig.min ?? 0,
+        rotationConfig.max ?? 360,
+        variationFactor(rotationConfig, input, random),
+      );
+  } else if (rotationConfig.useTilt && leaning) {
+    // Settings saved before ranges: tilt turns the stamp to the pen's lean
+    if (!preset.rotationFollowsLean)
+      rotation += tiltDirection(input.tiltX, input.tiltY);
+  } else if (rotationConfig.useRandomise || rotationConfig.usePressure) {
     rotation +=
       variationFactor({ ...rotationConfig, useTilt: false }, input, random) *
       360;
   }
 
-  /** Base offset plus a scatter of up to `factor × extent` in a random direction */
-  const scatter = (
+  /**
+   * The offset plus its varied part: within its range (in pixels), or without one, a scatter of up to the share × the
+   * size in a random direction
+   */
+  const offset = (
     base: number | undefined,
-    config: BrushParamConfig | undefined,
+    config: BrushParamConfig = {},
     extent: number,
   ) => {
-    if (!config?.useRandomise && !config?.usePressure && !config?.useTilt)
-      return base ?? 0;
+    if (!varies(config)) return base ?? 0;
+    if (hasRange(config))
+      return (
+        (base ?? 0) +
+        lerp(
+          config.min ?? 0,
+          config.max ?? 0,
+          variationFactor(config, input, random),
+        )
+      );
     const direction = random() < 0.5 ? -1 : 1;
     return (
       (base ?? 0) + direction * variationFactor(config, input, random) * extent
@@ -211,11 +208,9 @@ export const stampParams = (
     width,
     height,
     rotation,
-    offsetX: scatter(preset.offsetX, preset.offsetXConfig, width),
-    offsetY: scatter(preset.offsetY, preset.offsetYConfig, height),
-    alpha: clamp01(
-      (preset.alpha ?? 1) * variationFactor(preset.alphaConfig, input, random),
-    ),
+    offsetX: offset(preset.offsetX, preset.offsetXConfig, width),
+    offsetY: offset(preset.offsetY, preset.offsetYConfig, height),
+    alpha: clamp01((preset.alpha ?? 1) * scale(preset.alphaConfig)),
   };
 };
 

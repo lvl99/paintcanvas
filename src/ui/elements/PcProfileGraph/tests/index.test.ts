@@ -18,7 +18,7 @@ import {
 
 afterEach(() => document.body.replaceChildren());
 
-const { Linear, BezierCubic } = Interpolation;
+const { Linear, BezierQuad, BezierCubic } = Interpolation;
 
 /** Overweight's points */
 const curved = () =>
@@ -175,6 +175,11 @@ describe("pc-profile-graph", () => {
     await element.updateComplete;
     expect(element.points[1]!.i).toBe(Linear);
     expect(button("linear").getAttribute("aria-pressed")).toBe("true");
+    button("bezier-quad").click();
+    await element.updateComplete;
+    expect(element.points[1]!.i).toBe(BezierQuad);
+    expect(button("bezier-quad").getAttribute("aria-pressed")).toBe("true");
+    expect(button("bezier-quad").title).toBe("Softened (bezier quadratic)");
     button("bezier").click();
     expect(element.points[1]!.i).toBe(BezierCubic);
     button("remove").click();

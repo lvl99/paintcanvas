@@ -109,6 +109,8 @@ describe("pc-context-menu", () => {
   it("should pass on the chosen item and close, returning focus to the button", async () => {
     const { element, button, press } = await setup();
     const chosen = events<{ value: string }>(element, "pc-select");
+    // The menu's request to close stays inside (e.g. so a window the menu is in stays open)
+    const closes = events(document.body, "pc-close");
     await press();
     const menu = element.menu as PcMenu;
     query<HTMLButtonElement>(menu, '[data-value="duplicate"]').click();
@@ -116,6 +118,7 @@ describe("pc-context-menu", () => {
     expect(chosen).toEqual([{ value: "duplicate" }]);
     expect(element.open).toBe(false);
     expect(element.shadowRoot!.activeElement).toBe(button);
+    expect(closes).toEqual([]);
   });
 
   it("should close on a press outside, but not on its own button, leaving focus where it went", async () => {

@@ -26,7 +26,7 @@ import { dateTimeSchema, fileSchemaUrlSchema } from "../assets/schema.ts";
 import { SCHEMA_DIALECT, schemaUrl } from "../schemas/index.ts";
 
 /** Version of the app settings schema */
-export const APP_SETTINGS_SCHEMA_VERSION = "2.2.0";
+export const APP_SETTINGS_SCHEMA_VERSION = "2.3.0";
 
 /** `@type` of an app settings file */
 export const APP_SETTINGS_TYPE = "PaintCanvas/AppSettings";
@@ -101,6 +101,7 @@ const settingsProperties = {
       pinchZoom: { type: "boolean" },
       modifierScrollZoom: { type: "boolean" },
       focusPen: { type: "boolean" },
+      // No longer used (0.12.0 only), kept so settings saved with them stay valid
       penPressure: { type: "boolean" },
       penTilt: { type: "boolean" },
       gestures: {

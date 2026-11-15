@@ -23,7 +23,7 @@ describe("profileGraphFile", () => {
     const json = profileGraphFile.write([graph]);
     expect(JSON.parse(json)).toEqual({
       $schema:
-        "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.1.0.json",
+        "https://lvl99.github.io/paintcanvas/schemas/profile-graph-collection-2.2.0.json",
       "@type": "PaintCanvas/ProfileGraphCollection",
       items: [graph],
     });
