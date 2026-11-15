@@ -2,6 +2,33 @@
 
 PaintCanvas follows [semantic versioning](https://semver.org).
 
+## 0.13.0 (2026-11-15)
+
+Brush settings with ranges and several pen sources at once, pressure and tilt popovers on the tool settings bar, and a redesigned brush configuration window.
+
+### Fixed
+
+- The pen couldn't press buttons and other controls on iPad Safari: the page lock now leaves Apple Pencil (stylus) touches to the browser.
+- Info tips (`<pc-info-tip>`) ran past a window's edge and made it scroll sideways; they now move left to stay inside what clips or scrolls around them, and the page.
+- Choosing a shape, or pressing outside the shape menu, closed the brush configuration window. `<pc-context-menu>` keeps its menu's `pc-close` to itself, and the layout only closes the window on the window's own `pc-close`.
+
+### Added
+
+- Brush setting ranges: each setting's variation can have a `min` and `max`, and pressure, tilt and randomise can be on together, each with its own range and profile graph (`pressureProfile`, `tiltProfile`, `randomiseProfile`). Their shares multiply to set the value within the range. Brushes saved without ranges draw as before.
+- `rotationFollowsLean`: stamps turn to the direction the pen leans.
+- Profile graph points can be `bezier-quad`, and each point type curves as stroke smoothing does.
+- `<pc-pen-settings>`: the pressure and tilt popovers on the tool settings bar, which change the current tool only, with "Reset to brush defaults". `differsFromPreset`, `resetSource`, `setSource`, `writeSourceRange`, `writeSourceProfile`, `followsLean` and `setFollowsLean` in `lib/brushes/configRanges`.
+- "Pick…" in the colour palette panel opens the browser's colour picker for the brush colour.
+- `askChoice` (`ui/ask`), menu items with an `image`, `<pc-brush-test>`'s `actions` slot, and `MIN_STAMP_SIZE`.
+- Schemas: profile-graph, brush-preset and their collections 2.2.0, app-settings 2.3.0 (new optional properties only).
+
+### Changed
+
+- The brush configuration window: the name (with an asterisk for unsaved changes), "Add to presets" and Save at the top; Save saves to your own preset being edited and is off for built-in presets; "Add to presets" makes a new preset that later saves go to; the window stays open after saving and asks "Save changes?" when closed with unsaved changes; the shape opens a menu of built-in shapes; smoothing, sample rate and spacing have ⓘ tips; each source has its own row with a range and profile graph.
+- The tool settings bar's Pressure and Tilt buttons open popovers instead of toggling, and are purple while the current settings differ from the preset.
+- Brush settings stay within their limits: width and height 1–256 px, opacity 0–100%, rotation 0–360°, offsets −100 to 100 px, pressure, tilt and randomise 0–100%. Offset ranges are in pixels, and stamps are at least 1 pixel.
+- Breaking: removed the `penPressure` and `penTilt` input settings and `withPenInput` (settings saved with them still load), `PcToolSettings`'s `withSource`, and `configRanges`'s `selectSource` and `toggleSource` (use `setSource`).
+
 ## 0.12.0 (2026-11-14)
 
 Clearer brush and background colours, pen pressure and tilt that apply to every preset, and no page scrolling or zooming while the app is used.
