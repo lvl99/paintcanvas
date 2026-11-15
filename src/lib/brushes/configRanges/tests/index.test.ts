@@ -3,264 +3,347 @@ import { PROFILE_PRESETS } from "../../../profiles";
 import type { BrushConfig } from "../../types";
 import {
   differsFromPreset,
+  followsLean,
   readRange,
   resetSource,
-  selectSource,
-  toggleSource,
+  setFollowsLean,
+  setSource,
   writeRange,
+  writeSourceProfile,
+  writeSourceRange,
 } from "..";
 
-const none = { pressure: false, tilt: false, randomise: false };
+const overweight = PROFILE_PRESETS[1]!.content.points;
+const underweight = PROFILE_PRESETS[2]!.content.points;
 
 describe("readRange", () => {
   it("should read settings that don't vary, with defaults", () => {
-    expect(readRange({}, "width")).toEqual({
-      value: 1,
-      min: 1,
+    const range = readRange({}, "width");
+    expect([range.value, range.min, range.max, range.varies]).toEqual([
+      1,
+      1,
+      1,
+      false,
+    ]);
+    expect(range.sources.pressure).toEqual({
+      on: false,
+      min: 0,
       max: 1,
-      sources: none,
-      varies: false,
+      profile: undefined,
+      profileId: undefined,
     });
-    expect(readRange({ width: 30 }, "height").value).toBe(30);
-    expect(readRange({ height: 10 }, "height").value).toBe(10);
-    expect(readRange({}, "alpha").value).toBe(100);
+    expect(range.sources.randomise).toMatchObject({ min: 1, max: 1 });
+    expect(readRange({ width: 8 }, "height").value).toBe(8);
     expect(readRange({ alpha: 0.5 }, "alpha").value).toBe(50);
     expect(readRange({}, "rotation").value).toBe(0);
   });
 
-  it("should read scale settings from the first source turned on", () => {
-    expect(
-      readRange(
-        {
-          width: 40,
-          widthConfig: {
-            usePressure: true,
-            minPressure: 0.25,
-            useRandomise: true,
-            minRandomise: 0.9,
-          },
+  it("should read a scale setting's range from min × the value to the value, and each source's own", () => {
+    const range = readRange(
+      {
+        width: 40,
+        widthConfig: {
+          min: 0.25,
+          usePressure: true,
+          minPressure: 0.1,
+          useTilt: true,
+          tiltProfile: overweight,
+          tiltProfileId: "overweight",
         },
-        "width",
-      ),
-    ).toEqual({
-      value: 40,
-      min: 10,
-      max: 40,
-      sources: { pressure: true, tilt: false, randomise: true },
-      varies: true,
+      },
+      "width",
+    );
+    expect([range.min, range.max, range.varies]).toEqual([10, 40, true]);
+    expect(range.sources.pressure).toMatchObject({ on: true, min: 0.1 });
+    expect(range.sources.tilt).toMatchObject({
+      on: true,
+      profile: overweight,
+      profileId: "overweight",
     });
-    // Randomise alone: its default range is 1 to 1
+    // Without a range: from 0, as before ranges
     expect(
-      readRange({ width: 40, widthConfig: { useRandomise: true } }, "width"),
-    ).toMatchObject({ min: 40, max: 40 });
+      readRange({ alpha: 0.8, alphaConfig: { usePressure: true } }, "alpha")
+        .min,
+    ).toBe(0);
   });
 
-  it("should read rotation as the angle plus up to 360° and offsets as scatter in pixels", () => {
+  it("should give sources without their own profile graph the setting's shared one", () => {
+    const range = readRange(
+      {
+        widthConfig: {
+          useRandomise: true,
+          profile: underweight,
+          profileId: "underweight",
+          pressureProfile: overweight,
+        },
+      },
+      "width",
+    );
+    expect(range.sources.randomise.profileId).toBe("underweight");
+    expect(range.sources.pressure.profile).toBe(overweight);
+    expect(range.sources.pressure.profileId).toBeUndefined();
+  });
+
+  it("should read rotation from the angle plus min to plus max, and offsets as percentages of the size", () => {
     expect(
       readRange(
         {
-          rotation: 10,
-          rotationConfig: { useTilt: true, minTilt: 0, maxTilt: 0.5 },
+          rotation: 30,
+          rotationConfig: { min: 10, max: 90, usePressure: true },
         },
         "rotation",
       ),
-    ).toMatchObject({ min: 10, max: 190 });
+    ).toMatchObject({ min: 40, max: 120 });
+    // Without a range: a full turn
+    expect(
+      readRange({ rotationConfig: { usePressure: true } }, "rotation"),
+    ).toMatchObject({ min: 0, max: 360 });
     expect(
       readRange(
-        {
-          width: 20,
-          offsetXConfig: {
-            useRandomise: true,
-            minRandomise: 0,
-            maxRandomise: 0.5,
-          },
-        },
+        { offsetXConfig: { min: -0.5, max: 0.25, useRandomise: true } },
         "offsetX",
       ),
-    ).toMatchObject({ min: 0, max: 10, varies: true });
-    expect(readRange({ offsetY: 3 }, "offsetY").value).toBe(3);
+    ).toMatchObject({ min: -50, max: 25 });
+    expect(readRange({}, "offsetY")).toMatchObject({ min: 0, max: 0 });
+  });
+
+  it("should show a rotation that follows the pen's lean with tilt (before ranges) without tilt", () => {
+    const config: BrushConfig = { rotationConfig: { useTilt: true } };
+    expect(readRange(config, "rotation").sources.tilt.on).toBe(false);
+    expect(followsLean(config)).toBe(true);
+    expect(followsLean({ rotationFollowsLean: true })).toBe(true);
+    expect(followsLean({})).toBe(false);
+    expect(
+      followsLean({ rotationConfig: { useTilt: true, min: 0, max: 90 } }),
+    ).toBe(false);
   });
 });
 
 describe("writeRange", () => {
-  it("should set a setting that doesn't vary, within its limits", () => {
-    expect(writeRange({}, "width", { value: 500 })).toEqual({
-      width: 256,
-    });
-    expect(writeRange({}, "alpha", { value: 40 })).toEqual({
-      alpha: 0.4,
-    });
-    expect(writeRange({ width: 5 }, "width", {})).toEqual({
-      width: 5,
-    });
-    // Offsets only change while they vary
+  it("should write a value for a setting that doesn't vary, kept within its limits", () => {
+    expect(writeRange({}, "width", { value: 500 })).toEqual({ width: 256 });
+    expect(writeRange({}, "alpha", { value: 40 })).toEqual({ alpha: 0.4 });
+    expect(writeRange({ width: 10 }, "width", {})).toEqual({ width: 10 });
     expect(writeRange({}, "offsetX", { value: 5 })).toEqual({});
   });
 
-  it("should write scale ranges to every source turned on", () => {
-    const config: BrushConfig = {
-      width: 40,
-      widthConfig: { usePressure: true, useTilt: true, useRandomise: false },
-    };
-    expect(writeRange(config, "width", { min: 10, max: 50 })).toEqual({
-      width: 50,
-      widthConfig: {
-        usePressure: true,
-        minPressure: 0.2,
-        maxPressure: 1,
-        useTilt: true,
-        minTilt: 0.2,
-        maxTilt: 1,
-        useRandomise: false,
-      },
+  it("should write a scale range as the value and a share of it, keeping the sources", () => {
+    expect(
+      writeRange(
+        { width: 40, widthConfig: { usePressure: true, minPressure: 0.2 } },
+        "width",
+        { min: 15, max: 60 },
+      ),
+    ).toEqual({
+      width: 60,
+      widthConfig: { usePressure: true, minPressure: 0.2, min: 0.25, max: 1 },
     });
-  });
-
-  it("should swap a min above the max, and handle an opacity of 0", () => {
-    const config: BrushConfig = {
-      alpha: 1,
-      alphaConfig: { useRandomise: true, minRandomise: 0.5, maxRandomise: 1 },
-    };
-    const swapped = writeRange(config, "alpha", { min: 90, max: 20 });
-    expect(swapped.alpha).toBe(0.9);
-    expect(swapped.alphaConfig?.minRandomise).toBeCloseTo(20 / 90);
-    expect(writeRange(config, "alpha", { min: 0, max: 0 })).toMatchObject({
-      alphaConfig: { minRandomise: 0, maxRandomise: 1 },
-    });
+    // Swapped when the low end is above the high one, and an opacity of 0 has no share
+    expect(
+      writeRange({ alphaConfig: { useTilt: true } }, "alpha", {
+        min: 0,
+        max: 0,
+      }),
+    ).toEqual({ alpha: 1e-8, alphaConfig: { useTilt: true, min: 0, max: 1 } });
+    expect(
+      writeRange({ width: 40, widthConfig: { useTilt: true } }, "width", {
+        min: 30,
+        max: 20,
+      }).widthConfig?.min,
+    ).toBeCloseTo(2 / 3);
   });
 
   it("should keep the end that isn't given", () => {
-    const config: BrushConfig = {
-      alpha: 0.8,
-      alphaConfig: { usePressure: true, minPressure: 0.5, maxPressure: 1 },
-    };
-    // From 40% to 80%: only the max changes, then only the min
-    expect(writeRange(config, "alpha", { max: 100 })).toMatchObject({
-      alpha: 1,
-      alphaConfig: { minPressure: 0.4 },
-    });
-    expect(writeRange(config, "alpha", { min: 20 })).toMatchObject({
-      alpha: 0.8,
-      alphaConfig: { minPressure: 0.25 },
-    });
-  });
-
-  it("should write rotation and offset ranges", () => {
-    expect(
-      writeRange({ rotationConfig: { useRandomise: true } }, "rotation", {
-        min: 90,
-        max: 180,
-      }),
-    ).toEqual({
-      rotation: 90,
-      rotationConfig: {
-        useRandomise: true,
-        minRandomise: 0,
-        maxRandomise: 0.25,
-      },
-    });
     expect(
       writeRange(
-        { width: 20, offsetYConfig: { usePressure: true } },
-        "offsetY",
-        { min: 5, max: 40 },
+        { width: 40, widthConfig: { useTilt: true, min: 0.5 } },
+        "width",
+        { max: 80 },
       ),
+    ).toEqual({ width: 80, widthConfig: { useTilt: true, min: 0.25, max: 1 } });
+    expect(
+      writeRange(
+        { width: 40, widthConfig: { useTilt: true, min: 0.5 } },
+        "width",
+        { min: 10 },
+      ),
+    ).toEqual({ width: 40, widthConfig: { useTilt: true, min: 0.25, max: 1 } });
+  });
+
+  it("should write rotation as the angle and a spread, and offsets as shares of the size", () => {
+    expect(
+      writeRange({ rotationConfig: { usePressure: true } }, "rotation", {
+        min: 45,
+        max: 135,
+      }),
     ).toEqual({
-      offsetYConfig: { usePressure: true, minPressure: 0.25, maxPressure: 1 },
-    });
-  });
-});
-
-describe("toggleSource", () => {
-  it("should give the first source a starting range", () => {
-    expect(toggleSource({}, "width", "pressure", true)).toEqual({
-      widthConfig: { usePressure: true, minPressure: 0.5, maxPressure: 1 },
-    });
-    expect(toggleSource({}, "rotation", "tilt", true)).toEqual({
-      rotationConfig: { useTilt: true, minTilt: 0, maxTilt: 0 },
-    });
-    expect(toggleSource({}, "offsetX", "randomise", true)).toEqual({
-      offsetXConfig: { useRandomise: true, minRandomise: 0, maxRandomise: 0.5 },
-    });
-  });
-
-  it("should give later sources the current range, and turn sources off", () => {
-    const config: BrushConfig = {
-      width: 40,
-      widthConfig: { usePressure: true, minPressure: 0.25, maxPressure: 1 },
-    };
-    expect(toggleSource(config, "width", "randomise", true)).toEqual({
-      width: 40,
-      widthConfig: {
-        usePressure: true,
-        minPressure: 0.25,
-        maxPressure: 1,
-        useRandomise: true,
-        minRandomise: 0.25,
-        maxRandomise: 1,
-      },
-    });
-    expect(toggleSource(config, "width", "pressure", false)).toEqual({
-      widthConfig: { usePressure: false, minPressure: 0.25, maxPressure: 1 },
-    });
-  });
-});
-
-describe("selectSource", () => {
-  it("should give the first source a starting range, with only that source on", () => {
-    expect(selectSource({ width: 40 }, "width", "pressure")).toEqual({
-      widthConfig: { usePressure: true, minPressure: 0.5, maxPressure: 1 },
-    });
-  });
-
-  it("should switch to another source keeping the range and the profile graph, or turn variation off", () => {
-    const profile = PROFILE_PRESETS[1]!.content.points;
-    const config: BrushConfig = {
-      width: 40,
-      widthConfig: {
-        usePressure: true,
-        minPressure: 0.25,
-        useTilt: true,
-        profile,
-        profileId: "overweight",
-      },
-    };
-    const tilt = selectSource(config, "width", "tilt");
-    expect(tilt.widthConfig).toEqual({
-      usePressure: false,
-      minPressure: 0.25,
-      useTilt: true,
-      minTilt: 0.25,
-      maxTilt: 1,
-      useRandomise: false,
-      profile,
-      profileId: "overweight",
-    });
-    expect(readRange({ ...config, ...tilt }, "width")).toMatchObject({
-      min: 10,
-      max: 40,
-    });
-    // Choosing the source it already varies with turns the others off
-    expect(selectSource(config, "width", "pressure").widthConfig).toMatchObject(
-      {
-        usePressure: true,
-        useTilt: false,
-        useRandomise: false,
-      },
-    );
-    expect(selectSource(config, "width", undefined).widthConfig).toMatchObject({
-      usePressure: false,
-      useTilt: false,
-      useRandomise: false,
-      profile,
+      rotation: 45,
+      rotationConfig: { usePressure: true, min: 0, max: 90 },
     });
     expect(
-      selectSource(
-        { rotationConfig: { useRandomise: true } },
+      writeRange({ offsetYConfig: { useRandomise: true } }, "offsetY", {
+        min: -40,
+        max: 60,
+      }),
+    ).toEqual({ offsetYConfig: { useRandomise: true, min: -0.4, max: 0.6 } });
+  });
+});
+
+describe("setSource", () => {
+  it("should give the first source a starting range, and every source its full range", () => {
+    expect(setSource({ width: 40 }, "width", "pressure", true)).toEqual({
+      widthConfig: {
+        min: 0.5,
+        max: 1,
+        usePressure: true,
+        minPressure: 0,
+        maxPressure: 1,
+      },
+    });
+    expect(setSource({}, "rotation", "randomise", true).rotationConfig).toEqual(
+      {
+        min: 0,
+        max: 360,
+        useRandomise: true,
+        minRandomise: 0,
+        maxRandomise: 1,
+      },
+    );
+    expect(setSource({}, "offsetX", "tilt", true).offsetXConfig).toMatchObject({
+      min: -0.5,
+      max: 0.5,
+    });
+  });
+
+  it("should let several sources be on at once, keeping the range, and turn them off", () => {
+    const config: BrushConfig = {
+      widthConfig: { min: 0.2, usePressure: true, minPressure: 0.3 },
+    };
+    const tilted = setSource(config, "width", "tilt", true).widthConfig;
+    expect(tilted).toEqual({
+      min: 0.2,
+      usePressure: true,
+      minPressure: 0.3,
+      useTilt: true,
+      minTilt: 0,
+      maxTilt: 1,
+    });
+    // Already on: its range stays
+    expect(
+      setSource({ widthConfig: tilted }, "width", "pressure", true).widthConfig
+        ?.minPressure,
+    ).toBe(0.3);
+    expect(
+      setSource({ widthConfig: tilted }, "width", "pressure", false)
+        .widthConfig,
+    ).toMatchObject({ usePressure: false, useTilt: true });
+  });
+
+  it("should give a setting saved before ranges the range it worked with, and its shared graph to each source", () => {
+    const changes = setSource(
+      {
+        widthConfig: {
+          usePressure: true,
+          profile: overweight,
+          profileId: "overweight",
+        },
+      },
+      "width",
+      "tilt",
+      true,
+    );
+    expect(changes.widthConfig).toEqual({
+      min: 0,
+      max: 1,
+      usePressure: true,
+      pressureProfile: overweight,
+      pressureProfileId: "overweight",
+      useTilt: true,
+      minTilt: 0,
+      maxTilt: 1,
+    });
+    // Offsets scattered up to the size either way
+    expect(
+      setSource(
+        { offsetXConfig: { useRandomise: true } },
+        "offsetX",
+        "tilt",
+        true,
+      ).offsetXConfig,
+    ).toMatchObject({ min: -1, max: 1 });
+  });
+
+  it("should turn a rotation that followed the pen's lean with tilt into following it with rotationFollowsLean", () => {
+    expect(
+      setSource(
+        { rotationConfig: { useTilt: true } },
         "rotation",
         "tilt",
-      ).rotationConfig,
-    ).toMatchObject({ useTilt: true, minTilt: 1, maxTilt: 1 });
+        true,
+      ),
+    ).toEqual({
+      rotationFollowsLean: true,
+      rotationConfig: {
+        useTilt: true,
+        min: 0,
+        max: 360,
+        minTilt: 0,
+        maxTilt: 1,
+      },
+    });
+  });
+});
+
+describe("writeSourceRange and writeSourceProfile", () => {
+  it("should write a source's range, ordered and within 0–1", () => {
+    expect(
+      writeSourceRange(
+        { widthConfig: { min: 0.5, useTilt: true } },
+        "width",
+        "tilt",
+        { min: 1.2, max: 0.25 },
+      ),
+    ).toEqual({
+      widthConfig: { min: 0.5, useTilt: true, minTilt: 0.25, maxTilt: 1 },
+    });
+  });
+
+  it("should give a source its own profile graph, or remove it", () => {
+    const config: BrushConfig = {
+      alphaConfig: { min: 0, usePressure: true },
+    };
+    const withGraph = writeSourceProfile(
+      config,
+      "alpha",
+      "pressure",
+      overweight,
+      "overweight",
+    );
+    expect(withGraph.alphaConfig).toEqual({
+      min: 0,
+      usePressure: true,
+      pressureProfile: overweight,
+      pressureProfileId: "overweight",
+    });
+    expect(
+      writeSourceProfile(withGraph, "alpha", "pressure", underweight)
+        .alphaConfig,
+    ).toEqual({ min: 0, usePressure: true, pressureProfile: underweight });
+    expect(
+      writeSourceProfile(withGraph, "alpha", "pressure", undefined).alphaConfig,
+    ).toEqual({ min: 0, usePressure: true });
+  });
+});
+
+describe("setFollowsLean", () => {
+  it("should turn following the pen's lean on or off, and tilt off when the rotation followed it before ranges", () => {
+    expect(setFollowsLean({}, true)).toEqual({ rotationFollowsLean: true });
+    expect(
+      setFollowsLean({ rotationConfig: { useTilt: true } }, false),
+    ).toEqual({
+      rotationFollowsLean: false,
+      rotationConfig: { useTilt: false },
+    });
   });
 });
 

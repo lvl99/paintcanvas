@@ -19,11 +19,14 @@ import { isLinear, LINEAR_PROFILE_ID } from "../../../lib/profiles";
 import {
   PARAM_LIMITS,
   PEN_PARAMS,
-  configKey,
+  followsLean,
   readRange,
+  setFollowsLean,
   resetSource,
-  selectSource,
+  setSource,
   writeRange,
+  writeSourceProfile,
+  writeSourceRange,
   type PenSource,
 } from "../../../lib/brushes/configRanges";
 
@@ -38,6 +41,12 @@ const PARAM_LABELS: Record<PenParam, string> = {
   rotation: "paintCanvas.brushConfig.rotation",
 };
 
+/** Translation keys of each source's range name */
+const SOURCE_LABELS: Record<PenSource, string> = {
+  pressure: "paintCanvas.brushConfig.penPressure",
+  tilt: "paintCanvas.brushConfig.penTilt",
+};
+
 /** Translation keys of each source's heading */
 const HEADINGS: Record<PenSource, string> = {
   pressure: "paintCanvas.toolSettings.pressureSettings",
@@ -45,12 +54,12 @@ const HEADINGS: Record<PenSource, string> = {
 };
 
 /**
- * How a brush or eraser varies with pen pressure or tilt (`source`), for the tool settings bar's popovers: for the
- * width, height, opacity and rotation, a switch, a range (in pixels, percent or degrees, as in `<pc-brush-config>`)
- * and a profile graph button; constrain proportions (the height then follows the width, so its controls are off); and
- * "Reset to brush defaults", which puts back the selected preset's. A setting varies with one source at a time, so
- * switching it on here switches its other source off. With tilt, the rotation follows the pen's lean, so it has no
- * range.
+ * How a brush or eraser varies with pen pressure or tilt (`source`), for the tool settings bar's popovers, as in
+ * `<pc-brush-config>`: for the width, height, opacity and rotation, a switch and the source's profile graph button,
+ * and while on, the setting's range (in pixels, percent or degrees, shared by its sources) and the source's range
+ * (0–100); constrain proportions (the height then follows the width, so its controls are off); with tilt, whether the
+ * rotation follows the pen's lean; and "Reset to brush defaults", which puts back the selected preset's. A setting can
+ * vary with pressure and tilt (and randomness) at once.
  *
  * Changes are to the current settings (`settings.update`), not the preset, and aren't saved.
  *
@@ -95,6 +104,14 @@ export class PcPenSettings extends PcElement {
         justify-content: space-between;
         gap: 8px;
       }
+      /* The source's range, named, under the setting's */
+      .source {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-left: 12px;
+        font-size: var(--pc-font-size-small);
+      }
       .constrain {
         display: flex;
         align-items: center;
@@ -124,7 +141,7 @@ export class PcPenSettings extends PcElement {
   /** What the settings vary with: pen pressure or tilt */
   declare source: PenSource;
 
-  /** The setting whose profile graph is being edited, if any */
+  /** The setting whose source's profile graph is being edited, if any */
   declare editingProfile?: PenParam;
 
   private changes = new ChangeController(this, () => [this.settings]);
@@ -151,17 +168,16 @@ export class PcPenSettings extends PcElement {
     if (height !== undefined) settings.setHeight(height);
   }
 
-  /** Render one setting: its switch, profile graph button and range */
+  /** Render one setting: its switch and profile graph button, and while on, its range and the source's */
   private renderParam(settings: BrushSettings, param: PenParam) {
     const config = this.config(settings);
     const source = this.source;
     const range = readRange(config, param);
-    const on = range.sources[source];
+    const { on, min, max, profile } = range.sources[source];
     const label = this.t(PARAM_LABELS[param]);
+    const sourceLabel = this.t(SOURCE_LABELS[source]);
     // The height follows the width while proportions are constrained
     const disabled = param === "height" && Boolean(config.constrainProportions);
-    // The rotation follows the pen's lean, so it has no range
-    const ranged = !(source === "tilt" && param === "rotation");
     const limits = PARAM_LIMITS[param];
     const writeEnds = (event: CustomEvent<RangeDetail>) =>
       this.apply(
@@ -171,8 +187,17 @@ export class PcPenSettings extends PcElement {
           max: event.detail.high,
         }),
       );
-    const profileLabel = this.t("paintCanvas.profileEditor.button", {
+    const writeSourceEnds = (event: CustomEvent<RangeDetail>) =>
+      this.apply(
+        settings,
+        writeSourceRange(this.config(settings), param, source, {
+          min: event.detail.low / 100,
+          max: event.detail.high / 100,
+        }),
+      );
+    const profileLabel = this.t("paintCanvas.profileEditor.sourceButton", {
       param: label,
+      source: sourceLabel,
     });
     return html`<div class="param" data-param=${param}>
       <div class="heading">
@@ -183,10 +208,11 @@ export class PcPenSettings extends PcElement {
           @change=${(event: CustomEvent<{ checked: boolean }>) =>
             this.apply(
               settings,
-              selectSource(
+              setSource(
                 this.config(settings),
                 param,
-                event.detail.checked ? source : undefined,
+                source,
+                event.detail.checked,
               ),
             )}
         >
@@ -194,7 +220,7 @@ export class PcPenSettings extends PcElement {
         </pc-toggle-checkbox>
         <button
           type="button"
-          class=${`icon-button profile ${param} ${config[configKey(param)]?.profile ? "configured" : ""}`}
+          class=${`icon-button profile ${param} ${profile ? "configured" : ""}`}
           title=${profileLabel}
           aria-haspopup="dialog"
           ?disabled=${!on || disabled}
@@ -203,22 +229,49 @@ export class PcPenSettings extends PcElement {
           ${iconLabel(this.iconUrl("profileGraph"), profileLabel)}
         </button>
       </div>
+      <pc-slider-range
+        class=${`${param} range`}
+        label=${label}
+        min=${limits.min}
+        max=${limits.max}
+        .low=${live(Math.round(range.min))}
+        .high=${live(Math.round(range.max))}
+        ?disabled=${!on || disabled}
+        @pc-input=${writeEnds}
+        @pc-change=${writeEnds}
+      ></pc-slider-range>
       ${
-        ranged
-          ? html`<pc-slider-range
-              class=${`${param} range`}
-              label=${label}
-              min=${limits.min}
-              max=${limits.max}
-              .low=${live(Math.round(range.min))}
-              .high=${live(Math.round(range.max))}
-              ?disabled=${!on || disabled}
-              @pc-input=${writeEnds}
-              @pc-change=${writeEnds}
-            ></pc-slider-range>`
+        on
+          ? html`<div class="source">
+              <span>${sourceLabel}</span>
+              <pc-slider-range
+                class=${`${param} source-range`}
+                label=${`${label}: ${sourceLabel}`}
+                min="0"
+                max="100"
+                .low=${live(Math.round(min * 100))}
+                .high=${live(Math.round(max * 100))}
+                ?disabled=${disabled}
+                @pc-input=${writeSourceEnds}
+                @pc-change=${writeSourceEnds}
+              ></pc-slider-range>
+            </div>`
           : nothing
       }
     </div>`;
+  }
+
+  /** Render whether the rotation follows the pen's lean, under it in the tilt settings */
+  private renderFollowLean(settings: BrushSettings) {
+    return html`<pc-toggle-checkbox
+      class="follow-lean"
+      size="s"
+      .checked=${live(followsLean(settings.preset))}
+      @change=${(event: CustomEvent<{ checked: boolean }>) =>
+        settings.update(setFollowsLean(settings.preset, event.detail.checked))}
+    >
+      ${this.t("paintCanvas.brushConfig.followLean")}
+    </pc-toggle-checkbox>`;
   }
 
   /** Render constrain proportions, between the width and height */
@@ -242,32 +295,35 @@ export class PcPenSettings extends PcElement {
     </div>`;
   }
 
-  /** The profile graph editor for the setting being edited, while open */
+  /** The profile graph editor for the source of the setting being edited, while open */
   private renderProfileEditor(settings: BrushSettings) {
     const param = this.editingProfile;
     if (!param || !this.app) return nothing;
-    const key = configKey(param);
-    const variation = settings.preset[key] ?? {};
+    const source = this.source;
+    const { profile, profileId } = readRange(settings.preset, param).sources[
+      source
+    ];
     return html`<pc-profile-editor
       .profiles=${this.app.profiles}
       .author=${this.app.author}
-      .points=${variation.profile}
-      profile-id=${
-        variation.profileId ?? (variation.profile ? nothing : LINEAR_PROFILE_ID)
-      }
-      label=${this.t(PARAM_LABELS[param])}
+      .points=${profile}
+      profile-id=${profileId ?? (profile ? nothing : LINEAR_PROFILE_ID)}
+      label=${`${this.t(PARAM_LABELS[param])}: ${this.t(SOURCE_LABELS[source])}`}
       @pc-save=${(event: CustomEvent<ProfileSaveDetail>) => {
         event.stopPropagation();
-        const { points, profileId } = event.detail;
+        const { points, profileId: id } = event.detail;
         // A straight line changes nothing, so it isn't stored
         const linear = isLinear(points);
-        settings.update({
-          [key]: {
-            ...settings.preset[key],
-            profile: linear ? undefined : points,
-            profileId: linear ? undefined : profileId,
-          },
-        });
+        this.apply(
+          settings,
+          writeSourceProfile(
+            this.config(settings),
+            param,
+            source,
+            linear ? undefined : points,
+            id,
+          ),
+        );
         this.editingProfile = undefined;
       }}
       @pc-close=${(event: Event) => {
@@ -285,6 +341,7 @@ export class PcPenSettings extends PcElement {
       ${this.renderParam(settings, "height")}
       ${this.renderParam(settings, "alpha")}
       ${this.renderParam(settings, "rotation")}
+      ${this.source === "tilt" ? this.renderFollowLean(settings) : nothing}
       <button
         type="button"
         class="pill reset"

@@ -72,34 +72,58 @@ describe("pc-pen-settings", () => {
     ).toBe(true);
   });
 
-  it("should vary a setting with the source, one source at a time, without changing the preset", async () => {
+  it("should vary a setting with the source alongside others, without changing the preset", async () => {
     const { app, element } = await setup();
-    app.brush.update({ widthConfig: { useTilt: true, minTilt: 0.25 } });
+    app.brush.update({ widthConfig: { useTilt: true, min: 0.25 } });
     await element.updateComplete;
     expect(toggle(element, "width").checked).toBe(false);
+    // The setting's range shows, off, while this source is off
+    expect(range(element, "width").disabled).toBe(true);
+    expect(queryAll(element, "pc-slider-range.source-range")).toHaveLength(0);
     await flip(element, "width", true);
     expect(app.brush.preset.widthConfig).toMatchObject({
       usePressure: true,
-      useTilt: false,
-      minPressure: 0.25,
+      useTilt: true,
+      min: 0.25,
+      minPressure: 0,
+      maxPressure: 1,
     });
-    expect(toggle(element, "width").checked).toBe(true);
     expect([range(element, "width").low, range(element, "width").high]).toEqual(
       [10, 40],
     );
+    const sourceRange = query<PcSliderRange>(
+      element,
+      "pc-slider-range.width.source-range",
+    );
+    expect([sourceRange.low, sourceRange.high, sourceRange.label]).toEqual([
+      0,
+      100,
+      "Width: Pen pressure",
+    ]);
     await flip(element, "width", false);
-    expect(app.brush.preset.widthConfig?.usePressure).toBe(false);
+    expect(app.brush.preset.widthConfig).toMatchObject({
+      usePressure: false,
+      useTilt: true,
+    });
     expect(app.brush.selectedPreset?.content.widthConfig).toBeUndefined();
   });
 
-  it("should change a range in its unit, with the brush's size as the width's highest", async () => {
+  it("should change the setting's range in its unit, with the brush's size as the width's highest, and the source's range", async () => {
     const { app, element } = await setup();
     await flip(element, "width", true);
     range(element, "width").dispatchEvent(
       new CustomEvent("pc-change", { detail: { low: 15, high: 60 } }),
     );
     expect(app.brush.width).toBe(60);
-    expect(app.brush.preset.widthConfig?.minPressure).toBe(0.25);
+    expect(app.brush.preset.widthConfig?.min).toBe(0.25);
+    await element.updateComplete;
+    query(element, "pc-slider-range.width.source-range").dispatchEvent(
+      new CustomEvent("pc-input", { detail: { low: 20, high: 80 } }),
+    );
+    expect(app.brush.preset.widthConfig).toMatchObject({
+      minPressure: 0.2,
+      maxPressure: 0.8,
+    });
     await flip(element, "height", true);
     range(element, "height").dispatchEvent(
       new CustomEvent("pc-input", { detail: { low: 10, high: 20 } }),
@@ -110,7 +134,7 @@ describe("pc-pen-settings", () => {
       new CustomEvent("pc-change", { detail: { low: 25, high: 50 } }),
     );
     expect(app.brush.preset.alpha).toBe(0.5);
-    expect(app.brush.preset.alphaConfig?.minPressure).toBe(0.5);
+    expect(app.brush.preset.alphaConfig?.min).toBe(0.5);
   });
 
   it("should turn the height's controls off while proportions are constrained", async () => {
@@ -134,13 +158,32 @@ describe("pc-pen-settings", () => {
     expect(toggle(element, "width").disabled).toBe(false);
   });
 
-  it("should turn the rotation to follow the pen's lean with tilt, without a range", async () => {
+  it("should give the rotation a tilt range, and choose whether it follows the pen's lean, only with tilt", async () => {
     const { app, element } = await setup("tilt");
     expect(query(element, "h2").textContent).toBe("Pen tilt settings");
-    expect(queryAll(element, "pc-slider-range.rotation")).toHaveLength(0);
-    expect(queryAll(element, "pc-slider-range.width")).toHaveLength(1);
     await flip(element, "rotation", true);
-    expect(app.brush.preset.rotationConfig?.useTilt).toBe(true);
+    expect(app.brush.preset.rotationConfig).toMatchObject({
+      useTilt: true,
+      min: 0,
+      max: 360,
+    });
+    expect(
+      queryAll(element, "pc-slider-range.rotation.source-range"),
+    ).toHaveLength(1);
+    const lean = query<PcToggleCheckbox>(
+      element,
+      "pc-toggle-checkbox.follow-lean",
+    );
+    expect(lean.checked).toBe(false);
+    lean.dispatchEvent(
+      new CustomEvent("change", { detail: { checked: true } }),
+    );
+    await element.updateComplete;
+    expect(app.brush.preset.rotationFollowsLean).toBe(true);
+    expect(lean.checked).toBe(true);
+    element.source = "pressure";
+    await element.updateComplete;
+    expect(queryAll(element, "pc-toggle-checkbox.follow-lean")).toHaveLength(0);
   });
 
   it("should put back the preset's settings, and not without a preset", async () => {
@@ -168,12 +211,12 @@ describe("pc-pen-settings", () => {
     await flip(element, "width", true);
     const button = () =>
       query<HTMLButtonElement>(element, "button.profile.width");
-    expect(button().title).toBe("Width: profile graph");
+    expect(button().title).toBe("Width (Pen pressure): profile graph");
     button().click();
     await element.updateComplete;
     const editor = () => query<PcProfileEditor>(element, "pc-profile-editor");
     expect([editor().label, editor().profileId, editor().profiles]).toEqual([
-      "Width",
+      "Width: Pen pressure",
       "linear",
       app.profiles,
     ]);
@@ -187,8 +230,8 @@ describe("pc-pen-settings", () => {
     expect(queryAll(element, "pc-profile-editor")).toHaveLength(0);
     expect(app.brush.preset.widthConfig).toMatchObject({
       usePressure: true,
-      profile: overweight,
-      profileId: "overweight",
+      pressureProfile: overweight,
+      pressureProfileId: "overweight",
     });
     expect(button().classList).toContain("configured");
 
@@ -202,7 +245,7 @@ describe("pc-pen-settings", () => {
       }),
     );
     await element.updateComplete;
-    expect(app.brush.preset.widthConfig?.profile).toBeUndefined();
+    expect(app.brush.preset.widthConfig?.pressureProfile).toBeUndefined();
 
     // Points without an ID; closing changes nothing
     app.brush.update({

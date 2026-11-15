@@ -725,11 +725,11 @@ export class PaintCanvasElement extends PcElement {
       .presetName=${configuring.name}
       editingId=${configuring.editingId ?? nothing}
       @pc-save=${(event: CustomEvent<BrushConfigSaveDetail>) => {
+        // Saved to a preset, which stays open in the window
         this.toolSettings(configuring.kind).apply(
           event.detail.config,
           event.detail.name,
         );
-        this.configuring = undefined;
       }}
       @pc-close=${() => (this.configuring = undefined)}
     ></pc-brush-config>`;
