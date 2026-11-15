@@ -731,7 +731,11 @@ export class PaintCanvasElement extends PcElement {
           event.detail.name,
         );
       }}
-      @pc-close=${() => (this.configuring = undefined)}
+      @pc-close=${(event: Event) => {
+        // The window's own, not one from something in it (e.g. a menu)
+        if (event.composedPath()[0] === event.currentTarget)
+          this.configuring = undefined;
+      }}
     ></pc-brush-config>`;
   }
 

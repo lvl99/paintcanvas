@@ -428,6 +428,14 @@ describe("paint-canvas", () => {
     expect(app.brush.name).toBe("Half");
     // Saved to a preset: the window stays open until closed
     expect(config()).not.toBeNull();
+    // Not closed by something in it closing (e.g. a menu)
+    const inside = document.createElement("span");
+    config()!.shadowRoot!.append(inside);
+    inside.dispatchEvent(
+      new CustomEvent("pc-close", { bubbles: true, composed: true }),
+    );
+    await layout.updateComplete;
+    expect(config()).not.toBeNull();
     config()!.dispatchEvent(new CustomEvent("pc-close"));
     await layout.updateComplete;
     expect(config()).toBeNull();
