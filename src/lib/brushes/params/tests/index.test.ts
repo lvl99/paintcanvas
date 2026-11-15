@@ -222,12 +222,22 @@ describe("stampParams", () => {
     ).toBe(1);
   });
 
-  it("should never produce a negative size", () => {
+  it("should never draw a stamp smaller than 1 pixel", () => {
     const preset: BrushConfig = {
       ...base,
       widthConfig: { useRandomise: true, minRandomise: -1, maxRandomise: -1 },
+      heightConfig: { min: 0, usePressure: true },
     };
-    expect(stampParams(preset, { width: 10, height: 10 }, mouse).width).toBe(0);
+    const params = stampParams(preset, { width: 10, height: 10 }, pen(0));
+    expect([params.width, params.height]).toEqual([1, 1]);
+    // Constrained to a very thin width, the height too
+    expect(
+      stampParams(
+        { constrainProportions: true, widthConfig: { usePressure: true } },
+        { width: 10, height: 2 },
+        pen(0.01),
+      ).height,
+    ).toBe(1);
   });
 
   it("should use Math.random by default", () => {
@@ -427,19 +437,19 @@ describe("ranges and per-source profile graphs", () => {
     ).toBeCloseTo(90);
   });
 
-  it("should set an offset within its range of the size, without a random direction", () => {
+  it("should set an offset within its range in pixels, without a random direction", () => {
     const preset: BrushConfig = {
       offsetX: 2,
-      offsetXConfig: { min: -1, max: 1, usePressure: true },
-      offsetYConfig: { max: 0.5, usePressure: true },
+      offsetXConfig: { min: -40, max: 40, usePressure: true },
+      offsetYConfig: { max: 10, usePressure: true },
     };
     const params = stampParams(preset, size, pen(0.25), fixed(0.9));
-    expect(params.offsetX).toBeCloseTo(2 + -0.5 * 40);
-    expect(params.offsetY).toBeCloseTo(0.125 * 20);
+    expect(params.offsetX).toBeCloseTo(2 - 20);
+    expect(params.offsetY).toBeCloseTo(2.5);
     // Only a low end: up to no offset
     expect(
       stampParams(
-        { offsetXConfig: { min: -1, usePressure: true } },
+        { offsetXConfig: { min: -40, usePressure: true } },
         size,
         pen(0.5),
       ).offsetX,

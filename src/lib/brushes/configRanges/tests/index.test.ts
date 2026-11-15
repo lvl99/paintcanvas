@@ -65,6 +65,17 @@ describe("readRange", () => {
       readRange({ alpha: 0.8, alphaConfig: { usePressure: true } }, "alpha")
         .min,
     ).toBe(0);
+    // Sizes from 1 pixel, as drawn
+    expect(
+      readRange({ width: 40, widthConfig: { usePressure: true } }, "width"),
+    ).toMatchObject({ min: 1, max: 40 });
+    // Kept within the limits
+    expect(
+      readRange(
+        { rotation: 45, rotationConfig: { useRandomise: true } },
+        "rotation",
+      ),
+    ).toMatchObject({ min: 45, max: 360 });
   });
 
   it("should give sources without their own profile graph the setting's shared one", () => {
@@ -84,7 +95,7 @@ describe("readRange", () => {
     expect(range.sources.pressure.profileId).toBeUndefined();
   });
 
-  it("should read rotation from the angle plus min to plus max, and offsets as percentages of the size", () => {
+  it("should read rotation from the angle plus min to plus max, and offsets in pixels", () => {
     expect(
       readRange(
         {
@@ -100,7 +111,7 @@ describe("readRange", () => {
     ).toMatchObject({ min: 0, max: 360 });
     expect(
       readRange(
-        { offsetXConfig: { min: -0.5, max: 0.25, useRandomise: true } },
+        { offsetXConfig: { min: -50, max: 25, useRandomise: true } },
         "offsetX",
       ),
     ).toMatchObject({ min: -50, max: 25 });
@@ -124,7 +135,10 @@ describe("writeRange", () => {
     expect(writeRange({}, "width", { value: 500 })).toEqual({ width: 256 });
     expect(writeRange({}, "alpha", { value: 40 })).toEqual({ alpha: 0.4 });
     expect(writeRange({ width: 10 }, "width", {})).toEqual({ width: 10 });
-    expect(writeRange({}, "offsetX", { value: 5 })).toEqual({});
+    expect(writeRange({}, "offsetX", { value: 5 })).toEqual({ offsetX: 5 });
+    expect(writeRange({}, "offsetY", { value: -500 })).toEqual({
+      offsetY: -100,
+    });
   });
 
   it("should write a scale range as the value and a share of it, keeping the sources", () => {
@@ -170,7 +184,7 @@ describe("writeRange", () => {
     ).toEqual({ width: 40, widthConfig: { useTilt: true, min: 0.25, max: 1 } });
   });
 
-  it("should write rotation as the angle and a spread, and offsets as shares of the size", () => {
+  it("should write rotation as the angle and a spread, and offsets in pixels", () => {
     expect(
       writeRange({ rotationConfig: { usePressure: true } }, "rotation", {
         min: 45,
@@ -185,7 +199,10 @@ describe("writeRange", () => {
         min: -40,
         max: 60,
       }),
-    ).toEqual({ offsetYConfig: { useRandomise: true, min: -0.4, max: 0.6 } });
+    ).toEqual({
+      offsetY: -40,
+      offsetYConfig: { useRandomise: true, min: 0, max: 100 },
+    });
   });
 });
 
@@ -210,8 +227,8 @@ describe("setSource", () => {
       },
     );
     expect(setSource({}, "offsetX", "tilt", true).offsetXConfig).toMatchObject({
-      min: -0.5,
-      max: 0.5,
+      min: -10,
+      max: 10,
     });
   });
 
@@ -262,14 +279,26 @@ describe("setSource", () => {
       minTilt: 0,
       maxTilt: 1,
     });
-    // Offsets scattered up to the size either way
+    // Offsets scattered up to the size either way (the width for X, the height for Y), at most 100 pixels
+    const scattered = (config: BrushConfig, param: "offsetX" | "offsetY") =>
+      setSource(config, param, "tilt", true)[`${param}Config`];
     expect(
-      setSource(
-        { offsetXConfig: { useRandomise: true } },
+      scattered(
+        { width: 30, offsetXConfig: { useRandomise: true } },
         "offsetX",
-        "tilt",
-        true,
-      ).offsetXConfig,
+      ),
+    ).toMatchObject({ min: -30, max: 30 });
+    expect(
+      scattered(
+        { width: 30, height: 200, offsetYConfig: { useRandomise: true } },
+        "offsetY",
+      ),
+    ).toMatchObject({ min: -100, max: 100 });
+    expect(
+      scattered({ width: 8, offsetYConfig: { useRandomise: true } }, "offsetY"),
+    ).toMatchObject({ min: -8, max: 8 });
+    expect(
+      scattered({ offsetXConfig: { useRandomise: true } }, "offsetX"),
     ).toMatchObject({ min: -1, max: 1 });
   });
 

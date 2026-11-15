@@ -18,6 +18,9 @@ export interface StampParams {
   alpha: number;
 }
 
+/** The smallest width or height a stamp is drawn at, in pixels */
+export const MIN_STAMP_SIZE = 1;
+
 /** What the input device reports for a point */
 export interface PointInput {
   /** Pressure (0–1), only meaningful for pens */
@@ -124,11 +127,11 @@ const hasRange = (config: BrushParamConfig): boolean =>
  * Work out one stamp's size, rotation, offset and alpha from the preset, the user's chosen size and the input at that point
  * (see `BrushParamConfig`): each varied parameter's value is as far between its range's ends as its sources' share.
  *
- * - Size and alpha go from `min` × the value to the value.
+ * - Size and alpha go from `min` × the value to the value (sizes at least `MIN_STAMP_SIZE`).
  * - Rotation goes from the angle + `min` to the angle + `max` degrees (0 to 360 without a range). With
  *   `rotationFollowsLean`, the direction the pen leans is added; without a range, tilt sets that direction instead.
- * - Offsets go from `min` × the size to `max` × the size, added to the offset. Without a range, they scatter up to the
- *   share × the size in a random direction.
+ * - Offsets go from `min` to `max` pixels, added to the offset. Without a range, they scatter up to the share × the
+ *   size in a random direction.
  *
  * @example
  * stampParams(preset, { width: 20, height: 20 }, { isPen: true, pressure: 0.5 });
@@ -142,10 +145,17 @@ export const stampParams = (
   /** A scale parameter's factor: from its `min` to 1 */
   const scale = (config: BrushParamConfig | undefined) =>
     lerp(config?.min ?? 0, 1, variationFactor(config, input, random));
-  const width = Math.max(0, size.width * scale(preset.widthConfig));
-  const height = preset.constrainProportions
-    ? (width * size.height) / size.width
-    : Math.max(0, size.height * scale(preset.heightConfig));
+  // At least 1 pixel, however light the pressure or upright the pen
+  const width = Math.max(
+    MIN_STAMP_SIZE,
+    size.width * scale(preset.widthConfig),
+  );
+  const height = Math.max(
+    MIN_STAMP_SIZE,
+    preset.constrainProportions
+      ? (width * size.height) / size.width
+      : size.height * scale(preset.heightConfig),
+  );
 
   let rotation = preset.rotation ?? 0;
   const rotationConfig = preset.rotationConfig ?? {};
@@ -169,7 +179,10 @@ export const stampParams = (
       360;
   }
 
-  /** The offset plus its varied part: within its range, or a scatter in a random direction without one */
+  /**
+   * The offset plus its varied part: within its range (in pixels), or without one, a scatter of up to the share × the
+   * size in a random direction
+   */
   const offset = (
     base: number | undefined,
     config: BrushParamConfig = {},
@@ -183,8 +196,7 @@ export const stampParams = (
           config.min ?? 0,
           config.max ?? 0,
           variationFactor(config, input, random),
-        ) *
-          extent
+        )
       );
     const direction = random() < 0.5 ? -1 : 1;
     return (

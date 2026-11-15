@@ -60,7 +60,7 @@ A brush preset's width, height, opacity, rotation and offsets can vary for each 
 - Pen tilt (`useTilt`, between `minTilt` and `maxTilt`, from upright to flat; full for other devices)
 - Randomness (`useRandomise`, between `minRandomise` and `maxRandomise`)
 
-Each source's input goes through its own profile graph (`pressureProfile`, `tiltProfile`, `randomiseProfile`; a graph that goes down reverses it) before setting its share within its range. The shares multiply, and the value goes that far through the setting's range: sizes and opacity from `min` × the value to the value, rotation from the angle + `min` to + `max` degrees, offsets from `min` to `max` × the brush's size. `rotationFollowsLean` also turns each stamp to the direction the pen leans.
+Each source's input goes through its own profile graph (`pressureProfile`, `tiltProfile`, `randomiseProfile`; a graph that goes down reverses it) before setting its share within its range. The shares multiply, and the value goes that far through the setting's range: sizes and opacity from `min` × the value to the value, rotation from the angle + `min` to + `max` degrees, offsets from `min` to `max` pixels. `rotationFollowsLean` also turns each stamp to the direction the pen leans.
 
 Settings saved before ranges (without `min` and `max`) draw as they did: sizes and opacity from 0, rotation through a full turn (or following the lean with tilt), offsets scattering in a random direction, and one profile graph (`profile`) for every source. `readRange`, `writeRange`, `setSource`, `writeSourceRange` and `writeSourceProfile` from `@lvl99dotcom/paintcanvas/lib/brushes/configRanges` read and change them in the units the configuration window shows.
 

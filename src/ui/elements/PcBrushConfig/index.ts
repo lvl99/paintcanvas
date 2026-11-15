@@ -516,7 +516,6 @@ export class PcBrushConfig extends PcElement {
   ) {
     const range = readRange(draft, param);
     const limits = PARAM_LIMITS[param];
-    const isOffset = param === "offsetX" || param === "offsetY";
     const off = disabled || this.busy;
     const write = (values: { value?: number; min?: number; max?: number }) =>
       this.changeParam(param, writeRange(draft, param, values));
@@ -537,10 +536,10 @@ export class PcBrushConfig extends PcElement {
       : this.single(
           param,
           label,
-          isOffset ? 0 : range.value,
-          isOffset ? { min: 0, max: limits.max } : limits,
+          range.value,
+          limits,
           (value) => write({ value }),
-          disabled || isOffset,
+          disabled,
         );
     return html`<div class="param" data-param=${param}>
       <div class="row">

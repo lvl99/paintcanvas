@@ -36,8 +36,7 @@ export enum SmoothingType {
  *
  * - Scale parameters (width, height, alpha, …): from `value × min` to the value.
  * - Angle parameters (rotation, hue): from `value + min` to `value + max` degrees.
- * - Offset parameters (offsetX, offsetY): from `value + min × size` to `value + max × size` (the brush's width for X,
- *   its height for Y).
+ * - Offset parameters (offsetX, offsetY): from `value + min` to `value + max` pixels.
  *
  * Settings saved without `min` and `max` work as before ranges: scale from 0, angle from 0 to 360°; with tilt on, the
  * rotation follows the direction the pen leans (like a calligraphy nib); offsets scatter up to the share × size in a
@@ -102,10 +101,10 @@ export interface BrushParamConfig {
   profileId?: string;
   /**
    * The range's low end: a fraction of the value for scale parameters (0–1), degrees added to it for angle parameters,
-   * or a fraction of the brush's size for offset parameters (-1–1)
+   * or pixels for offset parameters
    */
   min?: number;
-  /** The range's high end, for angle (degrees added to the value) and offset (a fraction of the size) parameters */
+  /** The range's high end, for angle (degrees added to the value) and offset (pixels) parameters */
   max?: number;
   /** Pressure's own profile graph (instead of `profile`) */
   pressureProfile?: ProfilePoint[];

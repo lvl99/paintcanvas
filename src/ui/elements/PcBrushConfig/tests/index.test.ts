@@ -439,25 +439,31 @@ describe("pc-brush-config", () => {
     ).toEqual([]);
   });
 
-  it("should only let offsets change while they vary, as a range of the size either way", async () => {
+  it("should set a fixed offset in pixels, or a range of them while it varies", async () => {
     const { element } = await setup();
-    expect(
-      query<PcSliderRange>(element, "pc-slider-range.offsetX").disabled,
-    ).toBe(true);
+    const single = () =>
+      query<PcSliderRange>(element, "pc-slider-range.offsetX");
+    expect([single().disabled, single().min, single().max]).toEqual([
+      false,
+      -100,
+      100,
+    ]);
+    await slide(element, "offsetX", 12);
+    expect(draft(element).offsetX).toBe(12);
     await click(element, "input.offsetX.randomise");
+    // From the offset, 10 pixels either way
     const range = query<PcSliderRange>(
       element,
       "pc-slider-range.offsetX.range",
     );
     expect([range.min, range.max, range.low, range.high]).toEqual([
-      -100, 100, -50, 50,
+      -100, 100, 2, 22,
     ]);
-    range.setEnd("high", 10);
+    range.setEnd("high", 60);
     await element.updateComplete;
-    expect(draft(element).offsetXConfig).toMatchObject({
-      useRandomise: true,
-      min: -0.5,
-      max: 0.1,
+    expect(draft(element)).toMatchObject({
+      offsetX: 2,
+      offsetXConfig: { useRandomise: true, min: 0, max: 58 },
     });
     await click(element, "input.rotation.randomise");
     await click(element, "input.alpha.tilt");

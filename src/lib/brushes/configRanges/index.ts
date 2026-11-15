@@ -40,7 +40,7 @@ export interface SourceRange {
   profileId?: string;
 }
 
-/** A setting as the configuration window shows it, in its unit (pixels, percent of the size, percent or degrees) */
+/** A setting as the configuration window shows it, in its unit (pixels, percent or degrees) */
 export interface ParamRange {
   /** The setting's value when it doesn't vary (the range's high end for sizes and opacity) */
   value: number;
@@ -111,12 +111,12 @@ const RANGE_DEFAULTS: Record<(typeof KINDS)[VaryingParam], [number, number]> = {
   offset: [0, 0],
 };
 
-/** Each kind of setting's range when it starts to vary: half to full size, a full turn, or half the size either way */
+/** Each kind of setting's range when it starts to vary: half to full size, a full turn, or 10 pixels either way */
 const STARTING_RANGES: Record<(typeof KINDS)[VaryingParam], [number, number]> =
   {
     scale: [0.5, 1],
     angle: [0, 360],
-    offset: [-0.5, 0.5],
+    offset: [-10, 10],
   };
 
 /**
@@ -211,7 +211,7 @@ const readSource = (
 /**
  * Read a setting as the configuration window shows it: its range and each source's (see `BrushParamConfig`). Sizes
  * and opacity go from `min` × the value to the value; rotation from the angle + `min` to + `max` degrees; offsets
- * from `min` to `max` as percentages of the brush's size.
+ * from the offset + `min` to + `max` pixels.
  *
  * @example
  * readRange({ width: 40, widthConfig: { min: 0.25, usePressure: true } }, "width");
@@ -238,18 +238,20 @@ export const readRange = (
   const ends: Record<typeof kind, [number, number]> = {
     scale: [value * low, value],
     angle: [value + low, value + high],
-    offset: [low * 100, high * 100],
+    offset: [value + low, value + high],
   };
   const varies = anyOn(variation);
-  // A setting that doesn't vary is its value (an offset, none)
-  const fixed = kind === "offset" ? 0 : value;
-  const [min, max] = varies ? ends[kind] : [fixed, fixed];
+  const [lowest, highest] = varies ? ends[kind] : [value, value];
+  // Within the setting's limits (e.g. sizes from 1 pixel, as drawn)
+  const limits = PARAM_LIMITS[param];
+  const min = clamp(lowest, limits.min, limits.max);
+  const max = clamp(highest, limits.min, limits.max);
   return { value, min, max, sources, varies };
 };
 
 /**
  * A variation with its range set out, so writing one part keeps the rest as it worked: a setting saved before ranges
- * gets the range it worked with (scale from 0, rotation a full turn, offsets as they scattered at most), and its shared
+ * gets the range it worked with (scale from 0, rotation a full turn, offsets as far as they scattered), and its shared
  * profile graph goes to each source. A rotation that followed the pen's lean with tilt follows it with
  * `rotationFollowsLean` instead.
  */
@@ -269,8 +271,15 @@ const withRange = (
     variation.max === undefined
   ) {
     const kind = KINDS[param];
+    // Offsets scattered up to the size either way (the width for X, the height for Y), within the limits
+    const size = Math.min(
+      PARAM_LIMITS[param].max,
+      param === "offsetY"
+        ? (config.height ?? config.width ?? 1)
+        : (config.width ?? 1),
+    );
     [variation.min, variation.max] =
-      kind === "offset" ? [-1, 1] : RANGE_DEFAULTS[kind];
+      kind === "offset" ? [-size, size] : RANGE_DEFAULTS[kind];
   }
   if (variation.profile !== undefined) {
     for (const source of VARIATION_SOURCES) {
@@ -305,7 +314,7 @@ export const writeRange = (
   const kind = KINDS[param];
   if (!current.varies) {
     const value = clamp(range.value ?? current.value, limits.min, limits.max);
-    return kind === "offset" ? {} : { [param]: fromUnit(param, value) };
+    return { [param]: fromUnit(param, value) };
   }
   let min = clamp(range.min ?? current.min, limits.min, limits.max);
   let max = clamp(range.max ?? current.max, limits.min, limits.max);
@@ -315,20 +324,18 @@ export const writeRange = (
     changes[param as "width"] = fromUnit(param, Math.max(max, 1e-6));
     variation.min = max > 0 ? min / max : 0;
     variation.max = 1;
-  } else if (kind === "angle") {
-    changes.rotation = min;
+  } else {
+    // Rotation and offsets: the low end as the value, and how far the high end is from it
+    changes[param as "rotation"] = min;
     variation.min = 0;
     variation.max = max - min;
-  } else {
-    variation.min = min / 100;
-    variation.max = max / 100;
   }
   return { ...changes, [configKey(param)]: variation };
 };
 
 /**
  * Turn a source on or off for a setting, as config changes. Several can be on at once (their shares multiply). The
- * first source turned on gives the setting a starting range (half to full size, a full turn, or half the size either
+ * first source turned on gives the setting a starting range (half to full size, a full turn, or 10 pixels either
  * way), and a source turned on starts with its full range (0–1).
  *
  * @example
